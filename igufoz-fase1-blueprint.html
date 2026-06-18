@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Igufoz — Blueprint Fase 1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg:       #08090f;
+    --surface:  #0e1018;
+    --card:     #13161f;
+    --border:   #1c2030;
+    --muted:    #252d42;
+    --dim:      #48556e;
+    --text:     #a8b4cc;
+    --white:    #dde4f2;
+
+    --site:     #f97316;
+    --cliente:  #8b5cf6;
+    --admin:    #3b82f6;
+    --banco:    #10b981;
+    --status:   #14b8a6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    padding: 32px 24px 80px;
+  }
+
+  /* ── header ── */
+  .page-header { max-width: 1100px; margin: 0 auto 40px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -.03em;
+    margin-bottom: 6px;
+  }
+  .sub { font-size: 13px; color: var(--dim); }
+
+  /* ── tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    max-width: 1100px;
+    margin: 0 auto 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 5px;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 10px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--dim);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); background: var(--border); }
+  .tab.active { background: var(--card); color: var(--white); }
+
+  /* ── views ── */
+  .view { display: none; max-width: 1100px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* ══════════════════════════════
+     VISTA 1 — OVERVIEW
+  ══════════════════════════════ */
+  .three-products {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .product-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .product-top {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .product-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .product-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+  .product-url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .product-body { padding: 16px 20px; }
+  .product-desc { font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 14px; }
+  .product-list { list-style: none; }
+  .product-list li {
+    font-size: 12px;
+    color: var(--text);
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .product-list li:last-child { border-bottom: none; }
+  .li-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  /* banco central */
+  .banco-central {
+    background: linear-gradient(135deg, #041a10, #031510);
+    border: 1px solid #0d4a2a;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .banco-central::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--banco), #34d399);
+  }
+  .banco-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #34d399;
+    margin-bottom: 12px;
+  }
+  .banco-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+  .banco-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .banco-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #052e16;
+    border: 1px solid #0d4a2a;
+    color: #34d399;
+  }
+
+  /* ══════════════════════════════
+     VISTA 2 — SCHEMA SQL
+  ══════════════════════════════ */
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .table-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .table-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .table-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .cols { padding: 8px 0; }
+  .col-row {
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    gap: 8px;
+    padding: 6px 16px;
+    font-size: 11px;
+    border-bottom: 1px solid #111620;
+    align-items: center;
+  }
+  .col-row:last-child { border-bottom: none; }
+  .col-name {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--white);
+    font-weight: 500;
+  }
+  .col-type {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--dim);
+    font-size: 10px;
+  }
+  .col-note { font-size: 10px; color: var(--dim); text-align: right; }
+  .pk  { color: #fbbf24; }
+  .fk  { color: #60a5fa; }
+  .idx { color: #a78bfa; }
+  .nn  { color: #34d399; font-size: 9px; }
+
+  /* ══════════════════════════════
+     VISTA 3 — STATUS DA RESERVA
+  ══════════════════════════════ */
+  .status-flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 32px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .status-step {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 180px;
+  }
+  .status-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    margin-top: 24px;
+    min-width: 24px;
+  }
+  .status-dot-wrap {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 12px;
+    border: 2px solid;
+    position: relative;
+    z-index: 1;
+  }
+  .status-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .status-who {
+    font-size: 10px;
+    color: var(--dim);
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .status-actions { list-style: none; max-width: 160px; }
+  .status-actions li {
+    font-size: 11px;
+    color: var(--text);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+  .status-actions li:last-child { border-bottom: none; }
+
+  /* translado box */
+  .translado-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .translado-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flow-mini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .flow-mini-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text);
+    text-align: center;
+  }
+  .flow-mini-step strong { display: block; color: var(--white); font-size: 11px; margin-bottom: 3px; font-weight: 600; }
+  .flow-mini-arrow { color: var(--dim); font-size: 16px; }
+
+  /* ══════════════════════════════
+     VISTA 4 — ÁREA DO CLIENTE
+  ══════════════════════════════ */
+  .cliente-screens {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .screen-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .screen-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .screen-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    margin-bottom: 4px;
+  }
+  .screen-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .screen-body { padding: 14px 16px; }
+  .screen-field {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 11px;
+    color: var(--dim);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .screen-field.filled { color: var(--text); border-color: var(--muted); }
+  .screen-field.action {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #93c5fd;
+    cursor: pointer;
+    font-weight: 600;
+    justify-content: center;
+  }
+  .screen-field.upload {
+    background: #1a1530;
+    border-color: #7c3aed;
+    color: #c4b5fd;
+    border-style: dashed;
+    justify-content: center;
+  }
+
+  /* ══════════════════════════════
+     VISTA 5 — ORDEM DE EXECUÇÃO
+  ══════════════════════════════ */
+  .week-list { display: flex; flex-direction: column; gap: 14px; }
+  .week-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .week-header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .week-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    background: var(--muted);
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .week-title { font-size: 14px; font-weight: 700; color: var(--white); }
+  .week-focus { font-size: 11px; color: var(--dim); margin-left: auto; }
+  .week-tasks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+  .task {
+    background: var(--card);
+    padding: 14px 18px;
+  }
+  .task-product {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .task-name { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+  .task-detail { font-size: 11px; color: var(--dim); line-height: 1.5; }
+  .task-output {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @media (max-width: 760px) {
+    .three-products { grid-template-columns: 1fr; }
+    .schema-grid    { grid-template-columns: 1fr; }
+    .cliente-screens{ grid-template-columns: 1fr; }
+    .week-tasks     { grid-template-columns: 1fr; }
+    .status-flow    { flex-direction: column; align-items: flex-start; }
+    .status-connector { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <p class="eyebrow">Igufoz Platform · Fase 1</p>
+  <h1>Blueprint de execução</h1>
+  <p class="sub">Schema, fluxos e ordem de construção — tudo decidido antes de abrir o editor</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('overview')">① Os 3 produtos</button>
+  <button class="tab" onclick="show('schema')">② Banco de dados</button>
+  <button class="tab" onclick="show('status')">③ Status + Translado</button>
+  <button class="tab" onclick="show('cliente')">④ Área do cliente</button>
+  <button class="tab" onclick="show('execucao')">⑤ Ordem de execução</button>
+</div>
+
+
+<!-- ══ VISTA 1 ══ -->
+<div id="view-overview" class="view active">
+
+  <div class="three-products">
+
+    <!-- site -->
+    <div class="product-card">
+      <div class="product-top">
+        <div class="product-badge" style="background:#2a1400;color:var(--site);border:1px solid #7c2d12">Público</div>
+        <div class="product-name" style="color:var(--site)">Site de Captação</div>
+        <div class="product-url">reservas.igufoz.com.br</div>
+      </div>
+      <div class="product-body">
+        <p class="product-desc">O fluxo de 4 passos que já existe, com novo visual e conectado ao banco. Lógica de negócio preservada integralmente.</p>
+        <ul class="product-list">
+          <li><span class="li-dot" style="background:var(--site)"></span>Novo layout — identidade visual renovada</li>
+          <li><span class="li-dot" style="background:var(--site)"></span>Categorias, proteções, adicionais do Supabase</li>
+          <li><span class="li-dot" style="background:var(--site)"></span>Solicitação salva no banco (não localStorage)</li>
+          <li><span class="li-dot" style="background:var(--site)"></span>Confirmação automática via WhatsApp ao cliente</li>
+          <li><span class="li-dot" style="background:var(--site)"></span>E-mail coletado no Passo 1 (habilita login futuro)</li>
+          <li><span class="li-dot" style="background:var(--site)"></span>Toda lógica atual mantida: sazonalidade, cadeirinhas, aeroporto, domingo</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- área do cliente -->
+    <div class="product-card">
+      <div class="product-top">
+        <div class="product-badge" style="background:#1e1b4b;color:var(--cliente);border:1px solid #4c1d95">Login obrigatório</div>
+        <div class="product-name" style="color:var(--cliente)">Área do Cliente</div>
+        <div class="product-url">igufoz.com.br/minha-conta</div>
+      </div>
+      <div class="product-body">
+        <p class="product-desc">Acesso via magic link por e-mail. Zero senha para lembrar. Cliente vê suas reservas, envia documentos e pré-cadastra condutores.</p>
+        <ul class="product-list">
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Login por magic link (Supabase Auth)</li>
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Minhas reservas com status em tempo real</li>
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Acompanhar reserva + solicitar translado</li>
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Meu cadastro: dados + CNH + passaporte</li>
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Condutores adicionais pré-cadastrados</li>
+          <li><span class="li-dot" style="background:var(--cliente)"></span>Nova reserva logado (dados pré-preenchidos)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- admin -->
+    <div class="product-card">
+      <div class="product-top">
+        <div class="product-badge" style="background:#1e3a5f;color:var(--admin);border:1px solid #1e40af">Interno</div>
+        <div class="product-name" style="color:var(--admin)">Painel Admin</div>
+        <div class="product-url">igufoz.com.br/admin</div>
+      </div>
+      <div class="product-body">
+        <p class="product-desc">MVP do painel interno. Só o necessário para esta fase operar. Sem frota por placa, sem contratos, sem financeiro — isso vem na Fase 2.</p>
+        <ul class="product-list">
+          <li><span class="li-dot" style="background:var(--admin)"></span>Login real via Supabase Auth (sem mais senha em JS)</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>CRUD de categorias com imagem e estoque</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>CRUD de proteções com descrição de cobertura</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>CRUD de adicionais com tipo (diária/fixo)</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>Sazonalidade: períodos com preço por categoria</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>Reservas: listar, ver detalhes, mudar status</li>
+          <li><span class="li-dot" style="background:var(--admin)"></span>Clientes: ver cadastros e documentos enviados</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- banco central -->
+  <div class="banco-central">
+    <div class="banco-label">Núcleo compartilhado — todos os produtos lêem e escrevem aqui</div>
+    <div class="banco-title">Supabase (PostgreSQL + Auth + Storage)</div>
+    <div class="banco-chips">
+      <span class="banco-chip">PostgreSQL</span>
+      <span class="banco-chip">Row Level Security</span>
+      <span class="banco-chip">Supabase Auth (magic link)</span>
+      <span class="banco-chip">Storage (fotos de CNH)</span>
+      <span class="banco-chip">Realtime (status ao vivo)</span>
+      <span class="banco-chip">Edge Functions (WhatsApp)</span>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══ VISTA 2 — SCHEMA ══ -->
+<div id="view-schema" class="view">
+  <div class="schema-grid">
+
+    <!-- tenants -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">tenants</span>
+        <span class="table-tag" style="background:#052e16;color:#34d399">BASE DO SAAS</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">cnpj</span><span class="col-type">text UNIQUE</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">plano</span><span class="col-type">text</span><span class="col-note">default 'basic'</span></div>
+        <div class="col-row"><span class="col-name">whatsapp_central</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">dominio</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">ativo</span><span class="col-type">boolean</span><span class="col-note">default true</span></div>
+        <div class="col-row"><span class="col-name">criado_em</span><span class="col-type">timestamptz</span><span class="col-note">now()</span></div>
+      </div>
+    </div>
+
+    <!-- usuarios -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">usuarios</span>
+        <span class="table-tag" style="background:#1e1b4b;color:var(--cliente)">CLIENTES</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note">= auth.users.id</span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name idx">email</span><span class="col-type">text UNIQUE</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">whatsapp</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">cpf</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">data_nascimento</span><span class="col-type">date</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">role</span><span class="col-type">text</span><span class="col-note">cliente/admin/op</span></div>
+        <div class="col-row"><span class="col-name">criado_em</span><span class="col-type">timestamptz</span><span class="col-note">now()</span></div>
+      </div>
+    </div>
+
+    <!-- categorias -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">categorias</span>
+        <span class="table-tag" style="background:#2a1400;color:var(--site)">CATÁLOGO</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">slug</span><span class="col-type">text</span><span class="col-note">grupo_b, grupo_c…</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note">GRUPO B</span></div>
+        <div class="col-row"><span class="col-name">descricao</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">preco_diaria</span><span class="col-type">numeric(10,2)</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">transmissao</span><span class="col-type">text</span><span class="col-note">manual/auto</span></div>
+        <div class="col-row"><span class="col-name">max_pessoas</span><span class="col-type">integer</span><span class="col-note">default 5</span></div>
+        <div class="col-row"><span class="col-name">max_cadeirinhas</span><span class="col-type">integer</span><span class="col-note">default 2</span></div>
+        <div class="col-row"><span class="col-name">quantidade_frota</span><span class="col-type">integer</span><span class="col-note">default 1</span></div>
+        <div class="col-row"><span class="col-name">imagem_url</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">ordem</span><span class="col-type">integer</span><span class="col-note">exibição</span></div>
+        <div class="col-row"><span class="col-name">ativo</span><span class="col-type">boolean</span><span class="col-note">default true</span></div>
+      </div>
+    </div>
+
+    <!-- protecoes -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">protecoes</span>
+        <span class="table-tag" style="background:#2a1400;color:var(--site)">CATÁLOGO</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">descricao</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">preco</span><span class="col-type">numeric(10,2)</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">tipo_preco</span><span class="col-type">text</span><span class="col-note">per_day / fixed</span></div>
+        <div class="col-row"><span class="col-name">franquia</span><span class="col-type">text</span><span class="col-note">texto livre</span></div>
+        <div class="col-row"><span class="col-name">pre_autorizacao</span><span class="col-type">numeric(10,2)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">ordem</span><span class="col-type">integer</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">ativo</span><span class="col-type">boolean</span><span class="col-note">default true</span></div>
+      </div>
+    </div>
+
+    <!-- adicionais -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">adicionais</span>
+        <span class="table-tag" style="background:#2a1400;color:var(--site)">CATÁLOGO</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">descricao</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">preco</span><span class="col-type">numeric(10,2)</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">tipo_preco</span><span class="col-type">text</span><span class="col-note">per_day / fixed</span></div>
+        <div class="col-row"><span class="col-name">permite_quantidade</span><span class="col-type">boolean</span><span class="col-note">default false</span></div>
+        <div class="col-row"><span class="col-name">is_cadeirinha</span><span class="col-type">boolean</span><span class="col-note">default false</span></div>
+        <div class="col-row"><span class="col-name">estoque</span><span class="col-type">integer</span><span class="col-note">null = ilimitado</span></div>
+        <div class="col-row"><span class="col-name">ordem</span><span class="col-type">integer</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">ativo</span><span class="col-type">boolean</span><span class="col-note">default true</span></div>
+      </div>
+    </div>
+
+    <!-- sazonalidade -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">sazonalidade</span>
+        <span class="table-tag" style="background:#2a1400;color:var(--site)">CATÁLOGO</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note">ex: Carnaval 2025</span></div>
+        <div class="col-row"><span class="col-name idx">data_inicio</span><span class="col-type">date</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name idx">data_fim</span><span class="col-type">date</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">precos</span><span class="col-type">jsonb</span><span class="col-note">{"grupo_b": 210}</span></div>
+        <div class="col-row"><span class="col-name">ativo</span><span class="col-type">boolean</span><span class="col-note">default true</span></div>
+      </div>
+    </div>
+
+    <!-- solicitacoes -->
+    <div class="table-card" style="grid-column: span 2">
+      <div class="table-header">
+        <span class="table-name">solicitacoes</span>
+        <span class="table-tag" style="background:#0a1520;color:var(--status)">CORAÇÃO DO SISTEMA</span>
+      </div>
+      <div class="cols" style="display:grid;grid-template-columns:1fr 1fr">
+        <div>
+          <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+          <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name fk">usuario_id</span><span class="col-type">uuid FK</span><span class="col-note">null se anônimo</span></div>
+          <div class="col-row"><span class="col-name fk">categoria_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name fk">protecao_id</span><span class="col-type">uuid FK</span><span class="col-note"></span></div>
+          <div class="col-row"><span class="col-name">cliente_nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">cliente_email</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">cliente_whatsapp</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">cliente_cpf</span><span class="col-type">text</span><span class="col-note"></span></div>
+        </div>
+        <div>
+          <div class="col-row"><span class="col-name">data_retirada</span><span class="col-type">timestamptz</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">data_devolucao</span><span class="col-type">timestamptz</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">local_retirada</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">local_devolucao</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name">numero_voo</span><span class="col-type">text</span><span class="col-note"></span></div>
+          <div class="col-row"><span class="col-name">horario_pouso</span><span class="col-type">text</span><span class="col-note"></span></div>
+          <div class="col-row"><span class="col-name">pessoas</span><span class="col-type">integer</span><span class="col-note">default 1</span></div>
+          <div class="col-row"><span class="col-name">valor_estimado</span><span class="col-type">numeric(10,2)</span><span class="col-note nn">NOT NULL</span></div>
+          <div class="col-row"><span class="col-name idx">status</span><span class="col-type">text</span><span class="col-note">enum abaixo</span></div>
+          <div class="col-row"><span class="col-name">observacoes</span><span class="col-type">text</span><span class="col-note"></span></div>
+          <div class="col-row"><span class="col-name">criado_em</span><span class="col-type">timestamptz</span><span class="col-note">now()</span></div>
+          <div class="col-row"><span class="col-name">atualizado_em</span><span class="col-type">timestamptz</span><span class="col-note">trigger</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- solicitacao_itens -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">solicitacao_itens</span>
+        <span class="table-tag" style="background:#0a1520;color:var(--status)">FILHA</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">solicitacao_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name fk">adicional_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">quantidade</span><span class="col-type">integer</span><span class="col-note">default 1</span></div>
+        <div class="col-row"><span class="col-name">preco_unitario</span><span class="col-type">numeric(10,2)</span><span class="col-note">snapshot</span></div>
+        <div class="col-row"><span class="col-name">tipo_preco</span><span class="col-type">text</span><span class="col-note">snapshot</span></div>
+      </div>
+    </div>
+
+    <!-- documentos -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">documentos</span>
+        <span class="table-tag" style="background:#1e1b4b;color:var(--cliente)">CLIENTE</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">usuario_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">tipo</span><span class="col-type">text</span><span class="col-note">cnh/passaporte/rg</span></div>
+        <div class="col-row"><span class="col-name">numero</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">validade</span><span class="col-type">date</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">categoria_cnh</span><span class="col-type">text</span><span class="col-note">A,B,AB,C,D,E</span></div>
+        <div class="col-row"><span class="col-name">arquivo_url</span><span class="col-type">text</span><span class="col-note">Supabase Storage</span></div>
+        <div class="col-row"><span class="col-name">verificado</span><span class="col-type">boolean</span><span class="col-note">admin confirma</span></div>
+        <div class="col-row"><span class="col-name">criado_em</span><span class="col-type">timestamptz</span><span class="col-note"></span></div>
+      </div>
+    </div>
+
+    <!-- condutores_adicionais -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">condutores_adicionais</span>
+        <span class="table-tag" style="background:#1e1b4b;color:var(--cliente)">CLIENTE</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">usuario_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name fk">tenant_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">nome</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">cpf</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">cnh_numero</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">cnh_validade</span><span class="col-type">date</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">cnh_categoria</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">cnh_arquivo_url</span><span class="col-type">text</span><span class="col-note">Storage</span></div>
+      </div>
+    </div>
+
+    <!-- translado -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-name">translados</span>
+        <span class="table-tag" style="background:#0a1520;color:var(--status)">OPERAÇÃO</span>
+      </div>
+      <div class="cols">
+        <div class="col-row"><span class="col-name pk">id</span><span class="col-type">uuid PK</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name fk">solicitacao_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name fk">usuario_id</span><span class="col-type">uuid FK</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">numero_voo</span><span class="col-type">text</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">horario_pouso</span><span class="col-type">time</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">data_voo</span><span class="col-type">date</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">pessoas</span><span class="col-type">integer</span><span class="col-note nn">NOT NULL</span></div>
+        <div class="col-row"><span class="col-name">observacoes</span><span class="col-type">text</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">status</span><span class="col-type">text</span><span class="col-note">pendente/confirmado</span></div>
+        <div class="col-row"><span class="col-name">confirmado_em</span><span class="col-type">timestamptz</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-name">solicitado_em</span><span class="col-type">timestamptz</span><span class="col-note">now()</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ VISTA 3 — STATUS ══ -->
+<div id="view-status" class="view">
+
+  <div class="status-flow">
+
+    <div class="status-step">
+      <div class="status-dot-wrap" style="background:#1a1200;border-color:#d97706;color:#fbbf24">📋</div>
+      <div class="status-name">Solicitada</div>
+      <div class="status-who">Sistema automático</div>
+      <ul class="status-actions">
+        <li>Cliente enviou o formulário</li>
+        <li>Salvo no banco</li>
+        <li>WhatsApp automático ao cliente: "Recebemos sua solicitação"</li>
+        <li>Alerta na central via WhatsApp</li>
+      </ul>
+    </div>
+    <div class="status-connector"></div>
+
+    <div class="status-step">
+      <div class="status-dot-wrap" style="background:#1e3a5f;border-color:#3b82f6;color:#60a5fa">🔍</div>
+      <div class="status-name">Em análise</div>
+      <div class="status-who">Central / Admin</div>
+      <ul class="status-actions">
+        <li>Admin abre a reserva</li>
+        <li>Verifica disponibilidade manualmente</li>
+        <li>Pode contatar cliente se necessário</li>
+        <li>Decide: confirmar ou recusar</li>
+      </ul>
+    </div>
+    <div class="status-connector"></div>
+
+    <div class="status-step">
+      <div class="status-dot-wrap" style="background:#052e16;border-color:#10b981;color:#34d399">✅</div>
+      <div class="status-name">Reserva confirmada</div>
+      <div class="status-who">Admin confirma</div>
+      <ul class="status-actions">
+        <li>Admin clica "Confirmar"</li>
+        <li>WhatsApp automático ao cliente: confirmação com detalhes</li>
+        <li>Cliente vê status atualizado na área dele</li>
+        <li>Translado liberado para solicitação</li>
+      </ul>
+    </div>
+    <div class="status-connector"></div>
+
+    <div class="status-step">
+      <div class="status-dot-wrap" style="background:#0a1520;border-color:#14b8a6;color:#2dd4bf">🏁</div>
+      <div class="status-name">Concluída</div>
+      <div class="status-who">Admin após devolução</div>
+      <ul class="status-actions">
+        <li>Veículo devolvido</li>
+        <li>Admin marca como concluída</li>
+        <li>Entra no histórico do cliente</li>
+        <li>Base para CRM futuro</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- regra de cancelamento -->
+  <div class="translado-box" style="margin-bottom:16px">
+    <div class="translado-title">
+      <span style="background:#1a0505;border:1px solid #450a0a;color:#fca5a5;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700">CANCELADA</span>
+      Estado especial — não entra no fluxo principal
+    </div>
+    <div style="font-size:13px;color:var(--text);line-height:1.7">
+      Pode acontecer em qualquer momento antes de <strong style="color:var(--white)">Reserva confirmada</strong>. Quem pode cancelar: admin (recusa) ou cliente (desistência via área do cliente). Reserva cancelada <strong style="color:var(--white)">fica no histórico</strong> — nunca some. Status final imutável.
+    </div>
+  </div>
+
+  <!-- fluxo de translado -->
+  <div class="translado-box">
+    <div class="translado-title">✈️ Fluxo do Translado</div>
+    <div class="flow-mini">
+      <div class="flow-mini-step">
+        <strong>Reserva confirmada</strong>
+        Translado fica disponível na área do cliente
+      </div>
+      <div class="flow-mini-arrow">→</div>
+      <div class="flow-mini-step">
+        <strong>Cliente solicita</strong>
+        Informa voo, data, hora do pouso e nº de pessoas
+      </div>
+      <div class="flow-mini-arrow">→</div>
+      <div class="flow-mini-step">
+        <strong>Central recebe alerta</strong>
+        WhatsApp + destaque no painel admin
+      </div>
+      <div class="flow-mini-arrow">→</div>
+      <div class="flow-mini-step">
+        <strong>Admin confirma</strong>
+        Clica "Confirmar translado" no painel
+      </div>
+      <div class="flow-mini-arrow">→</div>
+      <div class="flow-mini-step">
+        <strong>Cliente recebe confirmação</strong>
+        WhatsApp automático com detalhes do translado
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:var(--dim)">
+      ⚠️ Translado só pode ser solicitado quando a reserva está em status <strong style="color:var(--white)">Reserva confirmada</strong>. Antes disso, o botão não aparece.
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══ VISTA 4 — ÁREA DO CLIENTE ══ -->
+<div id="view-cliente" class="view">
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px;font-size:13px;color:var(--text);line-height:1.7">
+    <strong style="color:var(--white)">Login por magic link.</strong> Cliente digita o e-mail → recebe link no e-mail → clica → está logado. Sem senha. Supabase Auth gerencia tudo. A sessão dura 7 dias.
+  </div>
+
+  <div class="cliente-screens">
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 1</div>
+        <div class="screen-name">Minhas Reservas</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field filled">📋 Reserva #2841 — Grupo C</div>
+        <div class="screen-field filled" style="color:var(--status);border-color:var(--status);background:#041a14">✅ Reserva confirmada</div>
+        <div class="screen-field filled">📅 10/08 → 15/08 · 5 diárias</div>
+        <div class="screen-field filled">📍 Aeroporto → Centro</div>
+        <div class="screen-field action">Ver detalhes →</div>
+        <div style="height:12px"></div>
+        <div class="screen-field filled">📋 Reserva #2790 — Grupo B</div>
+        <div class="screen-field filled" style="color:#fbbf24;border-color:#d97706;background:#1a1200">🔍 Em análise</div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 2</div>
+        <div class="screen-name">Detalhe da Reserva + Translado</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field filled">Reserva confirmada ✅</div>
+        <div class="screen-field filled">Grupo C · 5 diárias · R$ 914,65</div>
+        <div class="screen-field filled">Retirada: 10/08 às 14h</div>
+        <div class="screen-field filled">Proteção Plus + Terceiros</div>
+        <div style="height:8px;border-top:1px solid var(--border);margin:8px 0"></div>
+        <div class="screen-field" style="color:#fbbf24;background:#1a1200;border-color:#d97706;font-weight:600;text-align:center;justify-content:center">✈️ Solicitar translado</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:6px;text-align:center">Disponível pois reserva está confirmada</div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 3</div>
+        <div class="screen-name">Solicitar Translado</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field">Número do voo</div>
+        <div class="screen-field">Data do voo</div>
+        <div class="screen-field">Horário do pouso</div>
+        <div class="screen-field">Número de pessoas</div>
+        <div class="screen-field">Observações (opcional)</div>
+        <div class="screen-field action">Solicitar translado</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:6px;text-align:center">A central confirmará em breve via WhatsApp</div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 4</div>
+        <div class="screen-name">Meu Cadastro</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field filled">Pedro Henrique Santos</div>
+        <div class="screen-field filled">pedro@email.com</div>
+        <div class="screen-field filled">(45) 99999-0000</div>
+        <div class="screen-field filled">123.456.789-00</div>
+        <div style="height:8px;border-top:1px solid var(--border);margin:8px 0"></div>
+        <div class="screen-field upload">📎 Upload da CNH</div>
+        <div class="screen-field upload">📎 Upload do Passaporte</div>
+        <div class="screen-field action">Salvar dados</div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 5</div>
+        <div class="screen-name">Condutores Adicionais</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field filled">Maria Santos — CNH B</div>
+        <div class="screen-field filled" style="color:var(--status)">Válida até 03/2027 ✓</div>
+        <div style="height:8px;border-top:1px solid var(--border);margin:8px 0"></div>
+        <div class="screen-field">Nome completo</div>
+        <div class="screen-field">CPF</div>
+        <div class="screen-field">Nº CNH + validade</div>
+        <div class="screen-field upload">📎 Upload da CNH do condutor</div>
+        <div class="screen-field action">Adicionar condutor</div>
+      </div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header">
+        <div class="screen-num">Tela 6</div>
+        <div class="screen-name">Nova Reserva (logado)</div>
+      </div>
+      <div class="screen-body">
+        <div class="screen-field filled" style="color:var(--status)">✓ Dados pré-preenchidos</div>
+        <div class="screen-field filled">Pedro Henrique Santos</div>
+        <div class="screen-field filled">123.456.789-00</div>
+        <div class="screen-field filled">CNH verificada ✓</div>
+        <div style="height:8px;border-top:1px solid var(--border);margin:8px 0"></div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:8px">Fluxo de 4 passos normal,<br>mas Passo 4 já vem preenchido</div>
+        <div class="screen-field action">Iniciar reserva →</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ VISTA 5 — EXECUÇÃO ══ -->
+<div id="view-execucao" class="view">
+  <div class="week-list">
+
+    <div class="week-card">
+      <div class="week-header">
+        <span class="week-num">SEMANA 1</span>
+        <span class="week-title">Fundação — Banco e Autenticação</span>
+        <span class="week-focus">Sem essa semana, nada funciona</span>
+      </div>
+      <div class="week-tasks">
+        <div class="task">
+          <div class="task-product" style="color:var(--banco)">Supabase</div>
+          <div class="task-name">Criar projeto + todas as tabelas</div>
+          <div class="task-detail">Rodar as migrations com todas as tabelas mapeadas no schema. Configurar RLS básico: cliente só vê suas próprias solicitações.</div>
+          <span class="task-output">migrations/*.sql</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--banco)">Supabase</div>
+          <div class="task-name">Auth + seed de dados</div>
+          <div class="task-detail">Configurar magic link. Criar tenant Igufoz. Popular tabelas de categorias, proteções e adicionais com os dados atuais do sistema.</div>
+          <span class="task-output">seed.sql</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">Login real</div>
+          <div class="task-detail">Substituir PASSWORD em JS por Supabase Auth. Admin faz login com e-mail + senha. Sessão JWT real. Sem mais localStorage como autenticação.</div>
+          <span class="task-output">admin/login.html</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">CRUD de Categorias</div>
+          <div class="task-detail">Listar, criar, editar, desativar categorias. Upload de imagem via Supabase Storage. Dados vêm do banco, não de JS hardcoded.</div>
+          <span class="task-output">admin/categorias</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-card">
+      <div class="week-header">
+        <span class="week-num">SEMANA 2</span>
+        <span class="week-title">Admin completo — Catálogo e Reservas</span>
+        <span class="week-focus">Operação interna funcional</span>
+      </div>
+      <div class="week-tasks">
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">CRUD Proteções + Adicionais</div>
+          <div class="task-detail">Mesma estrutura das categorias. Proteções com campo de franquia e pré-autorização. Adicionais com flag de cadeirinha e estoque.</div>
+          <span class="task-output">admin/protecoes, admin/adicionais</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">Sazonalidade</div>
+          <div class="task-detail">Interface para criar períodos com preço diferenciado por categoria. Substituir array JS por tabela no banco.</div>
+          <span class="task-output">admin/sazonalidade</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">Listagem de Reservas</div>
+          <div class="task-detail">Tabela com filtro por status. Ver detalhes completos. Botões: Em análise → Confirmada → Concluída. Cancelar com motivo.</div>
+          <span class="task-output">admin/reservas</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--admin)">Admin</div>
+          <div class="task-name">Translados pendentes</div>
+          <div class="task-detail">Seção no painel mostrando translados solicitados aguardando confirmação. Botão "Confirmar translado" dispara WhatsApp automático ao cliente.</div>
+          <span class="task-output">admin/translados</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-card">
+      <div class="week-header">
+        <span class="week-num">SEMANA 3</span>
+        <span class="week-title">Site novo — Visual + Banco</span>
+        <span class="week-focus">Substitui o site atual</span>
+      </div>
+      <div class="week-tasks">
+        <div class="task">
+          <div class="task-product" style="color:var(--site)">Site</div>
+          <div class="task-name">Novo layout — 4 passos</div>
+          <div class="task-detail">Redesenho visual completo mantendo toda a lógica atual. Categorias, proteções e adicionais carregados do Supabase em vez do localDatabase.</div>
+          <span class="task-output">index.html + style.css</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--site)">Site</div>
+          <div class="task-name">Salvar no banco + confirmação</div>
+          <div class="task-detail">Substituir localStorage + Google Sheets por INSERT no Supabase. Ao submeter: WhatsApp automático ao cliente via Edge Function. Alerta à central.</div>
+          <span class="task-output">script.js refatorado</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--site)">Site</div>
+          <div class="task-name">E-mail no Passo 1</div>
+          <div class="task-detail">Mover campo de e-mail do Passo 4 para o Passo 1, logo depois de definir o período. Permite remarketing e login futuro sem redigitar dados.</div>
+          <span class="task-output">step1 atualizado</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--site)">Site</div>
+          <div class="task-name">Sazonalidade via banco</div>
+          <div class="task-detail">getEffectiveCategoryPrice() lê do Supabase em vez do localStorage. Cache de 5 minutos para não sobrecarregar chamadas na navegação.</div>
+          <span class="task-output">pricing.js</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-card">
+      <div class="week-header">
+        <span class="week-num">SEMANA 4</span>
+        <span class="week-title">Área do Cliente — Login e Funcionalidades</span>
+        <span class="week-focus">Fecha a Fase 1</span>
+      </div>
+      <div class="week-tasks">
+        <div class="task">
+          <div class="task-product" style="color:var(--cliente)">Cliente</div>
+          <div class="task-name">Login magic link + Minhas Reservas</div>
+          <div class="task-detail">Tela de login com campo de e-mail. Supabase envia o link. Após login: lista de reservas do cliente com status em tempo real via Realtime.</div>
+          <span class="task-output">cliente/login, cliente/reservas</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--cliente)">Cliente</div>
+          <div class="task-name">Detalhe + Solicitar Translado</div>
+          <div class="task-detail">Página da reserva individual. Se status = Confirmada, mostra botão de translado. Formulário grava em tabela translados e alerta a central.</div>
+          <span class="task-output">cliente/reserva/[id]</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--cliente)">Cliente</div>
+          <div class="task-name">Meu Cadastro + Upload CNH</div>
+          <div class="task-detail">Formulário de dados pessoais. Upload de CNH e passaporte para Supabase Storage com URL assinada. Extração automática de dados da CNH via Claude Vision.</div>
+          <span class="task-output">cliente/cadastro</span>
+        </div>
+        <div class="task">
+          <div class="task-product" style="color:var(--cliente)">Cliente</div>
+          <div class="task-name">Condutores Adicionais</div>
+          <div class="task-detail">Lista de condutores cadastrados. Formulário para adicionar novo: nome, CPF, CNH, validade, upload da foto da CNH. Mesma extração automática.</div>
+          <span class="task-output">cliente/condutores</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function show(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "admin",
+      "runtimeExecutable": "C:\\Users\\User\\Downloads\\Fase 1\\serve-admin.cmd",
+      "runtimeArgs": [],
+      "port": 3001,
+      "autoPort": true
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "C:\\Users\\User\\Downloads\\Fase 1\\serve-site.cmd",
+      "runtimeArgs": [],
+      "port": 3002,
+      "autoPort": true
+    }
+  ]
+}

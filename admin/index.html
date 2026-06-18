@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Igufoz — Painel Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ===================== TELA DE LOGIN ===================== -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-icon">I</div>
+            <div>
+                <div class="login-logo-name">Igufoz</div>
+                <div class="login-logo-sub">Painel Administrativo</div>
+            </div>
+        </div>
+
+        <form id="login-form" novalidate>
+            <div class="form-group">
+                <label for="login-email">E-mail</label>
+                <input type="email" id="login-email" placeholder="admin@igufoz.com.br" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Senha</label>
+                <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <div id="login-error" class="login-error" style="display:none"></div>
+            <button type="submit" id="login-btn" class="btn-primary btn-block">
+                <span id="login-btn-text">Entrar</span>
+                <span id="login-btn-loader" style="display:none">Entrando...</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="admin-app" style="display:none">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">I</div>
+            <div>
+                <div class="sidebar-logo-name">Igufoz</div>
+                <div class="sidebar-logo-sub">Admin</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item" data-page="dashboard">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <div class="nav-section-label">Catálogo</div>
+            <a href="#" class="nav-item" data-page="categorias">
+                <span class="nav-icon">🚗</span> Veículos
+            </a>
+            <a href="#" class="nav-item" data-page="protecoes">
+                <span class="nav-icon">🛡️</span> Proteções
+            </a>
+            <a href="#" class="nav-item" data-page="adicionais">
+                <span class="nav-icon">➕</span> Adicionais
+            </a>
+            <a href="#" class="nav-item" data-page="sazonalidade">
+                <span class="nav-icon">🗓️</span> Sazonalidade
+            </a>
+            <a href="#" class="nav-item" data-page="locais">
+                <span class="nav-icon">📍</span> Locais
+            </a>
+            <div class="nav-section-label">Operação</div>
+            <a href="#" class="nav-item" data-page="reservas">
+                <span class="nav-icon">📋</span> Reservas
+            </a>
+            <a href="#" class="nav-item" data-page="translados">
+                <span class="nav-icon">✈️</span> Translados
+                <span class="nav-badge" id="badge-translados" style="display:none"></span>
+            </a>
+            <a href="#" class="nav-item" data-page="clientes">
+                <span class="nav-icon">👥</span> Clientes
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user" id="sidebar-user-info">
+                <div class="sidebar-user-avatar" id="sidebar-avatar">—</div>
+                <div class="sidebar-user-name" id="sidebar-user-name">Carregando...</div>
+            </div>
+            <button id="logout-btn" class="btn-logout" title="Sair">↪ Sair</button>
+        </div>
+    </aside>
+
+    <!-- Conteúdo principal -->
+    <main class="main-content">
+        <div id="page-content">
+            <div class="loading-page">Carregando...</div>
+        </div>
+    </main>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div id="modal-overlay" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modal-title"></h3>
+            <button id="modal-close-btn" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-footer">
+            <button id="modal-cancel-btn" class="btn-secondary">Cancelar</button>
+            <button id="modal-save-btn" class="btn-primary">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div id="toast" class="toast" style="display:none"></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>

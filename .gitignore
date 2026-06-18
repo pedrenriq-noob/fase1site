@@ -1,0 +1,26 @@
+# Claude Code (configurações locais da máquina)
+.claude/
+
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (NUNCA commitar)
+.env
+.env.local
+.env.*.local
+
+# Editores
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/

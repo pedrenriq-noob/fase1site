@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\.claude\")",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(\\(Get-Command npx -ErrorAction SilentlyContinue\\).Source; \\(Get-Command node -ErrorAction SilentlyContinue\\).Source; \\(Get-Command python -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(python --version)",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__form_input",
+      "mcp__Claude_in_Chrome__find",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "mcp__Claude_in_Chrome__javascript_tool",
+      "Bash(Get-Content \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\001_tenants.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\002_usuarios.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\003_categorias.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\004_protecoes_adicionais.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\005_sazonalidade.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\006_solicitacoes.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\007_documentos_condutores_translados.sql\", \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\008_triggers.sql\" -Raw)",
+      "Bash(Out-String)",
+      "PowerShell([System.IO.File]::ReadAllText\\(\"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\sql\\\\all_migrations.sql\", [System.Text.Encoding]::UTF8\\))",
+      "Bash(npx serve *)",
+      "PowerShell(Start-Process powershell -ArgumentList '-NoExit', '-Command', 'npx serve \"C:\\\\Users\\\\User\\\\Downloads\\\\Fase 1\\\\admin\" -p 3001 --no-clipboard' -WindowStyle Normal)",
+      "mcp__Claude_in_Chrome__read_network_requests",
+      "Bash(start serve-admin.cmd)",
+      "Bash(ping -n 3 localhost)",
+      "Bash(curl -s -o nul -w \"%{http_code}\" http://localhost:3001)",
+      "Bash(git -C \"C:/Users/User/Downloads/Fase 1\" init)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
