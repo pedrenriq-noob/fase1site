@@ -814,9 +814,11 @@ window.submitReservation = async function() {
       `Pessoas: ${S.pessoas}`,
     ].filter(Boolean).join(' | ') || null
 
-    const { data: sol, error: solErr } = await supabase
+    const solId = crypto.randomUUID()
+    const { error: solErr } = await supabase
       .from('solicitacoes')
       .insert({
+        id:               solId,
         tenant_id:        TENANT_ID,
         categoria_id:     S.catId,
         protecao_id:      S.protId,
@@ -835,9 +837,9 @@ window.submitReservation = async function() {
         status:           'solicitada',
         observacoes:      obsCompleto,
       })
-      .select('id').single()
 
     if (solErr) throw new Error(solErr.message)
+    const sol = { id: solId }
 
     if (S.adicionais_sel.length > 0) {
       const { error: itErr } = await supabase.from('solicitacao_itens').insert(
