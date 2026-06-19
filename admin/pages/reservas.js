@@ -178,8 +178,8 @@ async function verReserva(id) {
             <div><strong>CPF</strong><br>${r.cliente_cpf ?? '—'}</div>
             <div><strong>WhatsApp</strong><br>${r.cliente_whatsapp}</div>
             <div><strong>E-mail</strong><br>${r.cliente_email ?? '—'}</div>
-            <div><strong>Retirada</strong><br>${fmtD(r.data_retirada)} ${r.hora_retirada?.slice(0,5) ?? ''}</div>
-            <div><strong>Devolução</strong><br>${fmtD(r.data_devolucao)} ${r.hora_devolucao?.slice(0,5) ?? ''}</div>
+            <div><strong>Retirada</strong><br>${fmtDt(r.data_retirada)}</div>
+            <div><strong>Devolução</strong><br>${fmtDt(r.data_devolucao)}</div>
             <div><strong>Local Retirada</strong><br>${r.local_retirada ?? '—'}</div>
             <div><strong>Local Devolução</strong><br>${r.local_devolucao ?? '—'}</div>
             <div><strong>Veículo</strong><br>${r.categorias?.nome ?? '—'}</div>
