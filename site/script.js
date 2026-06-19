@@ -879,6 +879,13 @@ window.submitReservation = async function() {
       if (itErr) throw new Error(itErr.message)
     }
 
+    // Dispara notificação por email após todos os inserts concluídos
+    fetch('https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/notificar-reserva', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF' },
+      body: JSON.stringify({ record: { id: sol.id, tenant_id: TENANT_ID, categoria_id: S.catId, protecao_id: S.protId, cliente_nome: S.nome, cliente_email: S.email, cliente_whatsapp: S.whatsapp.replace(/\D/g,''), cliente_cpf: S.cpf.replace(/\D/g,''), data_retirada: `${S.retData}T${S.retHora}:00`, data_devolucao: `${S.devData}T${S.devHora}:00`, local_retirada: S.retLocal, local_devolucao: S.devLocal, valor_estimado: total, pessoas: S.pessoas, numero_voo: S.voo || null, horario_pouso: S.pouso || null, observacoes: obsCompleto } }),
+    }).catch(() => {}) // silencia erros de rede — não bloqueia o fluxo do cliente
+
     // Limpa rascunho salvo
     try { sessionStorage.removeItem(SESSION_KEY) } catch (_) {}
 
