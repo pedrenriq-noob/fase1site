@@ -771,22 +771,22 @@ input[type="checkbox"] {
   #app.mode-flow {
     display: grid;
     grid-template-columns: 1fr 280px;
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     align-items: start;
   }
 
-  #app.mode-flow .header    { grid-column: 1 / -1; }
-  #app.mode-flow #steps-bar { grid-column: 1 / -1; }
+  #app.mode-flow .header        { grid-column: 1 / -1; }
+  #app.mode-flow .progress-bar  { grid-column: 1 / -1; }
+  #app.mode-flow #steps-bar     { grid-column: 1 / -1; }
 
   #app.mode-flow #content {
     grid-column: 1;
-    grid-row: 3;
     min-height: 400px;
   }
 
   #app.mode-flow .summary {
     grid-column: 2;
-    grid-row: 3;
+    grid-row: 4;
     border-top: none;
     border-left: 3px solid var(--orange);
     position: sticky;
@@ -794,6 +794,9 @@ input[type="checkbox"] {
     align-self: start;
     min-height: 400px;
   }
+
+  /* Sidebar cuida da navegação no desktop — esconde botão do conteúdo */
+  #app.mode-flow #content .button-group { display: none; }
 
   #app.mode-landing { display: block; }
 
