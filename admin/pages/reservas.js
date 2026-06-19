@@ -157,7 +157,7 @@ async function verReserva(id) {
             .single(),
         supabase
             .from('solicitacao_itens')
-            .select(`quantidade, adicionais(nome, tipo_preco)`)
+            .select(`quantidade, preco_unitario, tipo_preco, adicionais(nome)`)
             .eq('solicitacao_id', id),
     ])
 
@@ -165,11 +165,56 @@ async function verReserva(id) {
 
     const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
     const fmtDt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'
-    const fmtD  = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
 
-    const linhasItens = (itens ?? []).map(i =>
-        `<tr><td>${i.adicionais?.nome ?? '—'}</td><td style="text-align:center">${i.quantidade}</td></tr>`
-    ).join('') || '<tr><td colspan="2" style="color:#94a3b8;text-align:center">Nenhum adicional</td></tr>'
+    // Calcula dias
+    const diffMs = new Date(r.data_devolucao) - new Date(r.data_retirada)
+    const dias = Math.max(1, Math.round(diffMs / 36e5 / 24 * 10) / 10)
+
+    // Monta linhas da tabela de valores
+    const trStyle = 'border-bottom:1px solid var(--border)'
+    const tdL = 'padding:7px 4px;font-size:13px'
+    const tdR = 'padding:7px 4px;font-size:13px;text-align:right'
+
+    const linhasCat = r.categorias ? (() => {
+      const precoDia = r.valor_estimado > 0 ? null : 0
+      return `<tr style="${trStyle}">
+        <td style="${tdL}">${r.categorias.nome} (${dias}× diária)</td>
+        <td style="${tdR}">—</td>
+        <td style="${tdR}">—</td>
+      </tr>`
+    })() : ''
+
+    const linhasProd = (() => {
+      const rows = []
+      // Categoria
+      if (r.categorias) {
+        rows.push(`<tr style="${trStyle}">
+          <td style="${tdL}">${r.categorias.nome} <span style="color:#94a3b8;font-size:11px">(${dias} diária${dias !== 1 ? 's' : ''})</span></td>
+          <td style="${tdR}">—</td>
+          <td style="${tdR}">—</td>
+        </tr>`)
+      }
+      // Proteção
+      if (r.protecoes) {
+        rows.push(`<tr style="${trStyle}">
+          <td style="${tdL}">${r.protecoes.nome}</td>
+          <td style="${tdR}">—</td>
+          <td style="${tdR}">—</td>
+        </tr>`)
+      }
+      // Adicionais
+      ;(itens ?? []).forEach(i => {
+        const unitario = parseFloat(i.preco_unitario || 0)
+        const qty      = i.quantidade || 1
+        const total    = i.tipo_preco === 'per_day' ? unitario * qty * dias : unitario * qty
+        rows.push(`<tr style="${trStyle}">
+          <td style="${tdL}">${i.adicionais?.nome ?? '—'}${qty > 1 ? ` (${qty}×)` : ''}</td>
+          <td style="${tdR}">${fmt(unitario)}${i.tipo_preco === 'per_day' ? '/dia' : ''}</td>
+          <td style="${tdR}">${fmt(total)}</td>
+        </tr>`)
+      })
+      return rows.join('')
+    })()
 
     const corpo = `
     <div style="display:grid;gap:12px">
@@ -182,16 +227,20 @@ async function verReserva(id) {
             <div><strong>Devolução</strong><br>${fmtDt(r.data_devolucao)}</div>
             <div><strong>Local Retirada</strong><br>${r.local_retirada ?? '—'}</div>
             <div><strong>Local Devolução</strong><br>${r.local_devolucao ?? '—'}</div>
-            <div><strong>Veículo</strong><br>${r.categorias?.nome ?? '—'}</div>
-            <div><strong>Proteção</strong><br>${r.protecoes?.nome ?? 'Sem proteção'}</div>
             <div><strong>Voo</strong><br>${r.numero_voo ?? '—'}</div>
             <div><strong>Pessoas</strong><br>${r.pessoas ?? '—'}</div>
         </div>
         <div style="border-top:1px solid var(--border);padding-top:12px">
-            <strong style="font-size:13px">Adicionais</strong>
-            <table style="width:100%;margin-top:8px;font-size:13px">
-                <thead><tr><th style="text-align:left">Item</th><th style="text-align:center">Qtd</th></tr></thead>
-                <tbody>${linhasItens}</tbody>
+            <strong style="font-size:13px;display:block;margin-bottom:8px">Produtos e Valores</strong>
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="background:#f8fafc">
+                        <th style="text-align:left;padding:8px 4px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Produto</th>
+                        <th style="text-align:right;padding:8px 4px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Valor Unit.</th>
+                        <th style="text-align:right;padding:8px 4px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Total</th>
+                    </tr>
+                </thead>
+                <tbody>${linhasProd || '<tr><td colspan="3" style="color:#94a3b8;text-align:center;padding:12px">Sem itens</td></tr>'}</tbody>
             </table>
         </div>
         <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
