@@ -769,7 +769,8 @@ input[type="checkbox"] {
     display: grid;
     grid-template-columns: 1fr 300px;
     grid-template-rows: auto auto auto 1fr;
-    align-items: start;
+    height: 100vh;
+    overflow: hidden;
   }
 
   #app.mode-flow .header        { grid-column: 1 / -1; }
@@ -778,7 +779,8 @@ input[type="checkbox"] {
 
   #app.mode-flow #content {
     grid-column: 1;
-    min-height: 400px;
+    overflow-y: auto;
+    padding-bottom: 32px;
   }
 
   #app.mode-flow .summary {
@@ -786,10 +788,8 @@ input[type="checkbox"] {
     grid-row: 4;
     border-top: none;
     border-left: 3px solid var(--orange);
-    position: sticky;
-    top: 24px;
-    align-self: start;
-    min-height: 400px;
+    overflow-y: auto;
+    align-self: stretch;
   }
 
   /* Sidebar cuida da navegação no desktop — esconde botão do conteúdo */
