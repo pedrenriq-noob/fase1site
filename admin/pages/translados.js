@@ -2,42 +2,53 @@
 import { supabase, TENANT_ID, toast } from '../admin.js'
 
 export async function renderTranslados() {
-    const { data: translados, error } = await supabase
-        .from('translados')
+    const { data: reservas, error } = await supabase
+        .from('solicitacoes')
         .select(`
-            id, numero_voo, data_voo, horario_pouso, pessoas,
-            status, solicitado_em, confirmado_em, observacoes,
-            usuarios ( nome, whatsapp ),
-            solicitacoes ( id, categorias ( nome ) )
+            id, numero_voo, horario_pouso, pessoas, status,
+            cliente_nome, cliente_whatsapp, criado_em, observacoes,
+            data_retirada, local_retirada,
+            categorias ( nome )
         `)
         .eq('tenant_id', TENANT_ID)
-        .order('solicitado_em', { ascending: false })
+        .not('numero_voo', 'is', null)
+        .order('criado_em', { ascending: false })
 
     if (error) throw error
 
-    const pendentes   = (translados ?? []).filter(t => t.status === 'pendente')
-    const historico   = (translados ?? []).filter(t => t.status !== 'pendente')
+    const STATUS_TRANSLADO = {
+        solicitada: 'pendente',
+        em_analise: 'pendente',
+        confirmada: 'confirmado',
+        concluida:  'confirmado',
+        cancelada:  'cancelado',
+    }
 
-    const cardTranslado = (t) => `
-    <div class="translado-card ${t.status}" data-id="${t.id}">
+    const pendentes = (reservas ?? []).filter(r => ['solicitada','em_analise'].includes(r.status))
+    const historico = (reservas ?? []).filter(r => !['solicitada','em_analise'].includes(r.status))
+
+    const cardTranslado = (r) => {
+        const tStatus = STATUS_TRANSLADO[r.status] ?? 'pendente'
+        const isPendente = tStatus === 'pendente'
+        return `
+    <div class="translado-card ${tStatus}" data-id="${r.id}">
         <div class="translado-info">
-            <strong>✈️ Voo ${t.numero_voo}</strong>
-            <span>📅 ${fmtData(t.data_voo)} às ${t.horario_pouso?.slice(0,5)}</span>
-            <span>👤 ${t.usuarios?.nome ?? '—'} · ${t.usuarios?.whatsapp ?? '—'}</span>
-            <span>🚗 ${t.solicitacoes?.categorias?.nome ?? '—'}</span>
-            <span>👥 ${t.pessoas} pessoa${t.pessoas !== 1 ? 's' : ''}</span>
-            ${t.observacoes ? `<span style="font-size:12px;color:#64748b">📝 ${t.observacoes}</span>` : ''}
+            <strong>✈️ Voo ${r.numero_voo}</strong>
+            <span>🛬 Pouso: ${r.horario_pouso ?? '—'} · Retirada: ${fmtDt(r.data_retirada)}</span>
+            <span>👤 ${r.cliente_nome ?? '—'} · ${r.cliente_whatsapp ?? '—'}</span>
+            <span>🚗 ${r.categorias?.nome ?? '—'}</span>
+            <span>👥 ${r.pessoas ?? 1} pessoa${(r.pessoas ?? 1) !== 1 ? 's' : ''}</span>
+            <span>📍 ${r.local_retirada ?? '—'}</span>
+            ${r.observacoes ? `<span style="font-size:12px;color:#64748b">📝 ${r.observacoes}</span>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <span class="status-badge status-${t.status === 'pendente' ? 'solicitada' : t.status === 'confirmado' ? 'confirmada' : 'cancelada'}">
-                ${t.status === 'pendente' ? '⏳ Pendente' : t.status === 'confirmado' ? '✅ Confirmado' : '❌ Cancelado'}
+            <span class="status-badge status-${r.status === 'confirmada' || r.status === 'concluida' ? 'confirmada' : r.status === 'cancelada' ? 'cancelada' : 'solicitada'}">
+                ${isPendente ? '⏳ Pendente' : tStatus === 'confirmado' ? '✅ Confirmado' : '❌ Cancelado'}
             </span>
-            ${t.status === 'pendente' ? `
-            <button class="btn-primary btn-sm" data-action="confirmar" data-id="${t.id}">✅ Confirmar</button>
-            <button class="btn-danger btn-sm"  data-action="cancelar"  data-id="${t.id}">❌ Cancelar</button>
-            ` : `<span style="font-size:11px;color:#94a3b8">${t.confirmado_em ? 'em ' + fmtData(t.confirmado_em) : ''}</span>`}
+            <span style="font-size:11px;color:#94a3b8">Reserva: ${r.status}</span>
         </div>
     </div>`
+    }
 
     return `
     <div class="page-header">
@@ -60,38 +71,13 @@ export async function renderTranslados() {
 }
 
 export function bindTranslados() {
-    document.querySelectorAll('[data-action="confirmar"]').forEach(btn =>
-        btn.addEventListener('click', () => atualizarTranslado(btn.dataset.id, 'confirmado')))
-
-    document.querySelectorAll('[data-action="cancelar"]').forEach(btn =>
-        btn.addEventListener('click', () => atualizarTranslado(btn.dataset.id, 'cancelado')))
+    // status gerenciado pela página de Reservas — sem ações diretas aqui
 }
 
-async function atualizarTranslado(id, status) {
-    const acao = status === 'confirmado' ? 'confirmar' : 'cancelar'
-    if (!confirm(`Deseja ${acao} este translado?`)) return
-
-    const payload = {
-        status,
-        confirmado_em: status === 'confirmado' ? new Date().toISOString() : null,
-    }
-
-    const { error } = await supabase
-        .from('translados')
-        .update(payload)
-        .eq('id', id)
-        .eq('tenant_id', TENANT_ID)
-
-    if (error) { toast(error.message, 'error'); return }
-
-    toast(status === 'confirmado' ? 'Translado confirmado!' : 'Translado cancelado.', 'success')
-
-    const el = document.getElementById('page-content')
-    el.innerHTML = await renderTranslados()
-    bindTranslados()
-}
-
-function fmtData(str) {
+function fmtDt(str) {
     if (!str) return '—'
-    return new Date(str + 'T00:00:00').toLocaleDateString('pt-BR')
+    return new Date(str).toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    })
 }
