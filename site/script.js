@@ -857,8 +857,9 @@ window.submitReservation = async function() {
         local_devolucao:  S.devLocal,
         valor_estimado:   total,
         pessoas:          S.pessoas,
-        numero_voo:       S.voo   || null,
-        horario_pouso:    S.pouso || null,
+        numero_voo:       S.voo        || null,
+        horario_pouso:    S.pouso      || null,
+        companhia_aerea:  S.companhia  || null,
         status:           'solicitada',
         observacoes:      obsCompleto,
       })

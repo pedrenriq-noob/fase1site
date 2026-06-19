@@ -5,7 +5,7 @@ export async function renderTranslados() {
     const { data: reservas, error } = await supabase
         .from('solicitacoes')
         .select(`
-            id, numero_voo, horario_pouso, pessoas, status,
+            id, numero_voo, horario_pouso, companhia_aerea, pessoas, status,
             cliente_nome, cliente_whatsapp, criado_em, observacoes,
             data_retirada, local_retirada,
             categorias ( nome )
@@ -33,7 +33,7 @@ export async function renderTranslados() {
         return `
     <div class="translado-card ${tStatus}" data-id="${r.id}">
         <div class="translado-info">
-            <strong>✈️ Voo ${r.numero_voo}</strong>
+            <strong>✈️ ${r.companhia_aerea ? r.companhia_aerea + ' · ' : ''}Voo ${r.numero_voo}</strong>
             <span>🛬 Pouso: ${r.horario_pouso ?? '—'} · Retirada: ${fmtDt(r.data_retirada)}</span>
             <span>👤 ${r.cliente_nome ?? '—'} · ${r.cliente_whatsapp ?? '—'}</span>
             <span>🚗 ${r.categorias?.nome ?? '—'}</span>
