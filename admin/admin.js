@@ -6,7 +6,6 @@ import { renderAdicionais, bindAdicionais }       from './pages/adicionais.js'
 import { renderSazonalidade, bindSazonalidade }   from './pages/sazonalidade.js'
 import { renderReservas, bindReservas }           from './pages/reservas.js'
 import { renderTranslados, bindTranslados }       from './pages/translados.js'
-import { renderClientes }                         from './pages/clientes.js'
 import { renderDashboard }                        from './pages/dashboard.js'
 import { renderLocais, bindLocais }               from './pages/locais.js'
 
@@ -55,7 +54,6 @@ async function navegar(pagina) {
             case 'sazonalidade': el.innerHTML = await renderSazonalidade(); bindSazonalidade(); break
             case 'reservas':     el.innerHTML = await renderReservas();     bindReservas();     break
             case 'translados':   el.innerHTML = await renderTranslados();   bindTranslados();   break
-            case 'clientes':     el.innerHTML = await renderClientes();     break
             case 'locais':       el.innerHTML = await renderLocais();       bindLocais();       break
             default:             el.innerHTML = '<p>Página não encontrada.</p>'
         }
@@ -112,10 +110,11 @@ export function toast(msg, tipo = 'info') {
 
 async function atualizarBadgeTranslados() {
     const { count } = await supabase
-        .from('translados')
+        .from('solicitacoes')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', TENANT_ID)
-        .eq('status', 'pendente')
+        .not('numero_voo', 'is', null)
+        .in('status', ['solicitada', 'em_analise'])
 
     const badge = document.getElementById('badge-translados')
     if (count > 0) {
