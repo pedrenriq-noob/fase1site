@@ -152,7 +152,7 @@ async function verReserva(id) {
     const [{ data: r }, { data: itens }] = await Promise.all([
         supabase
             .from('solicitacoes')
-            .select(`*, categorias(nome), protecoes(nome)`)
+            .select(`*, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco)`)
             .eq('id', id)
             .single(),
         supabase
@@ -175,31 +175,27 @@ async function verReserva(id) {
     const tdL = 'padding:7px 4px;font-size:13px'
     const tdR = 'padding:7px 4px;font-size:13px;text-align:right'
 
-    const linhasCat = r.categorias ? (() => {
-      const precoDia = r.valor_estimado > 0 ? null : 0
-      return `<tr style="${trStyle}">
-        <td style="${tdL}">${r.categorias.nome} (${dias}× diária)</td>
-        <td style="${tdR}">—</td>
-        <td style="${tdR}">—</td>
-      </tr>`
-    })() : ''
-
     const linhasProd = (() => {
       const rows = []
       // Categoria
       if (r.categorias) {
+        const precoDia = parseFloat(r.categorias.preco_diaria || 0)
+        const totalCat = precoDia * dias
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${r.categorias.nome} <span style="color:#94a3b8;font-size:11px">(${dias} diária${dias !== 1 ? 's' : ''})</span></td>
-          <td style="${tdR}">—</td>
-          <td style="${tdR}">—</td>
+          <td style="${tdR}">${fmt(precoDia)}/dia</td>
+          <td style="${tdR}">${fmt(totalCat)}</td>
         </tr>`)
       }
       // Proteção
       if (r.protecoes) {
+        const precoProt  = parseFloat(r.protecoes.preco || 0)
+        const totalProt  = r.protecoes.tipo_preco === 'per_day' ? precoProt * dias : precoProt
+        const sufixoProt = r.protecoes.tipo_preco === 'per_day' ? '/dia' : ''
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${r.protecoes.nome}</td>
-          <td style="${tdR}">—</td>
-          <td style="${tdR}">—</td>
+          <td style="${tdR}">${fmt(precoProt)}${sufixoProt}</td>
+          <td style="${tdR}">${fmt(totalProt)}</td>
         </tr>`)
       }
       // Adicionais
