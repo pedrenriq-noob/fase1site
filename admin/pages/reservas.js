@@ -21,7 +21,7 @@ export async function renderReservas() {
     const { data: reservas, error } = await supabase
         .from('solicitacoes')
         .select(`
-            id, status, cliente_nome, cliente_whatsapp, cliente_email,
+            id, numero, status, cliente_nome, cliente_whatsapp, cliente_email,
             data_retirada, data_devolucao, valor_estimado, criado_em,
             categorias ( nome )
         `)
@@ -39,8 +39,10 @@ export async function renderReservas() {
             `<option value="${s}" ${s === status ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`
         ).join('')
 
+        const numFmt = r.numero ? String(r.numero).padStart(4, '0') : '—'
         return `
         <tr>
+            <td style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
             <td style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
             <td class="td-name">${r.cliente_nome}</td>
             <td style="font-size:12px">${r.cliente_whatsapp}</td>
@@ -81,7 +83,7 @@ export async function renderReservas() {
             ${reservas?.length ? `
             <table>
                 <thead><tr>
-                    <th>Enviado em</th><th>Cliente</th><th>WhatsApp</th><th>Veículo</th><th>Total</th><th>Retirada</th><th>Status</th><th></th>
+                    <th>#</th><th>Enviado em</th><th>Cliente</th><th>WhatsApp</th><th>Veículo</th><th>Total</th><th>Retirada</th><th>Status</th><th></th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -152,7 +154,7 @@ async function verReserva(id) {
     const [{ data: r }, { data: itens }] = await Promise.all([
         supabase
             .from('solicitacoes')
-            .select(`*, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco)`)
+            .select(`*, numero, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco)`)
             .eq('id', id)
             .single(),
         supabase
@@ -246,7 +248,8 @@ async function verReserva(id) {
         ${r.motivo_cancelamento ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px;font-size:13px"><strong>Motivo cancelamento:</strong> ${r.motivo_cancelamento}</div>` : ''}
     </div>`
 
-    abrirModal(`📋 Reserva — ${r.cliente_nome}`, corpo, null)
+    const numFmt = r.numero ? String(r.numero).padStart(4, '0') : '—'
+    abrirModal(`📋 #${numFmt} — ${r.cliente_nome}`, corpo, null)
     document.getElementById('modal-save-btn').style.display = 'none'
     document.getElementById('modal-cancel-btn').textContent = 'Fechar'
 }

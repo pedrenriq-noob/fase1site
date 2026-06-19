@@ -92,6 +92,7 @@ body{font-family:Arial,sans-serif;background:#f4f6fb;margin:0;padding:0}
   <div class="hdr"><h1>igufoz</h1><p>aluguel de veículos · foz do iguaçu</p></div>
   <div class="bdy">
     <h2 style="font-size:18px;color:#1a2332;margin:0 0 10px">Solicitação recebida! ✅</h2>
+    <p style="font-size:13px;color:#FF6B00;font-weight:700;margin:0 0 8px;letter-spacing:.5px">RESERVA #${String(row.numero ?? '—').padStart(4, '0')}</p>
     <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 16px">
       Olá, <strong>${String(row.cliente_nome ?? 'cliente').split(' ')[0]}</strong>! Sua solicitação foi recebida. Nossa equipe entrará em contato em breve para confirmar.
     </p>
@@ -140,7 +141,7 @@ body{font-family:Arial,sans-serif;background:#f4f6fb;margin:0;padding:0}
 <div class="wrap">
   <div class="hdr">
     <h1>🔔 Nova Solicitação de Reserva</h1>
-    <p>ID: ${row.id} · Enviado em ${fmtDate(row.criado_em ?? new Date().toISOString())}</p>
+    <p>Reserva <strong>#${String(row.numero ?? '?').padStart(4, '0')}</strong> · Enviado em ${fmtDate(row.criado_em ?? new Date().toISOString())}</p>
   </div>
   <div class="bdy">
     <div class="sec"><h3>Cliente</h3>
@@ -186,18 +187,22 @@ Deno.serve(async (req: Request) => {
     console.log(JSON.stringify({ event: 'notificar-reserva', id: row.id }))
 
     // Busca categoria, proteção e adicionais para montar tabela de valores
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON)
-    const [{ data: cat }, { data: prot }, { data: itens }] = await Promise.all([
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? SUPABASE_ANON
+    const sb = createClient(SUPABASE_URL, serviceKey)
+    const [{ data: solRow }, { data: cat }, { data: prot }, { data: itens }] = await Promise.all([
+      sb.from('solicitacoes').select('numero').eq('id', row.id).single(),
       row.categoria_id
         ? sb.from('categorias').select('nome, preco_diaria').eq('id', row.categoria_id).single()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
       row.protecao_id
         ? sb.from('protecoes').select('nome, preco, tipo_preco').eq('id', row.protecao_id).single()
-        : Promise.resolve({ data: null }),
+        : Promise.resolve({ data: null, error: null }),
       sb.from('solicitacao_itens')
         .select('quantidade, preco_unitario, tipo_preco, adicionais(nome)')
         .eq('solicitacao_id', row.id),
     ])
+
+    if (solRow?.numero) row.numero = solRow.numero
 
     const tasks: Promise<boolean>[] = [
       sendEmail(
