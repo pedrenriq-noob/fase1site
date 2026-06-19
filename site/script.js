@@ -2,7 +2,7 @@ import { supabase, TENANT_ID, WHATSAPP } from './supabase.js'
 
 // ── STATE ──────────────────────────────────────────────────
 const S = {
-  step: 0,
+  step: 1,
   // datas / horários / locais
   retData: '', retHora: '',
   devData: '', devHora: '',
@@ -725,7 +725,7 @@ window.nextStep = function() {
 
 window.prevStep = function() {
   if (S.step > 1) { S.step--; renderStep() }
-  else if (S.step === 1) { S.step = 0; renderStep() }
+  // step 1 é a primeira tela, não volta mais
 }
 
 function validate() {
