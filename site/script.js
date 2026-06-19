@@ -916,30 +916,30 @@ function buildWhatsMsg(cat, prot, total, dias) {
     : `👥 ${S.pessoas} pessoa${S.pessoas > 1 ? 's' : ''}`
 
   return encodeURIComponent(
-`📋 *IGUFOZ – NOVA RESERVA*
+`\u{1F4CB} *IGUFOZ – NOVA RESERVA*
 
-👤 *${S.nome}*
+\u{1F464} *${S.nome}*
 CPF: ${maskCPF(S.cpf)}
-📱 ${maskWpp(S.whatsapp)} | ✉️ ${S.email}
+\u{1F4F1} ${maskWpp(S.whatsapp)} | ✉ ${S.email}
 
 ${linhaVoo}
 
 ${SEP}
 
-📍 *Retirada:* ${fmtDate(S.retData)} – ${S.retHora}
+\u{1F4CD} *Retirada:* ${fmtDate(S.retData)} – ${S.retHora}
 ${S.retLocal}
 
-📍 *Devolução:* ${fmtDate(S.devData)} – ${S.devHora}
+\u{1F4CD} *Devolução:* ${fmtDate(S.devData)} – ${S.devHora}
 ${S.devLocal}
 
 ${SEP}
 
-💰 *Valores:*
+\u{1F4B0} *Valores:*
 ${itens}
 
-💳 *Total: ${R(total)}*
+\u{1F4B3} *Total: ${R(total)}*
 
-📝 ${S.obs || 'Sem observações'}`)
+\u{1F4DD} ${S.obs || 'Sem observações'}`)
 }
 
 function showSuccess(waMsg, total) {
