@@ -20,8 +20,31 @@ const S = {
   termos: false,
 }
 
+// ── SESSION PERSISTENCE ────────────────────────────────────
+const SESSION_KEY = 'igufoz_rascunho'
+
+function saveSession() {
+  const data = {
+    step: S.step, retData: S.retData, retHora: S.retHora,
+    devData: S.devData, devHora: S.devHora, retLocal: S.retLocal,
+    devLocal: S.devLocal, dias: S.dias, catId: S.catId,
+    protId: S.protId, adicionais_sel: S.adicionais_sel,
+  }
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(data)) } catch (_) {}
+}
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw)
+    Object.assign(S, data)
+  } catch (_) {}
+}
+
 // ── BOOT ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  loadSession()
   await loadData()
   renderStep()
 })
@@ -144,6 +167,7 @@ function renderStep() {
   else if (S.step === 4) renderStep4(content)
 
   if (!isLanding) updateSummary()
+  saveSession()
   window.scrollTo(0, 0)
 }
 
@@ -356,6 +380,7 @@ window.selectCat = function(id) {
     el.classList.toggle('selected', el.dataset.id === id)
   })
   updateSummary()
+  saveSession()
 }
 
 // ── STEP 2 — PROTEÇÕES ────────────────────────────────────
@@ -853,6 +878,9 @@ window.submitReservation = async function() {
       )
       if (itErr) throw new Error(itErr.message)
     }
+
+    // Limpa rascunho salvo
+    try { sessionStorage.removeItem(SESSION_KEY) } catch (_) {}
 
     // WhatsApp message
     const waMsg = buildWhatsMsg(cat, prot, total, dias)
