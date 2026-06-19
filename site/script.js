@@ -123,6 +123,7 @@ function renderStep() {
   const isLanding = S.step === 0
   app?.classList.toggle('mode-landing', isLanding)
   app?.classList.toggle('mode-flow',    !isLanding)
+  app?.classList.toggle('step-final',   S.step === 4)
   header?.classList.toggle('header-dark', isLanding)
 
   if (stepsBar) stepsBar.style.display = isLanding ? 'none' : ''
