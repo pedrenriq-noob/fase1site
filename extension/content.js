@@ -42,4 +42,32 @@
   chrome.storage.local.get('igufozOpen', (r) => {
     if (r.igufozOpen) setOpen(true)
   })
+
+  // Clipboard relay: o iframe não tem permissão de clipboard em alguns sites (Permissions-Policy).
+  // O sidebar envia o texto via postMessage e o content script copia no contexto da página principal.
+  window.addEventListener('message', e => {
+    if (e.data?.igufozCopy == null) return
+    const txt = String(e.data.igufozCopy)
+
+    const execFallback = () => {
+      const ta = document.createElement('textarea')
+      ta.value = txt
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      let ok = false
+      try { ok = document.execCommand('copy') } catch (_) {}
+      ta.remove()
+      frame.contentWindow?.postMessage({ igufozCopied: ok }, '*')
+    }
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => frame.contentWindow?.postMessage({ igufozCopied: true }, '*'))
+        .catch(execFallback)
+    } else {
+      execFallback()
+    }
+  })
 })()

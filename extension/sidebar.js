@@ -642,20 +642,6 @@ function copyCotacao() {
     msgExtra ? `\n${msgExtra}` : null,
   ].filter(l => l !== null).join('\n')
 
-  // Clipboard: tenta API moderna, cai para execCommand se bloqueada
-  const doFallback = () => {
-    const ta = document.createElement('textarea')
-    ta.value = txt
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
-    document.body.appendChild(ta)
-    ta.focus()
-    ta.select()
-    let ok = false
-    try { ok = document.execCommand('copy') } catch (_) {}
-    ta.remove()
-    return ok
-  }
-
   const confirm = () => {
     const btn = document.getElementById('copyBtn')
     btn.textContent = '✅ Copiado!'
@@ -663,13 +649,8 @@ function copyCotacao() {
     setTimeout(() => { btn.textContent = '📋 Copiar cotação'; btn.classList.remove('copied') }, 2500)
   }
 
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(txt).then(confirm).catch(() => {
-      if (doFallback()) confirm()
-    })
-  } else {
-    if (doFallback()) confirm()
-  }
+  // Delega o clipboard ao content script (evita bloqueio de Permissions-Policy no iframe)
+  window.parent.postMessage({ igufozCopy: txt }, '*')
 }
 
 // ── Reset ─────────────────────────────────────────────────
@@ -686,4 +667,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('resetBtn')?.addEventListener('click', resetForm)
   document.getElementById('copyBtn')?.addEventListener('click', copyCotacao)
   loadData()
+})
+
+// Resposta do content script após relay de clipboard
+window.addEventListener('message', e => {
+  if (e.data?.igufozCopied == null) return
+  if (e.data.igufozCopied) {
+    const btn = document.getElementById('copyBtn')
+    if (!btn) return
+    btn.textContent = '✅ Copiado!'
+    btn.classList.add('copied')
+    setTimeout(() => { btn.textContent = '📋 Copiar cotação'; btn.classList.remove('copied') }, 2500)
+  }
 })
