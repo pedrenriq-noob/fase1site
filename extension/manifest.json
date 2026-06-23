@@ -3,7 +3,7 @@
   "name": "Igufoz — Cotação Rápida",
   "version": "1.0.0",
   "description": "Sidebar de cotação para atendentes Igufoz. Funciona em qualquer aba.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "clipboardWrite"],
   "host_permissions": [
     "https://lxfnqzuzohudqwibgdic.supabase.co/*"
   ],
