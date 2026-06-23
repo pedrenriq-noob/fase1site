@@ -11,7 +11,8 @@ const esc     = s  => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 const chevron = `<svg class="chevron" width="11" height="7" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 
 let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
-let S      = { catId: null, protId: null, addSel: {}, extras: [] }
+let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
+               retData: '', retHora: '', devData: '', devHora: '' }
 let openPanel = null
 let openHora  = null
 
@@ -133,6 +134,7 @@ function catLabel() {
 }
 
 function protLabel() {
+  if (!S.protChosen) return ''           // nunca escolhido → mostra placeholder
   if (!S.protId) return 'Sem proteção'
   const p = DATA.prots.find(x => x.id === S.protId)
   return p ? p.nome : ''
@@ -162,16 +164,6 @@ function renderExtras() {
 
 // ── Render full form ──────────────────────────────────────
 function renderForm() {
-  const retData = document.querySelector('#retData')?.value ?? ''
-  const devData = document.querySelector('#devData')?.value ?? ''
-  const retHora = document.querySelector('#retHora .hora-btn span')?.textContent ?? ''
-  const devHora = document.querySelector('#devHora .hora-btn span')?.textContent ?? ''
-
-  const savedRetData = retData || ''
-  const savedDevData = devData || ''
-  const savedRetHora = retHora === 'Hora' ? '' : retHora
-  const savedDevHora = devHora === 'Hora' ? '' : devHora
-
   document.getElementById('body').innerHTML = `
     <!-- Período -->
     <section>
@@ -179,19 +171,19 @@ function renderForm() {
       <div class="period-grid">
         <div class="period-cell">
           <label for="retData">Retirada — data</label>
-          <input type="date" id="retData" value="${esc(savedRetData)}">
+          <input type="date" id="retData" value="${esc(S.retData)}">
         </div>
         <div class="period-cell">
           <label>Retirada — hora</label>
-          ${horaPickerHTML('retHora', 8, 23, savedRetHora)}
+          ${horaPickerHTML('retHora', 8, 23, S.retHora)}
         </div>
         <div class="period-cell">
           <label for="devData">Devolução — data</label>
-          <input type="date" id="devData" value="${esc(savedDevData)}">
+          <input type="date" id="devData" value="${esc(S.devData)}">
         </div>
         <div class="period-cell">
           <label>Devolução — hora</label>
-          ${horaPickerHTML('devHora', 0, 23, savedDevHora)}
+          ${horaPickerHTML('devHora', 0, 23, S.devHora)}
         </div>
       </div>
     </section>
@@ -248,9 +240,19 @@ function renderForm() {
 
 // ── Wire all events (called after each render) ────────────
 function wireEvents() {
-  // Date inputs
-  document.getElementById('retData')?.addEventListener('input', calc)
-  document.getElementById('devData')?.addEventListener('input', calc)
+  document.getElementById('retData')?.addEventListener('input', e => {
+    S.retData = e.target.value
+    calc()
+    // Se painel de categoria estiver aberto, atualiza preços (sazonalidade)
+    if (openPanel === 'cat') {
+      const panel = document.getElementById('panel-cat')
+      if (panel) panel.innerHTML = catOptionsHTML()
+    }
+  })
+  document.getElementById('devData')?.addEventListener('input', e => {
+    S.devData = e.target.value
+    calc()
+  })
 
   // Hora picker buttons — delegated on body
   // (handled in global delegation below)
@@ -334,8 +336,9 @@ document.addEventListener('click', e => {
   // ── Protection option
   const protOpt = e.target.closest('[data-prot-id]')
   if (protOpt && protOpt.closest('#panel-prot')) {
-    S.protId  = protOpt.dataset.protId || null
-    openPanel = null
+    S.protId      = protOpt.dataset.protId || null
+    S.protChosen  = true
+    openPanel     = null
     renderForm()
     return
   }
@@ -413,6 +416,8 @@ function refreshPanels() {
 
 // ── Update hora picker display ────────────────────────────
 function updateHora(id, val) {
+  if (id === 'retHora') S.retHora = val
+  if (id === 'devHora') S.devHora = val
   const btn = document.querySelector(`[data-hora-id="${id}"]`)
   if (btn) {
     btn.querySelector('span').textContent = val
@@ -430,11 +435,13 @@ function updateHora(id, val) {
 
 // ── Calculate total ───────────────────────────────────────
 function getHoraText(id) {
+  if (id === 'retHora' && S.retHora) return S.retHora
+  if (id === 'devHora' && S.devHora) return S.devHora
   const t = document.querySelector(`[data-hora-id="${id}"] span`)?.textContent
   return (t && t !== 'Hora') ? t : '08:00'
 }
 
-function getRetData() { return document.getElementById('retData')?.value || '' }
+function getRetData() { return S.retData || document.getElementById('retData')?.value || '' }
 
 // Mesma lógica de hora extra do site:
 // ≤1h resto → sem cobrança extra
@@ -576,7 +583,8 @@ function copyCotacao() {
 
 // ── Reset ─────────────────────────────────────────────────
 function resetForm() {
-  S         = { catId: null, protId: null, addSel: {}, extras: [] }
+  S         = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
+                retData: '', retHora: '', devData: '', devHora: '' }
   openPanel = null
   openHora  = null
   renderForm()
