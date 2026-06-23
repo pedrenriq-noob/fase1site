@@ -35,7 +35,7 @@ async function loadData() {
   loading.textContent = 'Carregando dados…'
   try {
     const [cats, prots, adds] = await Promise.all([
-      sbFetch('categorias', 'id,nome,preco_diaria,preco_final', '&order=ordem.asc'),
+      sbFetch('categorias', 'id,nome,preco_diaria', '&order=ordem.asc'),
       sbFetch('protecoes',  'id,nome,preco,tipo_preco',         '&order=ordem.asc'),
       sbFetch('adicionais', 'id,nome,preco,tipo_preco',         '&order=ordem.asc'),
     ])
@@ -57,7 +57,7 @@ function renderForm() {
   const body = document.getElementById('body')
 
   const catOptions = DATA.cats.map(c => {
-    const preco = c.preco_final || c.preco_diaria
+    const preco = c.preco_diaria
     return `<option value="${esc(c.id)}" data-preco="${preco}">${esc(c.nome)} — R$ ${fmtN(preco)}/dia</option>`
   }).join('')
 
