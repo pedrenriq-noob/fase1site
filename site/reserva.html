@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservar — Igufoz | Aluguel de carros em Foz do Iguaçu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container" id="app">
+
+    <!-- Header -->
+    <header class="header header-dark" id="main-header">
+      <div class="header-inner">
+        <a class="header-brand" href="index.html" aria-label="Voltar ao início">
+          <img src="assets/igufoz-logo-header.png" alt="Igufoz" class="header-logo-img" onerror="this.style.display='none'">
+          <div class="header-logo-text">
+            <span class="header-logo-name">igufoz</span>
+            <span class="header-logo-sub">aluguel de veículos</span>
+          </div>
+        </a>
+        <nav class="header-nav">
+          <a href="index.html#frota">Frota</a>
+          <a href="index.html#carta-verde">Carta Verde</a>
+          <a href="index.html#contato">Contato</a>
+        </nav>
+        <button class="header-account-btn">Minha conta</button>
+      </div>
+    </header>
+
+    <!-- Progress line (usado pelo JS) -->
+    <div class="progress-bar" aria-hidden="true">
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- Step indicator (oculto na landing) -->
+    <div class="steps" id="steps-bar">
+      <div class="step" data-step="1">1. 📅 Período</div>
+      <div class="step" data-step="2">2. 🛡 Proteção</div>
+      <div class="step" data-step="3">3. ➕ Adicionais</div>
+      <div class="step" data-step="4">4. 👤 Seus Dados</div>
+    </div>
+
+    <!-- Dynamic content -->
+    <div id="content"></div>
+
+    <!-- Sidebar resumo -->
+    <aside class="summary" id="summary">
+      <h3>Resumo do Pedido</h3>
+      <div id="summaryContent" aria-live="polite"></div>
+    </aside>
+
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

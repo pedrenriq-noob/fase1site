@@ -3,58 +3,341 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Igufoz — Aluguel de Veículos em Foz do Iguaçu</title>
+  <title>IguFoz | Aluguel de carros em Foz do Iguaçu</title>
+  <meta name="description" content="Aluguel de carros em Foz do Iguaçu com frota revisada, atendimento local e Carta Verde para Argentina e Paraguai.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
+  <header class="site-header">
+    <a class="brand" href="#inicio" aria-label="IguFoz - início">
+      <span class="brand-mark" aria-hidden="true"><span>IGU</span><span>FOZ</span></span>
+      <span class="brand-sub">aluguel de carros</span>
+    </a>
 
-  <div class="container" id="app">
+    <nav class="nav-links" aria-label="Menu principal">
+      <a href="#frota">Frota</a>
+      <a href="#carta-verde">Carta Verde</a>
+      <a href="#duvidas">Dúvidas</a>
+      <a href="#contato">Contato</a>
+    </nav>
 
-    <!-- Header -->
-    <header class="header header-dark" id="main-header">
-      <div class="header-inner">
-        <div class="header-brand">
-          <img src="logo-igufoz.png" alt="Igufoz" class="header-logo-img" onerror="this.style.display='none'">
-          <div class="header-logo-text">
-            <span class="header-logo-name">igufoz</span>
-            <span class="header-logo-sub">aluguel de veículos</span>
+    <div class="header-actions">
+      <a class="btn btn-ghost" href="https://wa.me/5545988182995" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn btn-primary" href="reserva.html">Reservar agora</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-content">
+        <p class="eyebrow">Locadora local em Foz do Iguaçu</p>
+        <h1>Alugue seu carro em Foz do Iguaçu sem complicação</h1>
+        <p class="hero-copy">
+          Retire em Foz, viaje com segurança e conte com atendimento local para explorar a cidade,
+          Argentina e Paraguai com Carta Verde.
+        </p>
+
+        <div class="hero-benefits" aria-label="Principais benefícios">
+          <span>Carta Verde para fronteira</span>
+          <span>Frota revisada</span>
+          <span>Atendimento local</span>
+        </div>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-large" href="reserva.html">Reservar agora</a>
+          <a class="btn btn-secondary btn-large" href="https://wa.me/5545988182995" target="_blank" rel="noopener">Falar com atendente</a>
+        </div>
+
+        <div class="trust-strip" aria-label="Provas de confiança">
+          <div>
+            <strong>15+</strong>
+            <span>anos de experiência</span>
+          </div>
+          <div>
+            <strong>13.000+</strong>
+            <span>clientes atendidos</span>
+          </div>
+          <div>
+            <strong>100%</strong>
+            <span>frota revisada</span>
           </div>
         </div>
-        <nav class="header-nav">
-          <a href="#">Frota</a>
-          <a href="#">Sobre</a>
-          <a href="#">Contato</a>
-        </nav>
-        <button class="header-account-btn">Minha conta</button>
       </div>
-    </header>
 
-    <!-- Progress line (usado pelo JS) -->
-    <div class="progress-bar" aria-hidden="true">
-      <div class="progress" id="progress"></div>
-    </div>
+      <div class="hero-visual" aria-label="Carro de locação em contexto turístico">
+        <img src="assets/hero-fiat-fastback-igufoz.png" alt="Fiat Fastback branco em estrada turística de Foz do Iguaçu">
+        <div class="floating-card">
+          <strong>Viaje pela tríplice fronteira</strong>
+          <span>Carros com documentação para Argentina e Paraguai.</span>
+        </div>
+      </div>
+    </section>
 
-    <!-- Step indicator (oculto na landing) -->
-    <div class="steps" id="steps-bar">
-      <div class="step" data-step="1">1. 📅 Período</div>
-      <div class="step" data-step="2">2. 🛡 Proteção</div>
-      <div class="step" data-step="3">3. ➕ Adicionais</div>
-      <div class="step" data-step="4">4. 👤 Seus Dados</div>
-    </div>
+    <section class="quick-search" id="reserva" aria-labelledby="reserva-title">
+      <div>
+        <p class="eyebrow">Reserva rápida</p>
+        <h2 id="reserva-title">Comece sua reserva em menos de 1 minuto</h2>
+      </div>
+      <form class="search-card" id="quickSearchForm">
+        <label>
+          <span>Local de retirada</span>
+          <select id="qs-local">
+            <option>Av. Brasil, 90 - Centro</option>
+            <option>Av. das Cataratas, 1419 - Vila Yolanda</option>
+            <option>Aeroporto de Foz do Iguaçu</option>
+          </select>
+        </label>
+        <label>
+          <span>Retirada</span>
+          <input type="date" id="qs-ret">
+        </label>
+        <label>
+          <span>Devolução</span>
+          <input type="date" id="qs-dev">
+        </label>
+        <button type="submit" class="btn btn-primary">Ver carros disponíveis</button>
+      </form>
+    </section>
 
-    <!-- Dynamic content -->
-    <div id="content"></div>
+    <section class="section" id="frota">
+      <div class="section-heading">
+        <p class="eyebrow">Frota</p>
+        <h2>Escolha por categoria, com preço claro desde o início</h2>
+        <p>Todas as opções têm ar-condicionado, direção hidráulica, multimídia e 5 ocupantes, com exceção do Grupo H, que acomoda 7 pessoas.</p>
+      </div>
+      <div class="fleet-grid">
+        <article class="fleet-card is-highlight">
+          <img class="fleet-photo" src="assets/slug-grupo-b.jpeg" alt="Veículo do Grupo B da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo B</span>
+            <strong>R$ 167,90/dia</strong>
+          </div>
+          <h3>Hatch compacto manual</h3>
+          <p>Mobi, C3 ou similar. Econômico, ágil e ideal para circular pela cidade.</p>
+          <div class="fleet-tags"><span>Manual</span><span>5 ocupantes</span><span>Multimídia</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-c.jpeg" alt="Veículo do Grupo C da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo C</span>
+            <strong>R$ 182,93/dia</strong>
+          </div>
+          <h3>Hatch médio manual</h3>
+          <p>Onix, Argo, 208, Polo ou similar. Mais espaço sem abrir mão da economia.</p>
+          <div class="fleet-tags"><span>Manual</span><span>5 ocupantes</span><span>Ar-condicionado</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-d.jpeg" alt="Veículo do Grupo D+ da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo D+</span>
+            <strong>R$ 249,96/dia</strong>
+          </div>
+          <h3>Sedan automático</h3>
+          <p>Cronos ou similar. Condução suave para passeios, compras e deslocamentos longos.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>Direção hidráulica</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-e.jpeg" alt="Veículo do Grupo E da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo E</span>
+            <strong>R$ 259,90/dia</strong>
+          </div>
+          <h3>Hatch automático completo</h3>
+          <p>Onix Premier ou similar. Design moderno, conforto e tecnologia embarcada.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>Multimídia</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-f.jpeg" alt="Veículo do Grupo F da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo F</span>
+            <strong>R$ 273,95/dia</strong>
+          </div>
+          <h3>SUV mini automático</h3>
+          <p>Tera, Pulse ou similar. Robusto e confortável para explorar a tríplice fronteira.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>Carta Verde opcional</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-i.jpeg" alt="Veículo do Grupo I da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo I</span>
+            <strong>R$ 289,90/dia</strong>
+          </div>
+          <h3>Sedan médio automático</h3>
+          <p>Virtus, Onix Plus ou similar. Mais porta-malas e conforto para família.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>Mais bagagem</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-g.jpeg" alt="Veículo do Grupo G da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo G</span>
+            <strong>R$ 369,90/dia</strong>
+          </div>
+          <h3>SUV médio automático</h3>
+          <p>2008, Fastback ou similar. Versatilidade, espaço e desempenho para qualquer roteiro.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>SUV</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-j.jpeg" alt="Veículo do Grupo J da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo J</span>
+            <strong>R$ 402,93/dia</strong>
+          </div>
+          <h3>SUV premium automático</h3>
+          <p>Tiggo 5x ou similar. Acabamento refinado para quem busca uma experiência superior.</p>
+          <div class="fleet-tags"><span>Automático</span><span>5 ocupantes</span><span>Premium</span></div>
+        </article>
+        <article class="fleet-card">
+          <img class="fleet-photo" src="assets/slug-grupo-h.jpeg" alt="Veículo do Grupo H de 7 lugares da IguFoz">
+          <div class="fleet-card-top">
+            <span>Grupo H</span>
+            <strong>R$ 496,98/dia</strong>
+          </div>
+          <h3>7 lugares automático</h3>
+          <p>Spin ou similar. Mais espaço para grupos, família grande e bagagens.</p>
+          <div class="fleet-tags"><span>Automático</span><span>7 ocupantes</span><span>Grupo familiar</span></div>
+        </article>
+      </div>
+      <p class="fleet-note">Valores de referência. Podem variar conforme período, disponibilidade, proteções e adicionais selecionados.</p>
+    </section>
 
-    <!-- Sidebar resumo -->
-    <aside class="summary" id="summary">
-      <h3>Resumo do Pedido</h3>
-      <div id="summaryContent" aria-live="polite"></div>
-    </aside>
+    <section class="section split" id="carta-verde">
+      <div>
+        <p class="eyebrow">Diferencial IguFoz</p>
+        <h2>Carta Verde para quem quer cruzar a fronteira com tranquilidade</h2>
+      </div>
+      <p>
+        A IguFoz emite a autorização de travessia junto com o veículo para circular em Puerto Iguazú,
+        Ciudad del Este e Presidente Franco. Esse diferencial reduz uma das maiores dúvidas de quem visita Foz.
+      </p>
+    </section>
 
-  </div>
+    <section class="section faq-section" id="duvidas">
+      <div class="section-heading">
+        <p class="eyebrow">Perguntas frequentes</p>
+        <h2>Respostas diretas para reduzir insegurança antes da reserva</h2>
+      </div>
+      <div class="faq-grid">
+        <details open>
+          <summary>Preciso pagar agora para reservar?</summary>
+          <p>Não. Você reserva agora sem pagar nada. O pagamento acontece apenas na retirada do veículo.</p>
+        </details>
+        <details>
+          <summary>Quais documentos preciso apresentar?</summary>
+          <p>CNH definitiva com pelo menos 2 anos, comprovante de residência, e-mail válido e cartão de crédito físico nominal ao titular do contrato.</p>
+        </details>
+        <details>
+          <summary>Posso cruzar para Argentina ou Paraguai?</summary>
+          <p>Sim, com a autorização de travessia e Carta Verde emitidas junto com o carro na retirada.</p>
+        </details>
+        <details>
+          <summary>Como funciona a caução?</summary>
+          <p>É um bloqueio temporário no limite do cartão de crédito, não uma cobrança. O valor depende do grupo e da proteção contratada.</p>
+        </details>
+        <details>
+          <summary>A devolução pode ser feita no aeroporto?</summary>
+          <p>Sim, em estacionamento parceiro. O local é monitorado 24 horas, e a recomendação é registrar fotos ou vídeos na devolução.</p>
+        </details>
+        <details>
+          <summary>Qual o horário da unidade Centro?</summary>
+          <p>Av. Brasil, 90, das 08h às 20h. Após as 18h, atendimento somente para clientes que chegam pelo aeroporto e fizeram reserva com pelo menos 24h de antecedência.</p>
+        </details>
+      </div>
+    </section>
+  </main>
 
-  <script type="module" src="script.js"></script>
+  <footer class="footer" id="contato">
+    <section class="footer-cta" aria-labelledby="footer-cta-title">
+      <div>
+        <p class="eyebrow">Atendimento IguFoz</p>
+        <h2 id="footer-cta-title">Dúvidas sobre retirada, caução ou Carta Verde?</h2>
+        <p>Fale com um atendente local antes de reservar. A ideia é reduzir incerteza, não empurrar o cliente para um formulário frio.</p>
+      </div>
+      <div class="footer-cta-actions">
+        <a class="btn btn-primary" href="https://wa.me/5545988182995" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+        <a class="btn btn-ghost" href="reserva.html">Reservar agora</a>
+      </div>
+    </section>
+
+    <section class="footer-main" aria-label="Informações da IguFoz">
+      <div class="footer-brand">
+        <span class="brand-mark footer-logo" aria-hidden="true"><span>IGU</span><span>FOZ</span></span>
+        <span class="brand-sub footer-logo-sub">aluguel de carros</span>
+        <p>Locadora local em Foz do Iguaçu com frota revisada, atendimento humano e suporte para viagens pela tríplice fronteira.</p>
+        <div class="footer-badges" aria-label="Sinais de confiança">
+          <span>15+ anos</span>
+          <span>13.000+ clientes</span>
+          <span>Frota revisada</span>
+        </div>
+      </div>
+
+      <nav class="footer-column" aria-label="Aluguel de carros">
+        <h3>Aluguel</h3>
+        <a href="reserva.html">Reservar veículo</a>
+        <a href="#frota">Grupos de carros</a>
+        <a href="#carta-verde">Carta Verde</a>
+        <a href="#duvidas">Adicionais e proteções</a>
+      </nav>
+
+      <nav class="footer-column" aria-label="Atendimento">
+        <h3>Atendimento</h3>
+        <a href="https://wa.me/5545988182995" target="_blank" rel="noopener">(45) 98818-2995</a>
+        <a href="tel:+554535725005">(45) 3572-5005</a>
+        <a href="mailto:contato@igufoz.com.br">contato@igufoz.com.br</a>
+        <a href="#contato">Unidades e horários</a>
+        <a href="#duvidas">Perguntas frequentes</a>
+      </nav>
+
+      <nav class="footer-column" aria-label="Empresa">
+        <h3>Empresa</h3>
+        <a href="#inicio">Sobre a IguFoz</a>
+        <a href="https://www.instagram.com/igufozlocadora" target="_blank" rel="noopener">Instagram</a>
+        <a href="#frota">Frota disponível</a>
+        <a href="reserva.html">Solicitar cotação</a>
+      </nav>
+    </section>
+
+    <section class="footer-units" aria-label="Unidades e segurança">
+      <article>
+        <strong>Unidade Centro</strong>
+        <span>Av. Brasil, 90 - Centro, Foz do Iguaçu - PR</span>
+        <small>08h às 20h. Após 18h, apenas aeroporto com reserva 24h antes.</small>
+      </article>
+      <article>
+        <strong>Unidade Cataratas</strong>
+        <span>Av. das Cataratas, 1419 - Vila Yolanda</span>
+        <small>Todos os dias, das 08h às 18h</small>
+      </article>
+      <article>
+        <strong>Segurança e transparência</strong>
+        <span>Contrato de locação, regras de caução, proteção e travessia sempre informados antes da confirmação.</span>
+        <small>Sem surpresa no balcão.</small>
+      </article>
+    </section>
+
+    <section class="footer-bottom">
+      <p>IGUFOZ LOCADORA DE VEICULOS LTDA - CNPJ 05.892.846/0001-05.</p>
+      <div>
+        <a href="#inicio">Mapa do site</a>
+        <a href="#duvidas">FAQ</a>
+        <a href="https://www.instagram.com/igufozlocadora" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </section>
+  </footer>
+
+  <script>
+    // Formulário de busca rápida: salva datas na sessionStorage e redireciona para o fluxo de reserva
+    document.getElementById('quickSearchForm').addEventListener('submit', function (e) {
+      e.preventDefault()
+      const ret = document.getElementById('qs-ret').value
+      const dev = document.getElementById('qs-dev').value
+      const local = document.getElementById('qs-local').value
+      if (ret) sessionStorage.setItem('qs_retData', ret)
+      if (dev) sessionStorage.setItem('qs_devData', dev)
+      if (local) sessionStorage.setItem('qs_local', local)
+      window.location.href = 'reserva.html'
+    })
+  </script>
 </body>
 </html>
