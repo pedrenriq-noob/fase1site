@@ -228,8 +228,12 @@
   <div class="footer" id="footer" style="display:none">
     <div class="dias-badge" id="diasBadge"></div>
     <div class="total-row">
-      <span class="total-label">Total estimado</span>
+      <span class="total-label" id="totalLabel">Total estimado</span>
       <span class="total-value" id="totalVal">R$ 0,00</span>
+    </div>
+    <div class="total-row" id="primeRow" style="display:none;margin-bottom:2px">
+      <span class="total-label" style="font-size:12px;color:var(--muted)">⭐ Com prime</span>
+      <span class="total-value" id="primeVal" style="font-size:16px;color:var(--green)">R$ 0,00</span>
     </div>
     <button class="copy-btn" id="copyBtn">📋 Copiar cotação</button>
   </div>

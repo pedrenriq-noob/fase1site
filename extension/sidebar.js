@@ -12,7 +12,7 @@ const chevron = `<svg class="chevron" width="11" height="7" viewBox="0 0 10 6" f
 
 let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
 let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-               retData: '', retHora: '', devData: '', devHora: '' }
+               retData: '', retHora: '', devData: '', devHora: '', prime: false }
 let openPanel = null
 let openHora  = null
 
@@ -230,6 +230,21 @@ function renderForm() {
 
     <hr class="divider">
 
+    ${isPrimeCat() ? `
+    <!-- Prime Gourmet (apenas Grupo C) -->
+    <section>
+      <label id="primeLabel" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 0${!isPrimePeriodo() ? ';opacity:.45;pointer-events:none' : ''}">
+        <div id="primeChk" style="width:18px;height:18px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color .15s,background .15s">
+          <span id="primeMark" style="display:none;color:#fff;font-size:11px;font-weight:700">✓</span>
+        </div>
+        <div>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">⭐ PRIME GOURMET</span>
+          ${!isPrimePeriodo() ? '<div style="font-size:10px;color:var(--red);margin-top:1px">Indisponível no período selecionado</div>' : ''}
+        </div>
+      </label>
+    </section>
+    <hr class="divider">` : ''}
+
     <!-- Mensagem padrão -->
     <section>
       <div class="sec-label">💬 Mensagem da cotação</div>
@@ -245,19 +260,30 @@ function renderForm() {
   calc()
 }
 
+function updatePrimeVisual() {
+  const chk  = document.getElementById('primeChk')
+  const mark = document.getElementById('primeMark')
+  if (chk)  { chk.style.background = S.prime ? 'var(--orange)' : ''; chk.style.borderColor = S.prime ? 'var(--orange)' : 'var(--border)' }
+  if (mark) mark.style.display = S.prime ? 'block' : 'none'
+}
+
 // ── Wire all events (called after each render) ────────────
 function wireEvents() {
   document.getElementById('retData')?.addEventListener('input', e => {
     S.retData = e.target.value
-    calc()
     // Se painel de categoria estiver aberto, atualiza preços (sazonalidade)
     if (openPanel === 'cat') {
       const panel = document.getElementById('panel-cat')
       if (panel) panel.innerHTML = catOptionsHTML()
     }
+    // Se for Grupo C, re-renderiza pra atualizar disponibilidade do prime
+    if (isPrimeCat()) { renderForm(); return }
+    calc()
   })
   document.getElementById('devData')?.addEventListener('input', e => {
     S.devData = e.target.value
+    // Se for Grupo C, re-renderiza pra atualizar disponibilidade do prime
+    if (isPrimeCat()) { renderForm(); return }
     calc()
   })
 
@@ -270,6 +296,17 @@ function wireEvents() {
     renderExtras()
     wireExtras()
   })
+
+  // Prime Gourmet toggle
+  document.getElementById('primeLabel')?.addEventListener('click', () => {
+    if (!isPrimeValido()) return
+    S.prime = !S.prime
+    updatePrimeVisual()
+    calc()
+  })
+  // Restaura estado visual do prime após re-render
+  if (S.prime && isPrimeValido()) updatePrimeVisual()
+  else if (!isPrimeValido() && S.prime) { S.prime = false }
 
   wireExtras()
 }
@@ -440,6 +477,34 @@ function updateHora(id, val) {
   calc()
 }
 
+// ── Prime Gourmet validations ─────────────────────────────
+const PRIME_DESCONTO = 169
+
+function isPrimeCat() {
+  const cat = DATA.cats.find(c => c.id === S.catId)
+  return cat?.slug === 'grupo_c'
+}
+
+// Retorna true se a data (ISO string 'YYYY-MM-DD') cair em período bloqueado para o prime
+function isDataBloqueada(iso) {
+  if (!iso) return false
+  const d   = new Date(iso + 'T12:00:00')
+  const mes = d.getMonth() + 1
+  const dia = d.getDate()
+  if (mes === 7)                  return true   // jul
+  if (mes === 12 && dia >= 15)    return true   // 15/12–31/12
+  if (mes === 1)                  return true   // jan
+  return false
+}
+
+function isPrimePeriodo() {
+  return !isDataBloqueada(S.retData) && !isDataBloqueada(S.devData)
+}
+
+function isPrimeValido() {
+  return isPrimeCat() && isPrimePeriodo()
+}
+
 // ── Calculate total ───────────────────────────────────────
 function getHoraText(id) {
   if (id === 'retHora' && S.retHora) return S.retHora
@@ -507,12 +572,27 @@ function calc() {
   const baseExtras = S.extras.reduce((s, e) => s + (e.preco || 0), 0)
   const total      = baseCat + baseProt + baseAdds + baseExtras
 
-  const badge = document.getElementById('diasBadge')
-  const val   = document.getElementById('totalVal')
-  if (badge) badge.textContent = dias > 0 ? `${diasFmt} diária${dias !== 1 ? 's' : ''}` : ''
-  if (val)   val.textContent   = `R$ ${fmtN(total)}`
+  // Se prime passou a ser inválido (ex.: mudou categoria/data), desmarca
+  if (S.prime && !isPrimeValido()) {
+    S.prime = false
+    updatePrimeVisual()
+  }
+  const primeAtivo  = S.prime && isPrimeValido()
+  const primeTotal  = primeAtivo ? Math.max(0, total - PRIME_DESCONTO) : null
 
-  return { dias, diasFmt, baseCat, baseProt, baseAdds, baseExtras, total }
+  const badge     = document.getElementById('diasBadge')
+  const val       = document.getElementById('totalVal')
+  const primeRow  = document.getElementById('primeRow')
+  const primeEl   = document.getElementById('primeVal')
+  const lblEl     = document.getElementById('totalLabel')
+
+  if (badge)   badge.textContent  = dias > 0 ? `${diasFmt} diária${dias !== 1 ? 's' : ''}` : ''
+  if (val)     val.textContent    = `R$ ${fmtN(total)}`
+  if (primeRow) primeRow.style.display  = primeAtivo ? '' : 'none'
+  if (primeEl)  primeEl.textContent     = primeAtivo ? `R$ ${fmtN(primeTotal)}` : ''
+  if (lblEl)    lblEl.textContent       = primeAtivo ? 'Total sem prime' : 'Total estimado'
+
+  return { dias, diasFmt, baseCat, baseProt, baseAdds, baseExtras, total, primeTotal }
 }
 
 // ── Copy cotação ──────────────────────────────────────────
@@ -541,6 +621,9 @@ function copyCotacao() {
   const msgExtra = document.getElementById('msgCotacao')?.value?.trim() || ''
   const precoD   = cat ? getPreco(cat) : 0
 
+  const primeAtivo = S.prime && isPrimeValido()
+  const primeTotalCopy = primeAtivo ? Math.max(0, total - PRIME_DESCONTO) : null
+
   const txt = [
     '🚗 *COTAÇÃO IGUFOZ*',
     '',
@@ -552,7 +635,8 @@ function copyCotacao() {
     prot && baseProt > 0 ? `🛡 ${prot.nome}` : null,
     linhasAdds ? `\n*Adicionais:*\n${linhasAdds.trimEnd()}` : null,
     '',
-    `💰 *Total estimado: R$ ${fmtN(total)}*`,
+    primeAtivo ? `💰 Total: R$ ${fmtN(total)}` : `💰 *Total estimado: R$ ${fmtN(total)}*`,
+    primeAtivo ? `⭐ *Com prime: R$ ${fmtN(primeTotalCopy)}*` : null,
     '',
     '_Valores sujeitos a confirmação._',
     msgExtra ? `\n${msgExtra}` : null,
@@ -591,7 +675,7 @@ function copyCotacao() {
 // ── Reset ─────────────────────────────────────────────────
 function resetForm() {
   S         = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-                retData: '', retHora: '', devData: '', devHora: '' }
+                retData: '', retHora: '', devData: '', devHora: '', prime: false }
   openPanel = null
   openHora  = null
   renderForm()
