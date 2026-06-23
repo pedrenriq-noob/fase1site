@@ -4,39 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reservar — Igufoz | Aluguel de carros em Foz do Iguaçu</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="container" id="app">
+  <!-- Header unificado -->
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="IguFoz - início">
+      <span class="brand-mark" aria-hidden="true"><span>IGU</span><span>FOZ</span></span>
+      <span class="brand-sub">aluguel de carros</span>
+    </a>
 
-    <!-- Header -->
-    <header class="header header-dark" id="main-header">
-      <div class="header-inner">
-        <a class="header-brand" href="index.html" aria-label="Voltar ao início">
-          <img src="assets/igufoz-logo-header.png" alt="Igufoz" class="header-logo-img" onerror="this.style.display='none'">
-          <div class="header-logo-text">
-            <span class="header-logo-name">igufoz</span>
-            <span class="header-logo-sub">aluguel de veículos</span>
-          </div>
-        </a>
-        <nav class="header-nav">
-          <a href="index.html#frota">Frota</a>
-          <a href="index.html#carta-verde">Carta Verde</a>
-          <a href="index.html#contato">Contato</a>
-        </nav>
-        <button class="header-account-btn">Minha conta</button>
-      </div>
-    </header>
+    <nav class="nav-links" aria-label="Menu principal">
+      <a href="index.html#frota">Frota</a>
+      <a href="index.html#carta-verde">Carta Verde</a>
+      <a href="index.html#duvidas">Dúvidas</a>
+      <a href="index.html#contato">Contato</a>
+    </nav>
+
+    <div class="header-actions">
+      <a class="btn btn-ghost" href="https://wa.me/5545988182995" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn btn-primary" href="index.html">Início</a>
+    </div>
+  </header>
+
+  <div class="container" id="app">
 
     <!-- Progress line (usado pelo JS) -->
     <div class="progress-bar" aria-hidden="true">
       <div class="progress" id="progress"></div>
     </div>
 
-    <!-- Step indicator (oculto na landing) -->
+    <!-- Step indicator -->
     <div class="steps" id="steps-bar">
       <div class="step" data-step="1">1. 📅 Período</div>
       <div class="step" data-step="2">2. 🛡 Proteção</div>
@@ -54,6 +53,86 @@
     </aside>
 
   </div>
+
+  <!-- Footer unificado -->
+  <footer class="footer" id="contato">
+    <section class="footer-cta" aria-labelledby="footer-cta-title">
+      <div>
+        <p class="eyebrow">Atendimento IguFoz</p>
+        <h2 id="footer-cta-title">Dúvidas sobre retirada, caução ou Carta Verde?</h2>
+        <p>Fale com um atendente local antes de reservar. A ideia é reduzir incerteza, não empurrar o cliente para um formulário frio.</p>
+      </div>
+      <div class="footer-cta-actions">
+        <a class="btn btn-primary" href="https://wa.me/5545988182995" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+        <a class="btn btn-ghost" href="index.html">Voltar ao início</a>
+      </div>
+    </section>
+
+    <section class="footer-main" aria-label="Informações da IguFoz">
+      <div class="footer-brand">
+        <span class="brand-mark footer-logo" aria-hidden="true"><span>IGU</span><span>FOZ</span></span>
+        <span class="brand-sub footer-logo-sub">aluguel de carros</span>
+        <p>Locadora local em Foz do Iguaçu com frota revisada, atendimento humano e suporte para viagens pela tríplice fronteira.</p>
+        <div class="footer-badges" aria-label="Sinais de confiança">
+          <span>15+ anos</span>
+          <span>13.000+ clientes</span>
+          <span>Frota revisada</span>
+        </div>
+      </div>
+
+      <nav class="footer-column" aria-label="Aluguel de carros">
+        <h3>Aluguel</h3>
+        <a href="reserva.html">Reservar veículo</a>
+        <a href="index.html#frota">Grupos de carros</a>
+        <a href="index.html#carta-verde">Carta Verde</a>
+        <a href="index.html#duvidas">Adicionais e proteções</a>
+      </nav>
+
+      <nav class="footer-column" aria-label="Atendimento">
+        <h3>Atendimento</h3>
+        <a href="https://wa.me/5545988182995" target="_blank" rel="noopener">(45) 98818-2995</a>
+        <a href="tel:+554535725005">(45) 3572-5005</a>
+        <a href="mailto:contato@igufoz.com.br">contato@igufoz.com.br</a>
+        <a href="index.html#contato">Unidades e horários</a>
+        <a href="index.html#duvidas">Perguntas frequentes</a>
+      </nav>
+
+      <nav class="footer-column" aria-label="Empresa">
+        <h3>Empresa</h3>
+        <a href="index.html#inicio">Sobre a IguFoz</a>
+        <a href="https://www.instagram.com/igufozlocadora" target="_blank" rel="noopener">Instagram</a>
+        <a href="index.html#frota">Frota disponível</a>
+        <a href="reserva.html">Solicitar cotação</a>
+      </nav>
+    </section>
+
+    <section class="footer-units" aria-label="Unidades e segurança">
+      <article>
+        <strong>Unidade Centro</strong>
+        <span>Av. Brasil, 90 - Centro, Foz do Iguaçu - PR</span>
+        <small>08h às 20h. Após 18h, apenas aeroporto com reserva 24h antes.</small>
+      </article>
+      <article>
+        <strong>Unidade Cataratas</strong>
+        <span>Av. das Cataratas, 1419 - Vila Yolanda</span>
+        <small>Todos os dias, das 08h às 18h</small>
+      </article>
+      <article>
+        <strong>Segurança e transparência</strong>
+        <span>Contrato de locação, regras de caução, proteção e travessia sempre informados antes da confirmação.</span>
+        <small>Sem surpresa no balcão.</small>
+      </article>
+    </section>
+
+    <section class="footer-bottom">
+      <p>IGUFOZ LOCADORA DE VEICULOS LTDA - CNPJ 05.892.846/0001-05.</p>
+      <div>
+        <a href="index.html">Início</a>
+        <a href="index.html#duvidas">FAQ</a>
+        <a href="https://www.instagram.com/igufozlocadora" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </section>
+  </footer>
 
   <script type="module" src="script.js"></script>
 </body>

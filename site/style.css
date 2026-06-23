@@ -1,45 +1,39 @@
 /* ============================================
    IGUFOZ — ESTILOS SITE DE RESERVAS
+   Tokens base, header, footer e botões vêm de shared.css
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700&display=swap');
+@import './shared.css';
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap');
 
 :root {
-  --blue:      #0f2b4f;
-  --blue-mid:  #1a4a7a;
-  --orange:    #FF6B00;
-  --orange-dk: #e05a00;
+  /* Aliases para compatibilidade com o JS existente */
+  --blue:      var(--navy);
+  --blue-mid:  var(--navy-2);
+  --orange-dk: var(--orange-dark);
   --orange-lt: #fff3ea;
-  --bg:        #f4f6fa;
-  --white:     #ffffff;
-  --text:      #1a2332;
-  --muted:     #64748b;
-  --border:    #e2e8f0;
+  --bg:        var(--soft);
+  --text:      var(--ink);
+  --border:    var(--line);
   --border-md: #cbd5e1;
   --radius:    14px;
   --radius-sm: 9px;
   --shadow-sm: 0 1px 4px rgba(0,0,0,.06);
   --shadow-md: 0 4px 16px rgba(0,0,0,.08);
 
-  /* Aliases usados pelo JS renderizado */
-  --text-muted: #64748b;
+  /* Usados pelo JS */
+  --text-muted: var(--muted);
   --text-sub:   #94a3b8;
-  --surface:    #ffffff;
+  --surface:    var(--white);
   --green:      #22c55e;
   --green-lt:   #f0fdf4;
   --red:        #ef4444;
-  --navy:       #0f2b4f;
   --navy-dk:    #0a1f3a;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--blue);
+  background: var(--soft);
   min-height: 100vh;
-  margin: 0;
-  padding: 0;
 }
 
 /* ============================================
@@ -431,13 +425,9 @@ input[type="checkbox"] {
 /* Categorias */
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-top: 4px;
-}
-
-@media (min-width: 860px) {
-  .category-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .category-card {
