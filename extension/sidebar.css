@@ -1,0 +1,42 @@
+/* ── Toggle button ── */
+#igufoz-toggle {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2147483646;
+  background: #FF6B00;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  width: 40px;
+  height: 56px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 12px rgba(0,0,0,.2);
+  transition: background .2s, right .3s;
+}
+#igufoz-toggle:hover { background: #e55e00; }
+#igufoz-toggle.igufoz-toggle-open { right: 360px; }
+
+/* ── Sidebar root ── */
+#igufoz-sidebar-root {
+  position: fixed;
+  top: 0;
+  right: -360px;
+  width: 360px;
+  height: 100vh;
+  z-index: 2147483645;
+  transition: right .3s ease;
+  box-shadow: -4px 0 24px rgba(0,0,0,.18);
+}
+#igufoz-sidebar-root.igufoz-open { right: 0; }
+
+/* ── iframe ── */
+#igufoz-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}

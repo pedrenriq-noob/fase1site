@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Igufoz Cotação</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:    #0f2b4f;
+      --orange:  #FF6B00;
+      --orange-lt: #fff3ea;
+      --border:  #e2e8f0;
+      --muted:   #64748b;
+      --red:     #dc2626;
+      --green:   #16a34a;
+      --radius:  8px;
+      --text:    #1a2332;
+      --bg:      #f8fafc;
+    }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      background: var(--blue);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .hdr-logo { font-weight: 800; font-size: 16px; letter-spacing: -.5px; color: var(--orange); }
+    .hdr-sub  { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+    .hdr-spacer { flex: 1; }
+    .hdr-reset {
+      background: none; border: 1px solid rgba(255,255,255,.2); color: #fff;
+      border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;
+    }
+    .hdr-reset:hover { background: rgba(255,255,255,.08); }
+
+    /* ── Scroll area ── */
+    .body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── Section label ── */
+    .sec-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    /* ── Period grid ── */
+    .period-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .period-cell { display: flex; flex-direction: column; gap: 4px; }
+    .period-cell label { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    /* ── Inputs ── */
+    input[type="date"],
+    input[type="time"],
+    select,
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: border-color .18s;
+      appearance: auto;
+    }
+    input:focus, select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,0,.1); }
+
+    select { cursor: pointer; }
+    select[size] { height: auto; }
+
+    /* ── Adicionais list ── */
+    .add-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .add-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .add-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--orange); cursor: pointer; flex-shrink: 0; }
+    .add-item-label { flex: 1; font-size: 12px; line-height: 1.3; }
+    .add-item-label small { display: block; color: var(--muted); font-size: 10px; }
+    .add-item-qty {
+      width: 52px;
+      padding: 5px 6px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ── Extras manuais ── */
+    .extras-list { display: flex; flex-direction: column; gap: 6px; }
+    .extra-row   { display: flex; gap: 6px; align-items: center; }
+    .extra-row input[type="text"]   { flex: 1; }
+    .extra-row input[type="number"] { width: 88px; }
+    .extra-row .rm-btn {
+      background: none; border: none; color: var(--red); font-size: 17px;
+      cursor: pointer; line-height: 1; padding: 0 2px; flex-shrink: 0;
+    }
+
+    .add-extra-btn {
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      width: 100%;
+      padding: 7px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color .18s, color .18s;
+    }
+    .add-extra-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+    /* ── Footer total ── */
+    .footer {
+      flex-shrink: 0;
+      background: #fff;
+      border-top: 2px solid var(--border);
+      padding: 12px 16px;
+    }
+
+    .dias-badge {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-align: right;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .total-label { font-size: 13px; font-weight: 600; }
+    .total-value { font-size: 20px; font-weight: 800; color: var(--orange); }
+
+    .copy-btn {
+      width: 100%;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s;
+    }
+    .copy-btn:hover { background: #e55e00; }
+    .copy-btn.copied { background: var(--green); }
+
+    /* ── Loading / error states ── */
+    .state-msg {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 24px 0;
+    }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); }
+
+    /* ── Select com altura máxima (listbox) ── */
+    .scroll-select { height: 140px; }
+  </style>
+</head>
+<body>
+
+  <div class="hdr">
+    <div>
+      <div class="hdr-logo">igufoz</div>
+      <div class="hdr-sub">cotação rápida</div>
+    </div>
+    <div class="hdr-spacer"></div>
+    <button class="hdr-reset" onclick="resetForm()">Limpar</button>
+  </div>
+
+  <div class="body" id="body">
+    <div class="state-msg" id="loading">Carregando dados…</div>
+  </div>
+
+  <div class="footer" id="footer" style="display:none">
+    <div class="dias-badge" id="diasBadge"></div>
+    <div class="total-row">
+      <span class="total-label">Total estimado</span>
+      <span class="total-value" id="totalVal">R$ 0,00</span>
+    </div>
+    <button class="copy-btn" id="copyBtn" onclick="copyCotacao()">📋 Copiar cotação</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
+    const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
+
+    const fmtN = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
+    const pad = n => String(n).padStart(2, '0')
+
+    let DATA = { cats: [], prots: [], adds: [] }
+    let extras = []   // [{desc, preco}]
+
+    // ── Fetch Supabase ──────────────────────────────────────
+    async function sb(table, select = '*') {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}&order=nome.asc`, {
+        headers: {
+          apikey: SUPABASE_ANON,
+          Authorization: `Bearer ${SUPABASE_ANON}`,
+        }
+      })
+      if (!r.ok) throw new Error(`${table}: ${r.status}`)
+      return r.json()
+    }
+
+    async function loadData() {
+      try {
+        const [cats, prots, adds] = await Promise.all([
+          sb('categorias', 'id,nome,preco_diaria,preco_final'),
+          sb('protecoes',  'id,nome,preco,tipo_preco'),
+          sb('adicionais', 'id,nome,preco,tipo_preco'),
+        ])
+        DATA = { cats, prots, adds }
+        renderForm()
+      } catch (e) {
+        document.getElementById('loading').textContent = 'Erro ao carregar dados. Verifique sua conexão.'
+        console.error(e)
+      }
+    }
+
+    // ── Render ──────────────────────────────────────────────
+    function renderForm() {
+      const body = document.getElementById('body')
+
+      body.innerHTML = `
+        <!-- Período -->
+        <section>
+          <div class="sec-label">📅 Período</div>
+          <div class="period-grid">
+            <div class="period-cell">
+              <label for="retData">Retirada — data</label>
+              <input type="date" id="retData" oninput="calc()">
+            </div>
+            <div class="period-cell">
+              <label for="retHora">Retirada — hora</label>
+              <input type="time" id="retHora" value="08:00" step="1800" oninput="calc()">
+            </div>
+            <div class="period-cell">
+              <label for="devData">Devolução — data</label>
+              <input type="date" id="devData" oninput="calc()">
+            </div>
+            <div class="period-cell">
+              <label for="devHora">Devolução — hora</label>
+              <input type="time" id="devHora" value="08:00" step="1800" oninput="calc()">
+            </div>
+          </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Categoria -->
+        <section>
+          <div class="sec-label">🚘 Categoria</div>
+          <select id="catSel" class="scroll-select" size="5" onchange="calc()">
+            <option value="">— Selecione —</option>
+            ${DATA.cats.map(c => `<option value="${c.id}" data-preco="${c.preco_final || c.preco_diaria}">${c.nome} — R$ ${fmtN(c.preco_final || c.preco_diaria)}/dia</option>`).join('')}
+          </select>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Proteção -->
+        <section>
+          <div class="sec-label">🛡 Proteção</div>
+          <select id="protSel" class="scroll-select" size="4" onchange="calc()">
+            <option value="">— Sem proteção —</option>
+            ${DATA.prots.map(p => `<option value="${p.id}" data-preco="${p.preco}" data-tipo="${p.tipo_preco}">${p.nome} — R$ ${fmtN(p.preco)}${p.tipo_preco === 'per_day' ? '/dia' : ''}</option>`).join('')}
+          </select>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Adicionais do catálogo -->
+        <section>
+          <div class="sec-label">➕ Adicionais</div>
+          <div class="add-list" id="addList">
+            ${DATA.adds.map(a => `
+              <div class="add-item">
+                <input type="checkbox" id="add_${a.id}" data-id="${a.id}" data-preco="${a.preco}" data-tipo="${a.tipo_preco}" onchange="calc()">
+                <label class="add-item-label" for="add_${a.id}">
+                  ${a.nome}
+                  <small>R$ ${fmtN(a.preco)}${a.tipo_preco === 'per_day' ? '/dia' : ''}</small>
+                </label>
+                <input type="number" class="add-item-qty" id="qty_${a.id}" value="1" min="1" max="10" oninput="calc()" style="display:none">
+              </div>`).join('')}
+          </div>
+        </section>
+
+        <hr class="divider">
+
+        <!-- Extras manuais -->
+        <section>
+          <div class="sec-label">✏️ Itens extras</div>
+          <div class="extras-list" id="extrasList"></div>
+          <button class="add-extra-btn" onclick="addExtra()">+ Adicionar item extra</button>
+        </section>
+      `
+
+      // Mostra qty quando checkbox marcado
+      DATA.adds.forEach(a => {
+        document.getElementById(`add_${a.id}`)?.addEventListener('change', e => {
+          const qty = document.getElementById(`qty_${a.id}`)
+          if (qty) qty.style.display = e.target.checked ? 'block' : 'none'
+          calc()
+        })
+      })
+
+      // Restaura extras na memória
+      renderExtras()
+      document.getElementById('footer').style.display = ''
+      calc()
+    }
+
+    function renderExtras() {
+      const list = document.getElementById('extrasList')
+      if (!list) return
+      list.innerHTML = extras.map((ex, i) => `
+        <div class="extra-row" id="exRow_${i}">
+          <input type="text"   placeholder="Descrição" value="${ex.desc}"  oninput="extras[${i}].desc=this.value;calc()">
+          <input type="number" placeholder="R$" value="${ex.preco}" min="0" step="0.01" oninput="extras[${i}].preco=parseFloat(this.value)||0;calc()">
+          <button class="rm-btn" onclick="removeExtra(${i})" title="Remover">×</button>
+        </div>`).join('')
+    }
+
+    function addExtra() {
+      extras.push({ desc: '', preco: 0 })
+      renderExtras()
+    }
+
+    function removeExtra(i) {
+      extras.splice(i, 1)
+      renderExtras()
+      calc()
+    }
+
+    // ── Cálculo ─────────────────────────────────────────────
+    function getDias() {
+      const rd = document.getElementById('retData')?.value
+      const rh = document.getElementById('retHora')?.value || '08:00'
+      const dd = document.getElementById('devData')?.value
+      const dh = document.getElementById('devHora')?.value || '08:00'
+      if (!rd || !dd) return 0
+      const ret = new Date(`${rd}T${rh}`)
+      const dev = new Date(`${dd}T${dh}`)
+      const diff = (dev - ret) / 36e5 / 24
+      return Math.max(0, Math.round(diff * 10) / 10)
+    }
+
+    function calc() {
+      const dias = getDias()
+      const diasFmt = Number.isInteger(dias) ? dias : dias.toFixed(1).replace('.', ',')
+
+      // Categoria
+      const catSel = document.getElementById('catSel')
+      const catOpt = catSel?.options[catSel.selectedIndex]
+      const precoD = parseFloat(catOpt?.dataset.preco || 0)
+      const baseCat = precoD * (dias || 1)
+
+      // Proteção
+      const protSel = document.getElementById('protSel')
+      const protOpt = protSel?.options[protSel.selectedIndex]
+      const protPreco = parseFloat(protOpt?.dataset.preco || 0)
+      const protTipo  = protOpt?.dataset.tipo || ''
+      const baseProt  = protPreco ? (protTipo === 'per_day' ? protPreco * (dias || 1) : protPreco) : 0
+
+      // Adicionais catálogo
+      let baseAdds = 0
+      DATA.adds.forEach(a => {
+        const chk = document.getElementById(`add_${a.id}`)
+        if (!chk?.checked) return
+        const qty  = parseInt(document.getElementById(`qty_${a.id}`)?.value || 1)
+        const unit = parseFloat(chk.dataset.preco || 0)
+        const tipo = chk.dataset.tipo
+        baseAdds += tipo === 'per_day' ? unit * qty * (dias || 1) : unit * qty
+      })
+
+      // Extras manuais
+      const baseExtras = extras.reduce((s, e) => s + (e.preco || 0), 0)
+
+      const total = baseCat + baseProt + baseAdds + baseExtras
+
+      document.getElementById('diasBadge').textContent =
+        dias > 0 ? `${diasFmt} diária${dias !== 1 ? 's' : ''}` : ''
+      document.getElementById('totalVal').textContent = `R$ ${fmtN(total)}`
+
+      return { dias, diasFmt, precoD, baseCat, baseProt, baseAdds, baseExtras, total }
+    }
+
+    // ── Copiar cotação ──────────────────────────────────────
+    function copyCotacao() {
+      const rd = document.getElementById('retData')?.value
+      const rh = document.getElementById('retHora')?.value || '08:00'
+      const dd = document.getElementById('devData')?.value
+      const dh = document.getElementById('devHora')?.value || '08:00'
+
+      const catSel = document.getElementById('catSel')
+      const catNome = catSel?.options[catSel.selectedIndex]?.text || '—'
+
+      const protSel = document.getElementById('protSel')
+      const protNome = protSel?.options[protSel.selectedIndex]?.text || '—'
+
+      const { dias, diasFmt, baseCat, baseProt, baseAdds, baseExtras, total } = calc()
+
+      let linhasAdds = ''
+      DATA.adds.forEach(a => {
+        const chk = document.getElementById(`add_${a.id}`)
+        if (!chk?.checked) return
+        const qty  = parseInt(document.getElementById(`qty_${a.id}`)?.value || 1)
+        const unit = parseFloat(chk.dataset.preco || 0)
+        const tipo = chk.dataset.tipo
+        const sub  = tipo === 'per_day' ? unit * qty * (dias || 1) : unit * qty
+        linhasAdds += `  ➕ ${a.nome}${qty > 1 ? ` (${qty}×)` : ''}: R$ ${fmtN(sub)}\n`
+      })
+      extras.forEach(e => {
+        if (e.desc || e.preco) linhasAdds += `  ✏️ ${e.desc || 'Item extra'}: R$ ${fmtN(e.preco)}\n`
+      })
+
+      const txt = [
+        `🚗 *COTAÇÃO IGUFOZ*`,
+        ``,
+        `📅 Retirada:  ${fmtDate(rd)} às ${rh}`,
+        `📅 Devolução: ${fmtDate(dd)} às ${dh}`,
+        `⏱ Período:   ${diasFmt} diária${dias !== 1 ? 's' : ''}`,
+        ``,
+        `🚘 ${catNome}`,
+        baseProt > 0 ? `🛡 ${protNome}` : null,
+        linhasAdds ? `\n*Adicionais:*\n${linhasAdds.trimEnd()}` : null,
+        ``,
+        `💰 *Total estimado: R$ ${fmtN(total)}*`,
+        ``,
+        `_Valores sujeitos a confirmação._`,
+      ].filter(l => l !== null).join('\n')
+
+      navigator.clipboard.writeText(txt).then(() => {
+        const btn = document.getElementById('copyBtn')
+        btn.textContent = '✅ Copiado!'
+        btn.classList.add('copied')
+        setTimeout(() => {
+          btn.textContent = '📋 Copiar cotação'
+          btn.classList.remove('copied')
+        }, 2500)
+      }).catch(() => {
+        alert('Não foi possível copiar. Selecione o texto manualmente.')
+      })
+    }
+
+    // ── Reset ───────────────────────────────────────────────
+    function resetForm() {
+      extras = []
+      renderForm()
+    }
+
+    // ── Init ────────────────────────────────────────────────
+    loadData()
+  </script>
+</body>
+</html>

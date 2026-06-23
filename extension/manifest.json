@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Igufoz — Cotação Rápida",
+  "version": "1.0.0",
+  "description": "Sidebar de cotação para atendentes Igufoz. Funciona em qualquer aba.",
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "Igufoz Cotação",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["sidebar.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
