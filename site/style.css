@@ -776,24 +776,24 @@ input[type="checkbox"] {
   #app.mode-flow {
     display: grid;
     grid-template-columns: 1fr 300px;
-    grid-template-rows: auto auto auto 1fr;
-    height: 100vh;
+    grid-template-rows: auto auto 1fr;
+    height: calc(100vh - 78px);
     overflow: hidden;
   }
 
-  #app.mode-flow .header        { grid-column: 1 / -1; }
   #app.mode-flow .progress-bar  { grid-column: 1 / -1; }
   #app.mode-flow #steps-bar     { grid-column: 1 / -1; }
 
   #app.mode-flow #content {
     grid-column: 1;
+    grid-row: 3;
     overflow-y: auto;
     padding-bottom: 32px;
   }
 
   #app.mode-flow .summary {
     grid-column: 2;
-    grid-row: 4;
+    grid-row: 3;
     border-top: none;
     border-left: 3px solid var(--orange);
     overflow-y: auto;
