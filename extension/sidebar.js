@@ -37,7 +37,7 @@ async function loadData() {
     const [cats, prots, adds, sazon] = await Promise.all([
       sbFetch('categorias',   'id,nome,slug,preco_diaria', '&order=ordem.asc'),
       sbFetch('protecoes',    'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
-      sbFetch('adicionais',   'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
+      sbFetch('adicionais',   'id,nome,preco,tipo_preco,permite_quantidade',  '&order=ordem.asc'),
       sbFetch('sazonalidade', 'data_inicio,data_fim,precos', '').catch(() => []),
     ])
     DATA = { cats, prots, adds, sazon }
@@ -122,7 +122,7 @@ function addOptionsHTML() {
         <div class="add-opt-name">${esc(a.nome)}</div>
         <div class="add-opt-price">R$ ${fmtN(a.preco)}${a.tipo_preco === 'per_day' ? '/dia' : ''}</div>
       </div>
-      ${checked ? `<input type="number" class="add-qty" data-qty-id="${esc(a.id)}" value="${qty}" min="1" max="10">` : ''}
+      ${checked && a.permite_quantidade ? `<input type="number" class="add-qty" data-qty-id="${esc(a.id)}" value="${qty}" min="1" max="10">` : ''}
     </div>`
   }).join('')
 }
