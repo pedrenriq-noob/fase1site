@@ -17,7 +17,14 @@ let openPanel = null
 let openHora  = null
 
 // Mensagem padrão editável pelo atendente
-const MSG_DEFAULT = 'Para confirmar sua reserva, entre em contato pelo WhatsApp. Estamos à disposição! 😊'
+const MSG_DEFAULT = `Reserve agora e *pague só na retirada* do carro. Se precisar cancelar, *não tem taxa*.
+O pagamento pode ser feito em:
+💵 Dinheiro (somente reais)
+📲 Pix
+💳 Débito
+💳 Crédito em até 4x sem juros
+
+Pra avançar, me envia a foto da sua CNH e o comprovante de residência que já deixo sua reserva confirmada!`
 
 // ── Supabase ──────────────────────────────────────────────
 async function sbFetch(table, select, extra = '') {
