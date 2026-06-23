@@ -228,38 +228,50 @@
   <script>
     const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
     const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
+    const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
 
     const fmtN = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
-    const pad = n => String(n).padStart(2, '0')
 
     let DATA = { cats: [], prots: [], adds: [] }
     let extras = []   // [{desc, preco}]
 
     // ── Fetch Supabase ──────────────────────────────────────
-    async function sb(table, select = '*') {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${select}&order=nome.asc`, {
+    async function sb(table, select, extraParams = '') {
+      const url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}&tenant_id=eq.${TENANT_ID}&ativo=eq.true${extraParams}`
+      const r = await fetch(url, {
         headers: {
           apikey: SUPABASE_ANON,
           Authorization: `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
         }
       })
-      if (!r.ok) throw new Error(`${table}: ${r.status}`)
+      if (!r.ok) {
+        const body = await r.text().catch(() => '')
+        throw new Error(`${table} HTTP ${r.status}: ${body}`)
+      }
       return r.json()
     }
 
     async function loadData() {
+      const loading = document.getElementById('loading')
       try {
+        loading.textContent = 'Carregando dados…'
         const [cats, prots, adds] = await Promise.all([
-          sb('categorias', 'id,nome,preco_diaria,preco_final'),
-          sb('protecoes',  'id,nome,preco,tipo_preco'),
-          sb('adicionais', 'id,nome,preco,tipo_preco'),
+          sb('categorias', 'id,nome,preco_diaria,preco_final', '&order=ordem.asc'),
+          sb('protecoes',  'id,nome,preco,tipo_preco',         '&order=ordem.asc'),
+          sb('adicionais', 'id,nome,preco,tipo_preco',         '&order=ordem.asc'),
         ])
         DATA = { cats, prots, adds }
         renderForm()
       } catch (e) {
-        document.getElementById('loading').textContent = 'Erro ao carregar dados. Verifique sua conexão.'
-        console.error(e)
+        console.error('[Igufoz]', e)
+        loading.innerHTML = `
+          <div style="color:#dc2626;font-size:12px;line-height:1.5">
+            ⚠️ Erro ao carregar dados.<br>
+            <small style="color:#64748b">${e.message}</small><br><br>
+            <button onclick="loadData()" style="margin-top:6px;padding:6px 14px;background:#FF6B00;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Tentar novamente</button>
+          </div>`
       }
     }
 
