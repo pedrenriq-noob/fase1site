@@ -819,32 +819,70 @@ input[type="checkbox"] {
   .button-group { margin-top: 20px; }
 }
 
-/* ── Hora select (listbox com 6 opções visíveis) ── */
-.hora-select {
-  overflow-y: auto;
+/* ── Custom hora picker ── */
+.hora-picker { position: relative; flex: 1; }
+
+.hora-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 12px;
+  height: 40px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 0;
   background: var(--white);
-  font-size: 13px;
+  font-size: 14px;
   font-family: inherit;
-  color: var(--text);
   cursor: pointer;
-  outline: none;
-  flex: 1;
+  text-align: left;
+  transition: border-color .2s, box-shadow .2s;
+  color: var(--text);
 }
 
-.hora-select:focus {
+.hora-btn.placeholder { color: #94a3b8; }
+
+.hora-btn:hover { border-color: var(--orange); }
+
+.hora-btn.open {
   border-color: var(--orange);
   box-shadow: 0 0 0 3px rgba(255,107,0,.1);
 }
 
-.hora-select option {
-  padding: 5px 10px;
+.hora-btn svg { flex-shrink: 0; color: var(--muted); transition: transform .15s; }
+.hora-btn.open svg { transform: rotate(180deg); }
+
+.hora-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1.5px solid var(--orange);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+  z-index: 500;
+  max-height: 210px;
+  overflow-y: auto;
 }
 
-.hora-select option:first-child {
-  display: none; /* esconde o placeholder "Hora" já que é listbox */
+.hora-dropdown.open { display: block; }
+
+.hora-opt {
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background .1s;
+}
+
+.hora-opt:hover { background: var(--orange-lt); }
+
+.hora-opt.selected {
+  background: var(--orange-lt);
+  color: var(--orange);
+  font-weight: 600;
 }
 
 /* ── Inline field-level errors ── */

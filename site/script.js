@@ -47,6 +47,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadSession()
   await loadData()
   renderStep()
+  // Fecha hora pickers ao clicar fora
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.hora-picker')) {
+      document.querySelectorAll('.hora-dropdown.open').forEach(el => el.classList.remove('open'))
+      document.querySelectorAll('.hora-btn.open').forEach(el => {
+        el.classList.remove('open'); el.setAttribute('aria-expanded', 'false')
+      })
+    }
+  })
 })
 
 async function loadData() {
@@ -296,7 +305,7 @@ function renderStep1(c) {
         <label for="retData">Retirada *</label>
         <div class="date-time-group">
           <input type="date" id="retData" min="${minDate()}" value="${S.retData}">
-          <select id="retHora" aria-label="Horário de retirada" size="6" class="hora-select">${timeOpts(8, 23, S.retHora)}</select>
+          ${renderHoraPicker('retHora', 8, 23, S.retHora, 'Horário de retirada')}
         </div>
         ${avisoRetirada(S.retData, S.retHora)}
       </div>
@@ -304,7 +313,7 @@ function renderStep1(c) {
         <label for="devData">Devolução *</label>
         <div class="date-time-group">
           <input type="date" id="devData" min="${S.retData || minDate()}" value="${S.devData}">
-          <select id="devHora" aria-label="Horário de devolução" size="6" class="hora-select">${timeOpts(0, 23, S.devHora)}</select>
+          ${renderHoraPicker('devHora', 0, 23, S.devHora, 'Horário de devolução')}
         </div>
         ${avisoDevolucao(S.devData, S.devHora)}
       </div>
@@ -351,9 +360,7 @@ function renderStep1(c) {
     if (S.devData && S.devData < S.retData) { S.devData = '' }
     calcDias(); renderStep1(c)
   })
-  document.getElementById('retHora').addEventListener('change', e => { S.retHora = e.target.value; calcDias(); renderStep1(c) })
   document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c) })
-  document.getElementById('devHora').addEventListener('change', e => { S.devHora = e.target.value; calcDias(); renderStep1(c) })
   document.getElementById('retLocal').addEventListener('change', e => { S.retLocal = e.target.value })
   document.getElementById('devLocal').addEventListener('change', e => { S.devLocal = e.target.value; syncAeroAdd(); updateSummary() })
 }
@@ -1174,6 +1181,55 @@ function timeOpts(from, to, sel) {
       s += `<option${v === sel ? ' selected' : ''}>${v}</option>`
     }
   return s
+}
+
+function renderHoraPicker(id, from, to, sel, ariaLabel) {
+  let opts = ''
+  for (let h = from; h <= to; h++)
+    for (let m = 0; m < 60; m += 30) {
+      const v = pad(h) + ':' + pad(m)
+      opts += `<div class="hora-opt${v === sel ? ' selected' : ''}" onclick="selectHora('${id}','${v}')">${v}</div>`
+    }
+  const label = sel || 'Hora'
+  return `
+    <div class="hora-picker">
+      <button type="button" id="${id}" class="hora-btn${sel ? '' : ' placeholder'}"
+        onclick="toggleHoraPicker('${id}')"
+        aria-label="${ariaLabel}" aria-haspopup="listbox" aria-expanded="false">
+        <span>${esc(label)}</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="hora-dropdown" id="${id}-dropdown" role="listbox">${opts}</div>
+    </div>`
+}
+
+window.toggleHoraPicker = function(id) {
+  const dd  = document.getElementById(`${id}-dropdown`)
+  const btn = document.getElementById(id)
+  if (!dd || !btn) return
+  const isOpen = dd.classList.contains('open')
+  // Fecha todos antes
+  document.querySelectorAll('.hora-dropdown.open').forEach(el => el.classList.remove('open'))
+  document.querySelectorAll('.hora-btn.open').forEach(el => {
+    el.classList.remove('open'); el.setAttribute('aria-expanded', 'false')
+  })
+  if (!isOpen) {
+    dd.classList.add('open')
+    btn.classList.add('open')
+    btn.setAttribute('aria-expanded', 'true')
+    // Scroll até a opção selecionada
+    requestAnimationFrame(() => {
+      const sel = dd.querySelector('.hora-opt.selected')
+      if (sel) sel.scrollIntoView({ block: 'nearest' })
+    })
+  }
+}
+
+window.selectHora = function(id, value) {
+  if (id === 'retHora') S.retHora = value
+  if (id === 'devHora') S.devHora = value
+  calcDias()
+  renderStep1(document.getElementById('content'))
 }
 
 function pousoOpts(sel) {
