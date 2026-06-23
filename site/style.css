@@ -885,6 +885,64 @@ input[type="checkbox"] {
   font-weight: 600;
 }
 
+/* ── Sidebar period editor ── */
+.sb-period {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-period-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.sb-period-row { margin-bottom: 7px; }
+
+.sb-period-row > span {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.sb-date-group { display: flex; gap: 5px; align-items: center; }
+
+.sb-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  font-size: 11px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  background: var(--white);
+}
+
+.sb-input:focus { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(255,107,0,.08); }
+
+.sb-dias {
+  font-size: 11px;
+  color: var(--orange);
+  font-weight: 600;
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* Hora picker compacto para sidebar */
+.sb-date-group .hora-picker { flex: 0 0 78px; }
+.sb-date-group .hora-btn { height: 29px; font-size: 11px; padding: 0 7px; }
+.sb-date-group .hora-btn svg { width: 8px; height: 5px; }
+.sb-date-group .hora-dropdown { min-width: 78px; }
+.sb-date-group .hora-opt { padding: 6px 9px; font-size: 12px; }
+
 /* ── Inline field-level errors ── */
 .field-error {
   display: block;

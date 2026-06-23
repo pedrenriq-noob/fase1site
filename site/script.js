@@ -670,8 +670,36 @@ function updateSummary() {
   const nextBtn = `<button class="btn btn-primary" onclick="nextStep()" style="flex:1">Avançar →</button>`
   const btns    = `<div style="display:flex;gap:8px;margin-top:14px">${backBtn}${nextBtn}</div>`
 
+  // Period editor — shared between cat and no-cat paths
+  const diasLabel = S.dias > 0
+    ? `${Number.isInteger(S.dias) ? S.dias : S.dias.toFixed(1).replace('.', ',')} diária${S.dias !== 1 ? 's' : ''}`
+    : ''
+  const periodEditor = `
+    <div class="sb-period">
+      <div class="sb-period-label">📅 Período</div>
+      <div class="sb-period-row">
+        <span>Retirada</span>
+        <div class="sb-date-group">
+          <input type="date" id="sb-retData" class="sb-input" value="${S.retData}" min="${minDate()}">
+          ${renderHoraPicker('sb-retHora', 8, 23, S.retHora, 'Hora de retirada')}
+        </div>
+      </div>
+      <div class="sb-period-row">
+        <span>Devolução</span>
+        <div class="sb-date-group">
+          <input type="date" id="sb-devData" class="sb-input" value="${S.devData}" min="${S.retData || minDate()}">
+          ${renderHoraPicker('sb-devHora', 0, 23, S.devHora, 'Hora de devolução')}
+        </div>
+      </div>
+      ${diasLabel ? `<div class="sb-dias">${diasLabel}</div>` : ''}
+    </div>`
+
   if (!cat) {
-    el.innerHTML = `<p style="color:var(--muted);font-size:13px;margin-bottom:16px">Preencha o período e escolha um veículo.</p>${btns}`
+    el.innerHTML = `
+      ${periodEditor}
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Escolha uma categoria de veículo.</p>
+      ${btns}`
+    bindSbPeriod()
     return
   }
 
@@ -710,12 +738,31 @@ function updateSummary() {
         ${catOpts}
       </select>
     </div>
-    ${S.retData && S.devData ? `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">📅 ${fmtDate(S.retData)} → ${fmtDate(S.devData)}</div>` : ''}
+    ${periodEditor}
     ${items}
     <div class="summary-total">R$ ${fmtN(total)}</div>
     ${btns}`
 
   updateMobileBar()
+  bindSbPeriod()
+}
+
+function bindSbPeriod() {
+  document.getElementById('sb-retData')?.addEventListener('change', e => {
+    S.retData = e.target.value
+    const devEl = document.getElementById('sb-devData')
+    if (devEl) devEl.min = e.target.value
+    if (S.devData && S.devData < S.retData) S.devData = ''
+    calcDias()
+    updateSummary()
+    saveSession()
+  })
+  document.getElementById('sb-devData')?.addEventListener('change', e => {
+    S.devData = e.target.value
+    calcDias()
+    updateSummary()
+    saveSession()
+  })
 }
 
 // ── MOBILE STICKY BAR ─────────────────────────────────────
@@ -1226,10 +1273,15 @@ window.toggleHoraPicker = function(id) {
 }
 
 window.selectHora = function(id, value) {
-  if (id === 'retHora') S.retHora = value
-  if (id === 'devHora') S.devHora = value
+  if (id === 'retHora' || id === 'sb-retHora') S.retHora = value
+  if (id === 'devHora' || id === 'sb-devHora') S.devHora = value
   calcDias()
-  renderStep1(document.getElementById('content'))
+  if (id.startsWith('sb-')) {
+    updateSummary()
+    saveSession()
+  } else {
+    renderStep1(document.getElementById('content'))
+  }
 }
 
 function pousoOpts(sel) {
