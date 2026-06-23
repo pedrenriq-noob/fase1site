@@ -10,10 +10,13 @@ const pad     = n  => String(n).padStart(2, '0')
 const esc     = s  => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 const chevron = `<svg class="chevron" width="11" height="7" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 
-let DATA   = { cats: [], prots: [], adds: [] }
+let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
 let S      = { catId: null, protId: null, addSel: {}, extras: [] }
-let openPanel = null   // id of currently open collapsible panel
-let openHora  = null   // id of currently open hora picker
+let openPanel = null
+let openHora  = null
+
+// Mensagem padrão editável pelo atendente
+const MSG_DEFAULT = 'Para confirmar sua reserva, entre em contato pelo WhatsApp. Estamos à disposição! 😊'
 
 // ── Supabase ──────────────────────────────────────────────
 async function sbFetch(table, select, extra = '') {
@@ -30,12 +33,13 @@ async function loadData() {
   loading.className = 'state-msg'
   loading.textContent = 'Carregando dados…'
   try {
-    const [cats, prots, adds] = await Promise.all([
-      sbFetch('categorias', 'id,nome,preco_diaria', '&order=ordem.asc'),
-      sbFetch('protecoes',  'id,nome,preco,tipo_preco', '&order=ordem.asc'),
-      sbFetch('adicionais', 'id,nome,preco,tipo_preco', '&order=ordem.asc'),
+    const [cats, prots, adds, sazon] = await Promise.all([
+      sbFetch('categorias',   'id,nome,slug,preco_diaria', '&order=ordem.asc'),
+      sbFetch('protecoes',    'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
+      sbFetch('adicionais',   'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
+      sbFetch('sazonalidade', 'data_inicio,data_fim,precos', '').catch(() => []),
     ])
-    DATA = { cats, prots, adds }
+    DATA = { cats, prots, adds, sazon }
     renderForm()
   } catch (e) {
     console.error('[Igufoz]', e)
@@ -75,14 +79,17 @@ function colSelHTML(id, labelText, bodyHTML) {
 
 // ── Category options HTML ─────────────────────────────────
 function catOptionsHTML() {
-  return DATA.cats.map(c => `
-    <div class="col-opt${S.catId === c.id ? ' selected' : ''}" data-cat-id="${esc(c.id)}">
+  return DATA.cats.map(c => {
+    const preco = getPreco(c)
+    const sazon = preco !== c.preco_diaria
+    return `<div class="col-opt${S.catId === c.id ? ' selected' : ''}" data-cat-id="${esc(c.id)}">
       <div class="col-opt-radio"></div>
       <div class="col-opt-body">
         <div class="col-opt-name">${esc(c.nome)}</div>
-        <div class="col-opt-price">R$ ${fmtN(c.preco_diaria)}/dia</div>
+        <div class="col-opt-price">R$ ${fmtN(preco)}/dia${sazon ? ' 🔶' : ''}</div>
       </div>
-    </div>`).join('')
+    </div>`
+  }).join('')
 }
 
 // ── Protection options HTML ───────────────────────────────
@@ -122,7 +129,7 @@ function addOptionsHTML() {
 // ── Current selection labels ──────────────────────────────
 function catLabel() {
   const c = DATA.cats.find(x => x.id === S.catId)
-  return c ? `${c.nome} — R$ ${fmtN(c.preco_diaria)}/dia` : ''
+  return c ? `${c.nome} — R$ ${fmtN(getPreco(c))}/dia` : ''
 }
 
 function protLabel() {
@@ -220,6 +227,16 @@ function renderForm() {
       <div class="sec-label">✏️ Itens extras</div>
       <div class="extras-list" id="extrasList"></div>
       <button class="add-extra-btn" id="addExtraBtn">+ Adicionar item extra</button>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Mensagem padrão -->
+    <section>
+      <div class="sec-label">💬 Mensagem da cotação</div>
+      <textarea id="msgCotacao" rows="3" placeholder="Mensagem que aparece no final da cotação…"
+        style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:12px;color:var(--text);background:#fff;outline:none;resize:vertical;transition:border-color .18s"
+      >${esc(document.getElementById('msgCotacao')?.value ?? MSG_DEFAULT)}</textarea>
     </section>
   `
 
@@ -412,16 +429,44 @@ function updateHora(id, val) {
 }
 
 // ── Calculate total ───────────────────────────────────────
+function getHoraText(id) {
+  const t = document.querySelector(`[data-hora-id="${id}"] span`)?.textContent
+  return (t && t !== 'Hora') ? t : '08:00'
+}
+
+function getRetData() { return document.getElementById('retData')?.value || '' }
+
+// Mesma lógica de hora extra do site:
+// ≤1h resto → sem cobrança extra
+// 1h–4h     → fração proporcional (incrementos 1/8)
+// >4h       → diária completa extra
 function getDias() {
-  const rd = document.getElementById('retData')?.value
+  const rd = getRetData()
   const dd = document.getElementById('devData')?.value
-  const rh = document.querySelector('[data-hora-id="retHora"] span')?.textContent
-  const dh = document.querySelector('[data-hora-id="devHora"] span')?.textContent
   if (!rd || !dd) return 0
-  const rHora = (rh && rh !== 'Hora') ? rh : '08:00'
-  const dHora = (dh && dh !== 'Hora') ? dh : '08:00'
-  const diff  = (new Date(`${dd}T${dHora}`) - new Date(`${rd}T${rHora}`)) / 36e5 / 24
-  return Math.max(0, Math.round(diff * 10) / 10)
+  const rHora = getHoraText('retHora')
+  const dHora = getHoraText('devHora')
+  const diffH = (new Date(`${dd}T${dHora}`) - new Date(`${rd}T${rHora}`)) / 3600000
+  if (diffH <= 0) return 0
+  const full  = Math.floor(diffH / 24)
+  const resto = diffH % 24
+  if (resto <= 1)     return full
+  if (resto > 4)      return full + 1
+  return full + Math.floor(resto * 2) / 8
+}
+
+// Aplica sazonalidade se a data de retirada cair no período
+function getPreco(cat) {
+  const rd = getRetData()
+  if (rd) {
+    for (const p of DATA.sazon) {
+      if (rd >= p.data_inicio && rd <= p.data_fim) {
+        const pr = (p.precos ?? {})[cat.slug]
+        if (pr != null) return Number(pr)
+      }
+    }
+  }
+  return cat.preco_diaria
 }
 
 function calc() {
@@ -429,7 +474,8 @@ function calc() {
   const diasFmt = Number.isInteger(dias) ? dias : dias.toFixed(1).replace('.', ',')
 
   const cat     = DATA.cats.find(c => c.id === S.catId)
-  const baseCat = cat ? cat.preco_diaria * (dias || 1) : 0
+  const precoD  = cat ? getPreco(cat) : 0
+  const baseCat = precoD * (dias || 1)
 
   const prot     = DATA.prots.find(p => p.id === S.protId)
   const baseProt = prot
@@ -478,6 +524,9 @@ function copyCotacao() {
     if (e.desc || e.preco) linhasAdds += `  ✏️ ${e.desc || 'Item extra'}: R$ ${fmtN(e.preco)}\n`
   })
 
+  const msgExtra = document.getElementById('msgCotacao')?.value?.trim() || ''
+  const precoD   = cat ? getPreco(cat) : 0
+
   const txt = [
     '🚗 *COTAÇÃO IGUFOZ*',
     '',
@@ -485,13 +534,14 @@ function copyCotacao() {
     `📅 Devolução: ${fmtDate(dd)} às ${dh}`,
     `⏱ Período:   ${diasFmt} diária${dias !== 1 ? 's' : ''}`,
     '',
-    cat  ? `🚘 ${cat.nome} — R$ ${fmtN(cat.preco_diaria)}/dia` : null,
+    cat  ? `🚘 ${cat.nome} — R$ ${fmtN(precoD)}/dia` : null,
     prot && baseProt > 0 ? `🛡 ${prot.nome}` : null,
     linhasAdds ? `\n*Adicionais:*\n${linhasAdds.trimEnd()}` : null,
     '',
     `💰 *Total estimado: R$ ${fmtN(total)}*`,
     '',
     '_Valores sujeitos a confirmação._',
+    msgExtra ? `\n${msgExtra}` : null,
   ].filter(l => l !== null).join('\n')
 
   // Clipboard: tenta API moderna, cai para execCommand se bloqueada
