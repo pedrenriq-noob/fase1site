@@ -166,7 +166,12 @@ function renderStep() {
   else if (S.step === 3) renderStep3(content)
   else if (S.step === 4) renderStep4(content)
 
-  if (!isLanding) updateSummary()
+  // Mobile bar: inject once, hide when landing or step 4
+  if (!isLanding) ensureMobileBar()
+  const mBar = document.getElementById('mobile-bar')
+  if (mBar) mBar.style.display = (isLanding || S.step === 4) ? 'none' : ''
+
+  if (!isLanding) { updateSummary(); updateMobileBar() }
   saveSession()
   window.scrollTo(0, 0)
 }
@@ -288,18 +293,18 @@ function renderStep1(c) {
 
     <div class="period-row">
       <div class="period-group">
-        <label>Retirada *</label>
+        <label for="retData">Retirada *</label>
         <div class="date-time-group">
           <input type="date" id="retData" min="${minDate()}" value="${S.retData}">
-          <select id="retHora">${timeOpts(8, 23, S.retHora)}</select>
+          <select id="retHora" aria-label="Horário de retirada" size="6" class="hora-select">${timeOpts(8, 23, S.retHora)}</select>
         </div>
         ${avisoRetirada(S.retData, S.retHora)}
       </div>
       <div class="period-group">
-        <label>Devolução *</label>
+        <label for="devData">Devolução *</label>
         <div class="date-time-group">
           <input type="date" id="devData" min="${S.retData || minDate()}" value="${S.devData}">
-          <select id="devHora">${timeOpts(0, 23, S.devHora)}</select>
+          <select id="devHora" aria-label="Horário de devolução" size="6" class="hora-select">${timeOpts(0, 23, S.devHora)}</select>
         </div>
         ${avisoDevolucao(S.devData, S.devHora)}
       </div>
@@ -307,14 +312,14 @@ function renderStep1(c) {
 
     <div class="location-row">
       <div>
-        <label>Local de Retirada *</label>
+        <label for="retLocal">Local de Retirada *</label>
         <select id="retLocal">
           <option value="">Selecione...</option>
           ${locRet.map(l => `<option${l.nome === S.retLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label>Local de Devolução *</label>
+        <label for="devLocal">Local de Devolução *</label>
         <select id="devLocal">
           <option value="">Selecione...</option>
           ${locDev.map(l => `<option${l.nome === S.devLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
@@ -323,7 +328,7 @@ function renderStep1(c) {
     </div>
 
     <h2 style="margin-top:4px">🚘 Escolha a Categoria</h2>
-    <div class="category-grid" id="catGrid">${renderCatCards()}</div>
+    <div class="category-grid" id="catGrid" role="radiogroup" aria-label="Categorias de veículos">${renderCatCards()}</div>
 
     <div id="step1-err"></div>
     <div class="button-group">
@@ -362,7 +367,18 @@ function renderCatCards() {
     const img      = cat.imagem_url
       ? `<img src="${esc(cat.imagem_url)}" alt="${esc(cat.nome)}" class="category-img" onerror="this.style.display='none'">`
       : ''
-    return `<div class="category-card${sel ? ' selected' : ''}${esgotado ? ' esgotado' : ''}" onclick="${esgotado ? '' : `selectCat('${cat.id}')`}" data-id="${cat.id}">
+    const clickFn  = esgotado ? '' : `selectCat('${cat.id}')`
+    const keyFn    = esgotado ? '' : `if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCat('${cat.id}')}`
+    return `<div
+      class="category-card${sel ? ' selected' : ''}${esgotado ? ' esgotado' : ''}"
+      role="radio"
+      aria-checked="${sel}"
+      tabindex="${esgotado ? '-1' : '0'}"
+      onclick="${clickFn}"
+      onkeydown="${keyFn}"
+      data-id="${cat.id}"
+      aria-label="${esc(cat.nome)}, R$ ${fmtN(preco)} por dia${esgotado ? ', indisponível' : ''}">
+      ${sel ? '<div class="cat-selected-badge" aria-hidden="true">✓ Selecionado</div>' : ''}
       ${img}
       <div class="category-card-body">
         <h3>${esc(cat.nome)}</h3>
@@ -377,9 +393,18 @@ function renderCatCards() {
 window.selectCat = function(id) {
   S.catId = id
   document.querySelectorAll('.category-card').forEach(el => {
-    el.classList.toggle('selected', el.dataset.id === id)
+    const sel = el.dataset.id === id
+    el.classList.toggle('selected', sel)
+    el.setAttribute('aria-checked', sel ? 'true' : 'false')
+    const badge = el.querySelector('.cat-selected-badge')
+    if (sel && !badge) {
+      el.insertAdjacentHTML('afterbegin', '<div class="cat-selected-badge" aria-hidden="true">✓ Selecionado</div>')
+    } else if (!sel && badge) {
+      badge.remove()
+    }
   })
   updateSummary()
+  updateMobileBar()
   saveSession()
 }
 
@@ -519,29 +544,29 @@ function renderStep4(c) {
 
     <div class="form-row-2">
       <div class="form-group">
-        <label>Nome Completo *</label>
+        <label for="cli-nome">Nome Completo *</label>
         <input id="cli-nome" type="text" value="${esc(S.nome)}" placeholder="Seu nome completo">
       </div>
       <div class="form-group">
-        <label>CPF *</label>
+        <label for="cli-cpf">CPF *</label>
         <input id="cli-cpf" type="text" value="${esc(S.cpf)}" placeholder="000.000.000-00" maxlength="14">
       </div>
     </div>
 
     <div class="form-row-2">
       <div class="form-group">
-        <label>WhatsApp *</label>
+        <label for="cli-wpp">WhatsApp *</label>
         <input id="cli-wpp" type="tel" value="${esc(S.whatsapp)}" placeholder="(45) 9 9999-9999">
       </div>
       <div class="form-group">
-        <label>E-mail *</label>
+        <label for="cli-email">E-mail *</label>
         <input id="cli-email" type="email" value="${esc(S.email)}" placeholder="seu@email.com">
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
       <div class="form-group">
-        <label>Companhia Aérea</label>
+        <label for="cli-companhia">Companhia Aérea</label>
         <select id="cli-companhia">
           <option value="">Sem voo / Não sei</option>
           <option value="GOL" ${S.companhia === 'GOL' ? 'selected' : ''}>GOL</option>
@@ -550,24 +575,24 @@ function renderStep4(c) {
         </select>
       </div>
       <div class="form-group">
-        <label>Número do Voo</label>
+        <label for="cli-voo">Número do Voo</label>
         <input id="cli-voo" type="text" value="${esc(S.voo)}" placeholder="Ex: 1234">
       </div>
       <div class="form-group">
-        <label>Previsão de Pouso</label>
+        <label for="cli-pouso">Previsão de Pouso</label>
         <select id="cli-pouso">
           <option value="">Sem transfer</option>
           ${pousoOpts(S.pouso)}
         </select>
       </div>
       <div class="form-group">
-        <label>Nº de Pessoas</label>
+        <label for="cli-pessoas">Nº de Pessoas</label>
         <input id="cli-pessoas" type="number" min="1" max="${maxP}" value="${S.pessoas}">
       </div>
     </div>
 
     <div class="form-group">
-      <label>Observações</label>
+      <label for="cli-obs">Observações</label>
       <textarea id="cli-obs" rows="2" placeholder="Informações adicionais...">${esc(S.obs)}</textarea>
     </div>
 
@@ -682,6 +707,49 @@ function updateSummary() {
     ${items}
     <div class="summary-total">R$ ${fmtN(total)}</div>
     ${btns}`
+
+  updateMobileBar()
+}
+
+// ── MOBILE STICKY BAR ─────────────────────────────────────
+function ensureMobileBar() {
+  if (document.getElementById('mobile-bar')) return
+  const bar = document.createElement('div')
+  bar.id = 'mobile-bar'
+  bar.className = 'mobile-sticky-bar'
+  bar.setAttribute('aria-live', 'polite')
+  bar.setAttribute('aria-label', 'Resumo da seleção')
+  bar.innerHTML = `
+    <div class="mobile-bar-info">
+      <span class="mobile-bar-cat" id="mb-cat">Escolha um veículo</span>
+      <span class="mobile-bar-price" id="mb-price"></span>
+    </div>
+    <button class="btn btn-primary mobile-bar-btn" onclick="nextStep()">Avançar →</button>`
+  document.body.appendChild(bar)
+}
+
+function updateMobileBar() {
+  const catEl   = document.getElementById('mb-cat')
+  const priceEl = document.getElementById('mb-price')
+  if (!catEl || !priceEl) return
+
+  const cat = S.categorias.find(x => x.id === S.catId)
+  if (!cat) {
+    catEl.textContent   = 'Escolha um veículo'
+    priceEl.textContent = ''
+    return
+  }
+
+  const prot     = S.protecoes.find(x => x.id === S.protId)
+  const preco    = getPreco(cat)
+  const dias     = S.dias || 1
+  const baseCat  = preco * dias
+  const baseProt = prot ? (prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco) : 0
+  const totalAdd = S.adicionais_sel.reduce((s, a) => s + a.subtotal, 0)
+  const total    = baseCat + baseProt + totalAdd
+
+  catEl.textContent   = cat.nome
+  priceEl.textContent = `R$ ${fmtN(total)}`
 }
 
 // ── MODAL SEM PROTEÇÃO ─────────────────────────────────────
@@ -754,9 +822,31 @@ window.prevStep = function() {
   // step 1 é a primeira tela, não volta mais
 }
 
+function clearFieldErrors() {
+  document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'))
+  document.querySelectorAll('.field-error').forEach(el => el.remove())
+}
+
+function markErr(fieldId, msg) {
+  const el = document.getElementById(fieldId)
+  if (!el) return
+  el.classList.add('input-error')
+  if (!msg) return
+  // Insert after date-time-group when applicable, otherwise after the element itself
+  const insertTarget = el.closest('.date-time-group') ?? el
+  insertTarget.parentElement?.querySelector('.field-error')?.remove()
+  insertTarget.insertAdjacentHTML('afterend', `<span class="field-error" role="alert">${msg}</span>`)
+}
+
+function scrollToFirstError() {
+  const first = document.querySelector('.input-error')
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 function validate() {
+  clearFieldErrors()
   const errEl = document.getElementById(`step${S.step}-err`)
-  const err = (msg) => { if (errEl) { errEl.innerHTML = `<div class="step-error">${msg}</div>`; errEl.scrollIntoView({behavior:'smooth',block:'nearest'}) }; return false }
+  if (errEl) errEl.innerHTML = ''
 
   if (S.step === 1) {
     S.retData  = document.getElementById('retData')?.value  || S.retData
@@ -766,15 +856,25 @@ function validate() {
     S.retLocal = document.getElementById('retLocal')?.value || S.retLocal
     S.devLocal = document.getElementById('devLocal')?.value || S.devLocal
 
-    if (!S.retData)  return err('Informe a data de retirada.')
-    if (!S.retHora)  return err('Informe o horário de retirada.')
-    if (!S.devData)  return err('Informe a data de devolução.')
-    if (!S.devHora)  return err('Informe o horário de devolução.')
-    if (!S.retLocal) return err('Selecione o local de retirada.')
-    if (!S.devLocal) return err('Selecione o local de devolução.')
+    let hasErr = false
+    if (!S.devLocal) { markErr('devLocal', 'Selecione o local de devolução.');  hasErr = true }
+    if (!S.retLocal) { markErr('retLocal', 'Selecione o local de retirada.');   hasErr = true }
+    if (!S.devHora)  { markErr('devHora',  'Informe o horário de devolução.');  hasErr = true }
+    if (!S.devData)  { markErr('devData',  'Informe a data de devolução.');     hasErr = true }
+    if (!S.retHora)  { markErr('retHora',  'Informe o horário de retirada.');   hasErr = true }
+    if (!S.retData)  { markErr('retData',  'Informe a data de retirada.');      hasErr = true }
+    if (hasErr) { scrollToFirstError(); return false }
+
     calcDias()
-    if (S.dias <= 0) return err('O horário de devolução deve ser posterior ao de retirada.')
-    if (!S.catId)    return err('Selecione uma categoria de veículo.')
+    if (S.dias <= 0) {
+      markErr('devHora', 'O horário de devolução deve ser posterior ao de retirada.')
+      scrollToFirstError(); return false
+    }
+    if (!S.catId) {
+      if (errEl) errEl.innerHTML = `<div class="step-error">Selecione uma categoria de veículo.</div>`
+      document.getElementById('catGrid')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return false
+    }
   }
 
   if (S.step === 2 && !S.protId) {
@@ -783,24 +883,29 @@ function validate() {
   }
 
   if (S.step === 4) {
-    S.nome     = document.getElementById('cli-nome')?.value.trim()   || ''
-    S.cpf      = document.getElementById('cli-cpf')?.value.trim()    || ''
-    S.whatsapp = document.getElementById('cli-wpp')?.value.trim()    || ''
-    S.email    = document.getElementById('cli-email')?.value.trim()  || ''
+    S.nome      = document.getElementById('cli-nome')?.value.trim()   || ''
+    S.cpf       = document.getElementById('cli-cpf')?.value.trim()    || ''
+    S.whatsapp  = document.getElementById('cli-wpp')?.value.trim()    || ''
+    S.email     = document.getElementById('cli-email')?.value.trim()  || ''
     S.companhia = document.getElementById('cli-companhia')?.value     || ''
-    S.voo      = document.getElementById('cli-voo')?.value.trim()    || ''
-    S.pouso    = document.getElementById('cli-pouso')?.value         || ''
-    S.pessoas  = Number(document.getElementById('cli-pessoas')?.value) || 1
-    S.obs      = document.getElementById('cli-obs')?.value.trim()    || ''
-    S.termos   = document.getElementById('cli-termos')?.checked      || false
+    S.voo       = document.getElementById('cli-voo')?.value.trim()    || ''
+    S.pouso     = document.getElementById('cli-pouso')?.value         || ''
+    S.pessoas   = Number(document.getElementById('cli-pessoas')?.value) || 1
+    S.obs       = document.getElementById('cli-obs')?.value.trim()    || ''
+    S.termos    = document.getElementById('cli-termos')?.checked      || false
 
-    if (!S.nome)                return err('Informe seu nome completo.')
-    if (!validarCPF(S.cpf))     return err('CPF inválido. Verifique os números digitados.')
-    if (S.whatsapp.replace(/\D/g,'').length < 10) return err('Informe um WhatsApp válido.')
-    if (!S.email.includes('@')) return err('Informe um e-mail válido.')
-    const cat = S.categorias.find(x => x.id === S.catId)
-    if (S.pessoas > (cat?.max_pessoas ?? 5)) return err(`Este veículo comporta no máximo ${cat?.max_pessoas ?? 5} pessoas.`)
-    if (!S.termos) return err('Você deve declarar estar ciente das informações importantes.')
+    let hasErr = false
+    const cat  = S.categorias.find(x => x.id === S.catId)
+    if (S.pessoas > (cat?.max_pessoas ?? 5)) { markErr('cli-pessoas', `Máximo ${cat?.max_pessoas ?? 5} pessoas para este veículo.`); hasErr = true }
+    if (!S.email.includes('@'))              { markErr('cli-email',   'Informe um e-mail válido.');                                  hasErr = true }
+    if (S.whatsapp.replace(/\D/g,'').length < 10) { markErr('cli-wpp', 'Informe um WhatsApp válido com DDD.');                      hasErr = true }
+    if (!validarCPF(S.cpf))                  { markErr('cli-cpf',    'CPF inválido. Verifique os números.');                        hasErr = true }
+    if (!S.nome)                             { markErr('cli-nome',   'Informe seu nome completo.');                                  hasErr = true }
+    if (!S.termos) {
+      if (errEl) errEl.innerHTML = `<div class="step-error">Você deve declarar estar ciente das informações importantes.</div>`
+      hasErr = true
+    }
+    if (hasErr) { scrollToFirstError(); return false }
   }
 
   return true

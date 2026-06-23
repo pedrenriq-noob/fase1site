@@ -3,7 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const RESEND_KEY    = 're_51Rozuwe_Mk85nNbiLfteKshDW64jgaeh'
 const FROM_EMAIL    = 'Igufoz Reservas <onboarding@resend.dev>'
-const CENTRAL_EMAIL = 'reservasigufoz@gmail.com'
+const CENTRAL_EMAIL = 'pedrenriq@gmail.com'
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 
@@ -178,11 +178,20 @@ async function sendEmail(to: string, subject: string, html: string) {
   return res.ok
 }
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS })
+  }
+
   try {
     const payload = await req.json()
     const row = payload?.record as any
-    if (!row) return new Response('no record', { status: 400 })
+    if (!row) return new Response('no record', { status: 400, headers: CORS })
 
     console.log(JSON.stringify({ event: 'notificar-reserva', id: row.id }))
 
@@ -220,9 +229,9 @@ Deno.serve(async (req: Request) => {
     }
 
     await Promise.allSettled(tasks)
-    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
   } catch (e) {
     console.error(String(e))
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 })
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } })
   }
 })

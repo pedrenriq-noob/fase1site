@@ -447,6 +447,7 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: all .2s ease;
   overflow: hidden;
+  position: relative; /* needed for badge */
 }
 
 .category-card:hover {
@@ -456,9 +457,26 @@ input[type="checkbox"] {
 }
 
 .category-card.selected {
-  border-color: var(--orange);
+  border: 2.5px solid var(--orange);
   background: var(--orange-lt);
-  box-shadow: 0 4px 16px rgba(255,107,0,.15);
+  box-shadow: 0 0 0 3px rgba(255,107,0,.18), 0 4px 16px rgba(255,107,0,.2);
+  transform: translateY(-1px);
+}
+
+.cat-selected-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: .03em;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
 
 .category-img { width: 100%; height: 110px; object-fit: cover; display: block; }
@@ -799,6 +817,106 @@ input[type="checkbox"] {
   #app.mode-landing { display: block; }
 
   .button-group { margin-top: 20px; }
+}
+
+/* ── Hora select (listbox com 6 opções visíveis) ── */
+.hora-select {
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  background: var(--white);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+}
+
+.hora-select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(255,107,0,.1);
+}
+
+.hora-select option {
+  padding: 5px 10px;
+}
+
+.hora-select option:first-child {
+  display: none; /* esconde o placeholder "Hora" já que é listbox */
+}
+
+/* ── Inline field-level errors ── */
+.field-error {
+  display: block;
+  font-size: 11.5px;
+  color: var(--red);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.input-error {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,.1) !important;
+}
+
+/* ── Focus visible (keyboard nav) ── */
+.category-card:focus-visible,
+.protection-card:focus-visible,
+.btn:focus-visible,
+.btn-land-cta:focus-visible,
+.quantity-btn:focus-visible,
+.add-toggle:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* ── Mobile sticky summary bar ── */
+.mobile-sticky-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #fff;
+  border-top: 2px solid var(--border);
+  padding: 10px 16px;
+  z-index: 200;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.09);
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-bar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-bar-cat {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-bar-price {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--orange);
+}
+
+.mobile-bar-btn {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  #app.mode-flow .mobile-sticky-bar { display: flex; }
+  #app.mode-flow #content { padding-bottom: 78px; }
 }
 
 /* ============================================
