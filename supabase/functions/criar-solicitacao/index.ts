@@ -9,10 +9,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// ── Rate limiting simples por IP (em memória por isolate) ──────────────────
 const rateMap = new Map<string, { count: number; reset: number }>()
-const RATE_LIMIT = 10   // max requests
-const RATE_WINDOW = 60  // por segundo (1 minuto)
+const RATE_LIMIT = 10
+const RATE_WINDOW = 60
 
 function checkRateLimit(ip: string): boolean {
   const now = Math.floor(Date.now() / 1000)
@@ -26,7 +25,6 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
-// ── Mesma fórmula de site/script.js ──────────────────────────────────────
 function calcDias(ret: string, dev: string): number {
   const diffH = (new Date(dev).getTime() - new Date(ret).getTime()) / 3600000
   if (diffH <= 0) return 0
@@ -37,7 +35,6 @@ function calcDias(ret: string, dev: string): number {
   return full + Math.floor(resto * 2) / 8
 }
 
-// ── Validações server-side ────────────────────────────────────────────────
 function validarEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
 }
@@ -71,7 +68,6 @@ function err(msg: string, status = 400) {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
-  // ── Rate limit ────────────────────────────────────────────────────────
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
   if (!checkRateLimit(ip)) {
     return new Response(JSON.stringify({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }), {
@@ -82,7 +78,6 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json()
 
-    // ── Campos obrigatórios ───────────────────────────────────────────
     const required = [
       'tenant_id', 'categoria_id', 'cliente_nome', 'cliente_email',
       'cliente_whatsapp', 'data_retirada', 'data_devolucao',
@@ -92,32 +87,28 @@ Deno.serve(async (req: Request) => {
       if (!body[f]) return err(`Campo obrigatório ausente: ${f}`)
     }
 
-    // ── Validações de formato ─────────────────────────────────────────
-    if (!validarEmail(body.cliente_email)) {
-      return err('E-mail inválido.')
-    }
-    if (!validarWhatsApp(body.cliente_whatsapp)) {
-      return err('WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).')
-    }
-    if (body.cliente_cpf) {
+    if (!validarEmail(body.cliente_email)) return err('E-mail inválido.')
+    if (!validarWhatsApp(body.cliente_whatsapp)) return err('WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).')
+
+    if (!body.estrangeiro && body.cliente_cpf) {
       const cpfLimpo = String(body.cliente_cpf).replace(/\D/g, '')
-      if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) {
-        return err('CPF inválido.')
-      }
+      if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) return err('CPF inválido.')
     }
 
     const dias = calcDias(body.data_retirada, body.data_devolucao)
     if (dias <= 0) return err('Período inválido: devolução deve ser após a retirada.')
 
-    // ── Cliente Supabase com service_role ─────────────────────────────
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? SUPABASE_ANON
+    // P-03 FIX: service role obrigatório — sem fallback para anon key
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceKey) {
+      console.error('[criar-solicitacao] SUPABASE_SERVICE_ROLE_KEY não configurada')
+      return err('Erro de configuração do servidor. Contate o suporte.', 500)
+    }
     const sb = createClient(SUPABASE_URL, serviceKey)
 
-    // ── Valida tenant ─────────────────────────────────────────────────
     const { data: tenant } = await sb.from('tenants').select('id').eq('id', body.tenant_id).eq('ativo', true).single()
     if (!tenant) return err('Tenant inválido.')
 
-    // ── Busca preços reais do banco ───────────────────────────────────
     const [{ data: cat }, { data: prot }] = await Promise.all([
       sb.from('categorias')
         .select('id, slug, preco_diaria, ativo')
@@ -136,7 +127,6 @@ Deno.serve(async (req: Request) => {
     if (!cat?.ativo) return err('Categoria inválida ou inativa.')
     if (body.protecao_id && !prot?.ativo) return err('Proteção inválida ou inativa.')
 
-    // ── Aplica sazonalidade ───────────────────────────────────────────
     const dataRet = body.data_retirada.slice(0, 10)
     const { data: sazon } = await sb.from('sazonalidade')
       .select('precos')
@@ -152,7 +142,6 @@ Deno.serve(async (req: Request) => {
       if (pr != null) precoCat = Number(pr)
     }
 
-    // ── Calcula valores server-side ───────────────────────────────────
     const baseCat  = precoCat * dias
     const baseProt = prot
       ? (prot.tipo_preco === 'per_day' ? parseFloat(prot.preco) * dias : parseFloat(prot.preco))
@@ -186,47 +175,44 @@ Deno.serve(async (req: Request) => {
 
     const valor_estimado = Math.round((baseCat + baseProt + totalAdd) * 100) / 100
 
-    // ── Monta observações ─────────────────────────────────────────────
     const obsCompleto = [
       body.observacoes     || null,
       body.companhia_aerea ? `Cia: ${body.companhia_aerea}` : null,
       body.numero_voo      ? `Voo: ${body.numero_voo}`      : null,
       body.horario_pouso   ? `Pouso: ${body.horario_pouso}` : null,
       `Pessoas: ${body.pessoas ?? 1}`,
+      body.estrangeiro ? '[ESTRANGEIRO]' : null,
     ].filter(Boolean).join(' | ') || null
 
-    // ── Insere solicitação ────────────────────────────────────────────
-    const { data: sol, error: solErr } = await sb.from('solicitacoes').insert({
-      tenant_id:        body.tenant_id,
-      categoria_id:     body.categoria_id,
-      protecao_id:      body.protecao_id      ?? null,
-      cliente_nome:     body.cliente_nome,
-      cliente_email:    body.cliente_email,
-      cliente_whatsapp: body.cliente_whatsapp,
-      cliente_cpf:      body.cliente_cpf      ?? null,
-      estrangeiro:      body.estrangeiro      ?? false,
-      cliente_doc:      body.cliente_doc      ?? null,
-      companhia_aerea:  body.companhia_aerea  ?? null,
-      data_retirada:    body.data_retirada,
-      data_devolucao:   body.data_devolucao,
-      local_retirada:   body.local_retirada,
-      local_devolucao:  body.local_devolucao,
-      valor_estimado,
-      pessoas:          body.pessoas          ?? 1,
-      numero_voo:       body.numero_voo       ?? null,
-      horario_pouso:    body.horario_pouso    ?? null,
-      observacoes:      obsCompleto,
-      status:           'solicitada',
-    }).select('id, numero').single()
+    // TE-01 FIX: inserção atômica via RPC — solicitação + itens em uma única transação
+    const { data: result, error: rpcErr } = await sb.rpc('inserir_solicitacao_completa', {
+      p_sol: {
+        tenant_id:        body.tenant_id,
+        categoria_id:     body.categoria_id,
+        protecao_id:      body.protecao_id      ?? null,
+        cliente_nome:     body.cliente_nome,
+        cliente_email:    body.cliente_email,
+        cliente_whatsapp: body.cliente_whatsapp,
+        cliente_cpf:      body.cliente_cpf      ?? null,
+        estrangeiro:      body.estrangeiro      ?? false,
+        cliente_doc:      body.cliente_doc      ?? null,
+        companhia_aerea:  body.companhia_aerea  ?? null,
+        data_retirada:    body.data_retirada,
+        data_devolucao:   body.data_devolucao,
+        local_retirada:   body.local_retirada,
+        local_devolucao:  body.local_devolucao,
+        valor_estimado,
+        pessoas:          body.pessoas          ?? 1,
+        numero_voo:       body.numero_voo       ?? null,
+        horario_pouso:    body.horario_pouso    ?? null,
+        observacoes:      obsCompleto,
+      },
+      p_itens: itensInsert,
+    })
 
-    if (solErr) throw new Error(solErr.message)
+    if (rpcErr) throw new Error(rpcErr.message)
 
-    if (itensInsert.length > 0) {
-      const { error: itErr } = await sb.from('solicitacao_itens').insert(
-        itensInsert.map(i => ({ ...i, solicitacao_id: sol.id }))
-      )
-      if (itErr) throw new Error(itErr.message)
-    }
+    const sol = result as { id: string; numero: number }
 
     console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado, ip }))
 

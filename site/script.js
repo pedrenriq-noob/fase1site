@@ -36,9 +36,19 @@ function saveSession() {
 function loadSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
-    if (!raw) return
-    const data = JSON.parse(raw)
-    Object.assign(S, data)
+    if (raw) Object.assign(S, JSON.parse(raw))
+    // Pré-preenchimento vindo do formulário de busca rápida da landing
+    const qsRet   = sessionStorage.getItem('qs_retData')
+    const qsDev   = sessionStorage.getItem('qs_devData')
+    const qsLocal = sessionStorage.getItem('qs_local')
+    if (qsRet || qsDev || qsLocal) {
+      if (qsRet)   S.retData  = qsRet
+      if (qsDev)   S.devData  = qsDev
+      if (qsLocal) S.retLocal = qsLocal
+      sessionStorage.removeItem('qs_retData')
+      sessionStorage.removeItem('qs_devData')
+      sessionStorage.removeItem('qs_local')
+    }
   } catch (_) {}
 }
 
@@ -1235,7 +1245,7 @@ function calcDias() {
   if (diffH <= 0) { S.dias = 0; return }
   const full  = Math.floor(diffH / 24)
   const resto = diffH % 24
-  if (resto <= 1)     S.dias = full
+  if (resto <= 1)     S.dias = Math.max(1, full)
   else if (resto > 4) S.dias = full + 1
   else                S.dias = full + Math.floor(resto * 2) / 8
   // Recalcular subtotais dos adicionais já selecionados
