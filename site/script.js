@@ -17,7 +17,7 @@ const S = {
   // cliente
   nome: '', cpf: '', whatsapp: '', email: '',
   voo: '', companhia: '', pouso: '', pessoas: 1, obs: '',
-  termos: false,
+  termos: false, estrangeiro: false,
 }
 
 // ── SESSION PERSISTENCE ────────────────────────────────────
@@ -409,6 +409,40 @@ function renderCatCards() {
 }
 
 window.selectCat = function(id) {
+  const cat      = S.categorias.find(x => x.id === id)
+  const novoLim  = cat?.max_cadeirinhas ?? 2
+  const totalCad = getTotalCad()
+
+  if (totalCad > novoLim) {
+    // Reduz cadeirinhas ao novo limite, removendo o excesso do fim da lista
+    let cadsRestantes = novoLim
+    S.adicionais_sel = S.adicionais_sel.map(item => {
+      const adicional = S.adicionais.find(a => a.id === item.id)
+      if (!adicional?.is_cadeirinha) return item
+      if (cadsRestantes <= 0) return null
+      if (item.quantidade > cadsRestantes) {
+        const novaQty = cadsRestantes
+        cadsRestantes = 0
+        return { ...item, quantidade: novaQty, subtotal: calcSubtotal(adicional, novaQty) }
+      }
+      cadsRestantes -= item.quantidade
+      return item
+    }).filter(Boolean)
+
+    const limMsg = novoLim === 0
+      ? 'Este veículo não suporta cadeirinhas.'
+      : `Para veículos de até ${cat?.max_pessoas ?? 5} ocupantes, o limite é de ${novoLim} cadeirinha${novoLim !== 1 ? 's' : ''} por veículo. As cadeirinhas excedentes foram removidas.`
+
+    // Mostra aviso — se estiver no step 3, re-renderiza a tela
+    if (S.step === 3) {
+      const errEl = document.getElementById('step3-err')
+      if (errEl) errEl.innerHTML = `<div class="step-error" style="margin-top:8px">⚠️ ${limMsg}</div>`
+      renderStep3(document.getElementById('content'))
+    } else {
+      alert(`⚠️ ${limMsg}`)
+    }
+  }
+
   S.catId = id
   document.querySelectorAll('.category-card').forEach(el => {
     const sel = el.dataset.id === id
@@ -563,14 +597,23 @@ function renderStep4(c) {
     <button class="top-back" onclick="prevStep()">← Voltar</button>
     <h2>👤 Seus Dados</h2>
 
+    <label class="estrangeiro-toggle" id="estrangeiro-label">
+      <input type="checkbox" id="cli-estrangeiro" ${S.estrangeiro ? 'checked' : ''}>
+      <span>🌍 Sou estrangeiro — não possuo CPF brasileiro</span>
+    </label>
+
     <div class="form-row-2">
       <div class="form-group">
         <label for="cli-nome">Nome Completo *</label>
         <input id="cli-nome" type="text" value="${esc(S.nome)}" placeholder="Seu nome completo">
       </div>
-      <div class="form-group">
+      <div class="form-group" id="grupo-cpf" ${S.estrangeiro ? 'style="display:none"' : ''}>
         <label for="cli-cpf">CPF *</label>
         <input id="cli-cpf" type="text" value="${esc(S.cpf)}" placeholder="000.000.000-00" maxlength="14">
+      </div>
+      <div class="form-group" id="grupo-doc" ${S.estrangeiro ? '' : 'style="display:none"'}>
+        <label for="cli-doc">Documento de Identificação *</label>
+        <input id="cli-doc" type="text" value="${esc(S.cpf)}" placeholder="Passaporte, RNE, DNI...">
       </div>
     </div>
 
@@ -637,6 +680,24 @@ function renderStep4(c) {
       <button class="btn btn-primary" id="btn-submit" onclick="submitReservation()">Enviar Solicitação 🚀</button>
     </div>
   </div>`
+
+  // Toggle estrangeiro
+  const estrangeiroEl = document.getElementById('cli-estrangeiro')
+  const grupoCpf      = document.getElementById('grupo-cpf')
+  const grupoDoc      = document.getElementById('grupo-doc')
+  estrangeiroEl.addEventListener('change', () => {
+    S.estrangeiro = estrangeiroEl.checked
+    grupoCpf.style.display = S.estrangeiro ? 'none' : ''
+    grupoDoc.style.display = S.estrangeiro ? '' : 'none'
+    if (!S.estrangeiro) {
+      // Volta ao CPF: limpa o campo doc e restaura campo cpf
+      document.getElementById('cli-doc').value = ''
+    } else {
+      // Vai para estrangeiro: limpa CPF
+      document.getElementById('cli-cpf').value = ''
+      S.cpf = ''
+    }
+  })
 
   // Máscaras
   const cpfEl = document.getElementById('cli-cpf')
@@ -953,23 +1014,27 @@ function validate() {
   }
 
   if (S.step === 4) {
-    S.nome      = document.getElementById('cli-nome')?.value.trim()   || ''
-    S.cpf       = document.getElementById('cli-cpf')?.value.trim()    || ''
-    S.whatsapp  = document.getElementById('cli-wpp')?.value.trim()    || ''
-    S.email     = document.getElementById('cli-email')?.value.trim()  || ''
-    S.companhia = document.getElementById('cli-companhia')?.value     || ''
-    S.voo       = document.getElementById('cli-voo')?.value.trim()    || ''
-    S.pouso     = document.getElementById('cli-pouso')?.value         || ''
-    S.pessoas   = Number(document.getElementById('cli-pessoas')?.value) || 1
-    S.obs       = document.getElementById('cli-obs')?.value.trim()    || ''
-    S.termos    = document.getElementById('cli-termos')?.checked      || false
+    S.estrangeiro = document.getElementById('cli-estrangeiro')?.checked || false
+    S.nome        = document.getElementById('cli-nome')?.value.trim()   || ''
+    S.cpf         = S.estrangeiro
+      ? (document.getElementById('cli-doc')?.value.trim()  || '')
+      : (document.getElementById('cli-cpf')?.value.trim()  || '')
+    S.whatsapp    = document.getElementById('cli-wpp')?.value.trim()    || ''
+    S.email       = document.getElementById('cli-email')?.value.trim()  || ''
+    S.companhia   = document.getElementById('cli-companhia')?.value     || ''
+    S.voo         = document.getElementById('cli-voo')?.value.trim()    || ''
+    S.pouso       = document.getElementById('cli-pouso')?.value         || ''
+    S.pessoas     = Number(document.getElementById('cli-pessoas')?.value) || 1
+    S.obs         = document.getElementById('cli-obs')?.value.trim()    || ''
+    S.termos      = document.getElementById('cli-termos')?.checked      || false
 
     let hasErr = false
     const cat  = S.categorias.find(x => x.id === S.catId)
     if (S.pessoas > (cat?.max_pessoas ?? 5)) { markErr('cli-pessoas', `Máximo ${cat?.max_pessoas ?? 5} pessoas para este veículo.`); hasErr = true }
     if (!S.email.includes('@'))              { markErr('cli-email',   'Informe um e-mail válido.');                                  hasErr = true }
     if (S.whatsapp.replace(/\D/g,'').length < 10) { markErr('cli-wpp', 'Informe um WhatsApp válido com DDD.');                      hasErr = true }
-    if (!validarCPF(S.cpf))                  { markErr('cli-cpf',    'CPF inválido. Verifique os números.');                        hasErr = true }
+    if (!S.estrangeiro && !validarCPF(S.cpf)) { markErr('cli-cpf',   'CPF inválido. Verifique os números.');                        hasErr = true }
+    if (S.estrangeiro && !S.cpf)              { markErr('cli-doc',   'Informe o documento de identificação.');                       hasErr = true }
     if (!S.nome)                             { markErr('cli-nome',   'Informe seu nome completo.');                                  hasErr = true }
     if (!S.termos) {
       if (errEl) errEl.innerHTML = `<div class="step-error">Você deve declarar estar ciente das informações importantes.</div>`
@@ -1011,7 +1076,9 @@ window.submitReservation = async function() {
         cliente_nome:     S.nome,
         cliente_email:    S.email,
         cliente_whatsapp: S.whatsapp.replace(/\D/g, ''),
-        cliente_cpf:      S.cpf.replace(/\D/g, ''),
+        cliente_cpf:      S.estrangeiro ? null : (S.cpf.replace(/\D/g, '') || null),
+        cliente_doc:      S.estrangeiro ? S.cpf : null,
+        estrangeiro:      S.estrangeiro,
         companhia_aerea:  S.companhia   || null,
         data_retirada:    `${S.retData}T${S.retHora}:00`,
         data_devolucao:   `${S.devData}T${S.devHora}:00`,

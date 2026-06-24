@@ -204,6 +204,8 @@ Deno.serve(async (req: Request) => {
       cliente_email:    body.cliente_email,
       cliente_whatsapp: body.cliente_whatsapp,
       cliente_cpf:      body.cliente_cpf      ?? null,
+      estrangeiro:      body.estrangeiro      ?? false,
+      cliente_doc:      body.cliente_doc      ?? null,
       companhia_aerea:  body.companhia_aerea  ?? null,
       data_retirada:    body.data_retirada,
       data_devolucao:   body.data_devolucao,

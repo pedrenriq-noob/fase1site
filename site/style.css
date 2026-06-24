@@ -746,6 +746,26 @@ input[type="checkbox"] {
   border-top: 2px solid var(--border);
 }
 
+/* Toggle estrangeiro */
+.estrangeiro-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: #f0f7ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+  transition: background .15s, border-color .15s;
+  user-select: none;
+}
+.estrangeiro-toggle:hover { background: #dbeafe; border-color: #93c5fd; }
+.estrangeiro-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+
 /* Termos */
 .terms-box {
   background: var(--bg);
