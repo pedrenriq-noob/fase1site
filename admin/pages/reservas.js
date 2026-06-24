@@ -168,9 +168,8 @@ async function verReserva(id) {
     const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
     const fmtDt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'
 
-    // Calcula dias
-    const diffMs = new Date(r.data_devolucao) - new Date(r.data_retirada)
-    const dias = Math.max(1, Math.round(diffMs / 36e5 / 24 * 10) / 10)
+    // Calcula dias — mesma fórmula do site (script.js:calcDias)
+    const dias = calcDias(r.data_retirada, r.data_devolucao)
 
     // Monta linhas da tabela de valores
     const trStyle = 'border-bottom:1px solid var(--border)'
@@ -296,4 +295,15 @@ function fmtData(str) {
 function fmtDataSimples(str) {
     if (!str) return '—'
     return new Date(str).toLocaleDateString('pt-BR')
+}
+
+// Mesma fórmula do site/script.js para consistência de preços
+function calcDias(ret, dev) {
+    const diffH = (new Date(dev) - new Date(ret)) / 3600000
+    if (diffH <= 0) return 1
+    const full  = Math.floor(diffH / 24)
+    const resto = diffH % 24
+    if (resto <= 1)     return Math.max(1, full)
+    if (resto > 4)      return full + 1
+    return full + Math.floor(resto * 2) / 8
 }

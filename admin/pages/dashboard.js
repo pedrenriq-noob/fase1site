@@ -7,6 +7,7 @@ export async function renderDashboard() {
         .select('status, valor_estimado, criado_em')
         .eq('tenant_id', TENANT_ID)
         .order('criado_em', { ascending: false })
+        .limit(500)
 
     const total      = reservas?.length ?? 0
     const confirmada = reservas?.filter(r => r.status === 'confirmada').length  ?? 0

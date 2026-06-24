@@ -73,7 +73,7 @@ VALUES
     (v_tenant, 'Aut. Travessia + CV 7d',    'Autorização de travessia com Carta Verde de até 7 dias para o Mercosul.', 190.00, 'fixed', false, false, null, 5, true),
 
     -- Serviços
-    (v_tenant, 'DEVOLUÇÃO NO AEROPORTO',    'Devolução no estacionamento Leva e Trás 24h. Incluso translado até o aeroporto.', 50.00, 'fixed',   false, false, null, 6, true),
+    (v_tenant, 'DEVOLUÇÃO NO AEROPORTO',    'Devolução no estacionamento Leva e Trás 24h. Incluso translado até o aeroporto.', 69.90, 'fixed',   false, false, null, 6, true),
     (v_tenant, 'CONDUTOR ADICIONAL',        'Valor Diário',                       10.00, 'per_day', false, false, null, 7, true),
     (v_tenant, 'LAVAGEM ANTECIPADA',        'Valor Único',                        45.00, 'fixed',   false, false, null, 8, true),
     (v_tenant, 'PROTEÇÃO DE PNEUS E VIDROS','Cobertura Exclusiva para Vidros, Pneus e Rodas.', 24.90, 'per_day', false, false, null, 9, true)
