@@ -131,6 +131,7 @@ async function abrirFormLocal(id = null) {
                 <span style="color:var(--muted)">até</span>
                 <input type="time" id="f-ret-fim" value="${t('hora_retirada_fim')}" style="width:auto">
             </div>
+            <div id="aviso-ret-hora" style="font-size:12px;color:#b45309;margin-top:4px;display:none">🌙 Janela noturna (cross-midnight): o local ficará disponível das <span id="aviso-ret-ini"></span> até <span id="aviso-ret-fim"></span> do dia seguinte.</div>
         </div>
 
         <div class="form-group full" style="border-top:1.5px solid var(--border);padding-top:16px;margin-top:4px">
@@ -151,6 +152,7 @@ async function abrirFormLocal(id = null) {
                 <span style="color:var(--muted)">até</span>
                 <input type="time" id="f-dev-fim" value="${t('hora_devolucao_fim')}" style="width:auto">
             </div>
+            <div id="aviso-dev-hora" style="font-size:12px;color:#b45309;margin-top:4px;display:none">🌙 Janela noturna (cross-midnight): o local ficará disponível das <span id="aviso-dev-ini"></span> até <span id="aviso-dev-fim"></span> do dia seguinte.</div>
         </div>
     </div>`
 
@@ -200,6 +202,31 @@ async function abrirFormLocal(id = null) {
             id ? l : null, payload
         )
     })
+
+    // Detecta janela noturna (cross-midnight) e exibe aviso ao admin
+    function checkCrossNight(tipo) {
+        const ini = document.getElementById(`f-${tipo}-ini`)?.value
+        const fim = document.getElementById(`f-${tipo}-fim`)?.value
+        const aviso = document.getElementById(`aviso-${tipo}-hora`)
+        if (!aviso) return
+        if (ini && fim && ini > fim) {
+            document.getElementById(`aviso-${tipo}-ini`).textContent = ini
+            document.getElementById(`aviso-${tipo}-fim`).textContent = fim
+            aviso.style.display = 'block'
+        } else {
+            aviso.style.display = 'none'
+        }
+    }
+
+    // Ativa na abertura (valores já preenchidos) e a cada alteração
+    setTimeout(() => {
+        checkCrossNight('ret')
+        checkCrossNight('dev')
+        document.getElementById('f-ret-ini')?.addEventListener('input', () => checkCrossNight('ret'))
+        document.getElementById('f-ret-fim')?.addEventListener('input', () => checkCrossNight('ret'))
+        document.getElementById('f-dev-ini')?.addEventListener('input', () => checkCrossNight('dev'))
+        document.getElementById('f-dev-fim')?.addEventListener('input', () => checkCrossNight('dev'))
+    }, 0)
 }
 
 async function excluirLocal(id, nome) {

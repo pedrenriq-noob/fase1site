@@ -94,7 +94,11 @@ function locaisParaRetirada(data, hora) {
     if (l.hora_retirada_inicio && hora) {
       const ini = horaParaMinutos(l.hora_retirada_inicio)
       const fim = horaParaMinutos(l.hora_retirada_fim)
-      if (hMin < ini || hMin > fim) return false
+      if (ini <= fim) {
+        if (hMin < ini || hMin > fim) return false          // janela normal (08:00–18:00)
+      } else {
+        if (hMin < ini && hMin > fim) return false          // janela cross-midnight (18:01–07:59)
+      }
     }
     return true
   })
@@ -109,7 +113,11 @@ function locaisParaDevolucao(data, hora) {
     if (l.hora_devolucao_inicio && hora) {
       const ini = horaParaMinutos(l.hora_devolucao_inicio)
       const fim = horaParaMinutos(l.hora_devolucao_fim)
-      if (hMin < ini || hMin > fim) return false
+      if (ini <= fim) {
+        if (hMin < ini || hMin > fim) return false          // janela normal (08:00–18:00)
+      } else {
+        if (hMin < ini && hMin > fim) return false          // janela cross-midnight (18:01–07:59)
+      }
     }
     return true
   })
