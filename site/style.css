@@ -819,9 +819,9 @@ input[type="checkbox"] {
   #app.mode-flow {
     display: grid;
     grid-template-columns: 1fr 360px;
-    grid-template-rows: auto auto 1fr;
-    height: calc(100vh - 78px);
-    overflow: hidden;
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    overflow: visible;
   }
 
   #app.mode-flow .progress-bar  { grid-column: 1 / -1; }
@@ -830,22 +830,23 @@ input[type="checkbox"] {
   #app.mode-flow #content {
     grid-column: 1;
     grid-row: 3;
-    overflow-y: auto;
-    padding-bottom: 32px;
+    padding-bottom: 60px;
   }
 
   #app.mode-flow .summary {
     grid-column: 2;
     grid-row: 3;
     border-top: none;
-    border-left: 3px solid var(--orange);
+    border-left: 1px solid var(--border);
+    position: sticky;
+    top: 78px;
+    max-height: calc(100vh - 78px);
     overflow-y: auto;
-    align-self: stretch;
+    align-self: start;
   }
 
-  /* Sidebar cuida da navegação no desktop — esconde botão do conteúdo */
-  #app.mode-flow:not(.step-final) #content .button-group { display: none; }
-  #app.mode-flow.step-final #content .button-group { display: flex; }
+  /* Botão de navegação fica no conteúdo (abaixo das categorias) */
+  #app.mode-flow #content .button-group { display: flex; }
 
   #app.mode-landing { display: block; }
 
