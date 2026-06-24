@@ -256,6 +256,134 @@ async function verReserva(id) {
     abrirModal(`📋 #${numFmt} — ${r.cliente_nome}`, corpo, null)
     document.getElementById('modal-save-btn').style.display = 'none'
     document.getElementById('modal-cancel-btn').textContent = 'Fechar'
+
+    // Botão imprimir
+    const footer = document.querySelector('.modal-footer')
+    if (footer && !footer.querySelector('#btn-imprimir')) {
+        const btnPrint = document.createElement('button')
+        btnPrint.id = 'btn-imprimir'
+        btnPrint.className = 'btn-secondary'
+        btnPrint.textContent = '🖨 Imprimir'
+        btnPrint.addEventListener('click', () => imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt))
+        footer.insertBefore(btnPrint, footer.firstChild)
+    }
+}
+
+function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
+    const trStyle = 'border-bottom:1px solid #e2e8f0'
+    const tdL = 'padding:7px 6px;font-size:13px'
+    const tdR = 'padding:7px 6px;font-size:13px;text-align:right'
+
+    const linhasProd = (() => {
+        const rows = []
+        if (r.categorias) {
+            const precoDia = parseFloat(r.categorias.preco_diaria || 0)
+            rows.push(`<tr style="${trStyle}"><td style="${tdL}">${r.categorias.nome} (${dias} diária${dias !== 1 ? 's' : ''})</td><td style="${tdR}">${fmt(precoDia)}/dia</td><td style="${tdR}">${fmt(precoDia * dias)}</td></tr>`)
+        }
+        if (r.protecoes) {
+            const preco = parseFloat(r.protecoes.preco || 0)
+            const total = r.protecoes.tipo_preco === 'per_day' ? preco * dias : preco
+            rows.push(`<tr style="${trStyle}"><td style="${tdL}">${r.protecoes.nome}</td><td style="${tdR}">${fmt(preco)}${r.protecoes.tipo_preco === 'per_day' ? '/dia' : ''}</td><td style="${tdR}">${fmt(total)}</td></tr>`)
+        }
+        ;(itens ?? []).forEach(i => {
+            const u = parseFloat(i.preco_unitario || 0)
+            const q = i.quantidade || 1
+            const t = i.tipo_preco === 'per_day' ? u * q * dias : u * q
+            rows.push(`<tr style="${trStyle}"><td style="${tdL}">${i.adicionais?.nome ?? '—'}${q > 1 ? ` (${q}×)` : ''}</td><td style="${tdR}">${fmt(u)}${i.tipo_preco === 'per_day' ? '/dia' : ''}</td><td style="${tdR}">${fmt(t)}</td></tr>`)
+        })
+        return rows.join('')
+    })()
+
+    const status = { solicitada:'Solicitada', em_analise:'Em análise', confirmada:'Confirmada', concluida:'Concluída', cancelada:'Cancelada' }
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Reserva #${numFmt} — Igufoz</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: Arial, sans-serif; font-size:13px; color:#0b1b32; padding:32px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; padding-bottom:16px; border-bottom:2px solid #ff6a00; }
+  .brand { font-size:22px; font-weight:900; color:#ff6a00; letter-spacing:-.02em; }
+  .brand small { display:block; font-size:11px; font-weight:400; color:#61708a; margin-top:2px; }
+  .num { font-size:28px; font-weight:900; color:#08264a; letter-spacing:-.03em; }
+  .num small { display:block; font-size:11px; font-weight:400; color:#61708a; }
+  .status-pill { display:inline-block; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; margin-top:4px; }
+  section { margin-bottom:20px; }
+  h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#61708a; margin-bottom:10px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field strong { display:block; font-size:11px; color:#61708a; margin-bottom:2px; }
+  .field span { font-size:13px; color:#0b1b32; font-weight:500; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { background:#f3f7fb; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#61708a; padding:8px 6px; text-align:left; border-bottom:1px solid #d9e3ef; }
+  thead th:not(:first-child) { text-align:right; }
+  tfoot td { border-top:2px solid #08264a; padding:10px 6px; font-weight:700; font-size:14px; }
+  tfoot td:last-child { text-align:right; color:#ff6a00; }
+  .footer { margin-top:32px; padding-top:14px; border-top:1px solid #d9e3ef; font-size:11px; color:#61708a; display:flex; justify-content:space-between; }
+  @media print { body { padding:16px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="brand">IGUFOZ<small>Aluguel de Carros — Foz do Iguaçu</small></div>
+    <div class="status-pill">${status[r.status] ?? r.status}</div>
+  </div>
+  <div style="text-align:right">
+    <div class="num">#${numFmt}<small>Reserva</small></div>
+    <div style="font-size:11px;color:#61708a;margin-top:4px">Enviado em ${fmtDt(r.criado_em)}</div>
+  </div>
+</div>
+
+<section>
+  <h2>Dados do Cliente</h2>
+  <div class="grid">
+    <div class="field"><strong>Nome</strong><span>${r.cliente_nome}</span></div>
+    <div class="field"><strong>CPF</strong><span>${r.cliente_cpf ?? '—'}</span></div>
+    <div class="field"><strong>WhatsApp</strong><span>${r.cliente_whatsapp}</span></div>
+    <div class="field"><strong>E-mail</strong><span>${r.cliente_email ?? '—'}</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Período</h2>
+  <div class="grid">
+    <div class="field"><strong>Retirada</strong><span>${fmtDt(r.data_retirada)}</span></div>
+    <div class="field"><strong>Devolução</strong><span>${fmtDt(r.data_devolucao)}</span></div>
+    <div class="field"><strong>Local Retirada</strong><span>${r.local_retirada ?? '—'}</span></div>
+    <div class="field"><strong>Local Devolução</strong><span>${r.local_devolucao ?? '—'}</span></div>
+    ${r.numero_voo ? `<div class="field"><strong>Voo</strong><span>${r.numero_voo}</span></div>` : ''}
+    ${r.horario_pouso ? `<div class="field"><strong>Pouso</strong><span>${r.horario_pouso}</span></div>` : ''}
+    ${r.companhia_aerea ? `<div class="field"><strong>Companhia</strong><span>${r.companhia_aerea}</span></div>` : ''}
+    <div class="field"><strong>Pessoas</strong><span>${r.pessoas ?? 1}</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Produtos e Valores</h2>
+  <table>
+    <thead><tr><th>Produto</th><th>Valor Unit.</th><th>Total</th></tr></thead>
+    <tbody>${linhasProd || '<tr><td colspan="3" style="color:#94a3b8;padding:10px 6px">Sem itens</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="2">Total Estimado</td><td>${fmt(r.valor_estimado)}</td></tr></tfoot>
+  </table>
+</section>
+
+${r.observacoes ? `<section><h2>Observações</h2><p style="font-size:13px;line-height:1.6">${r.observacoes}</p></section>` : ''}
+${r.motivo_cancelamento ? `<section><h2>Motivo Cancelamento</h2><p style="font-size:13px;color:#b91c1c">${r.motivo_cancelamento}</p></section>` : ''}
+
+<div class="footer">
+  <span>Igufoz Locadora · (45) 9 8818-2995 · Foz do Iguaçu – PR</span>
+  <span>Documento gerado em ${new Date().toLocaleString('pt-BR')}</span>
+</div>
+</body>
+</html>`
+
+    const win = window.open('', '_blank', 'width=800,height=900')
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 400)
 }
 
 async function excluirReserva(id, num) {
