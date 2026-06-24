@@ -49,43 +49,19 @@ a { color: inherit; text-decoration: none; }
 
 .brand {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 140px;
-  line-height: 1;
+  align-items: center;
 }
 
-.brand-mark {
-  position: relative;
-  display: inline-flex;
-  gap: 2px;
-  color: var(--orange);
-  font-size: 28px;
-  font-weight: 950;
-  letter-spacing: -0.07em;
+.brand-logo {
+  height: 48px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
-.brand-mark::before {
-  position: absolute;
-  right: -13px;
-  top: -10px;
-  width: 92px;
-  height: 26px;
-  content: '';
-  border-top: 3px solid var(--orange);
-  border-right: 3px solid var(--orange);
-  border-radius: 60px 70px 0 0;
-  transform: skewX(-16deg);
-}
-
-.brand-mark span:last-child { color: #312a70; }
-
-.brand-sub {
-  margin-top: 3px;
-  color: var(--orange);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+.footer-logo {
+  height: 56px;
+  margin-bottom: 14px;
 }
 
 .nav-links {
@@ -357,14 +333,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 700px) {
   .site-header { min-height: 68px; }
 
-  .brand { min-width: 108px; }
-  .brand-mark { font-size: 22px; }
-  .brand-mark::before {
-    right: -9px; top: -8px;
-    width: 68px; height: 20px;
-    border-width: 2px;
-  }
-  .brand-sub { font-size: 10px; }
+  .brand-logo { height: 38px; }
 
   .header-actions .btn-ghost { display: none; }
   .header-actions .btn-primary { min-height: 40px; padding: 0 13px; font-size: 12px; }
