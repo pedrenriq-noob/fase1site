@@ -9,7 +9,24 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Mesma fórmula de site/script.js — fonte da verdade agora é aqui
+// ── Rate limiting simples por IP (em memória por isolate) ──────────────────
+const rateMap = new Map<string, { count: number; reset: number }>()
+const RATE_LIMIT = 10   // max requests
+const RATE_WINDOW = 60  // por segundo (1 minuto)
+
+function checkRateLimit(ip: string): boolean {
+  const now = Math.floor(Date.now() / 1000)
+  const entry = rateMap.get(ip)
+  if (!entry || now > entry.reset) {
+    rateMap.set(ip, { count: 1, reset: now + RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
+// ── Mesma fórmula de site/script.js ──────────────────────────────────────
 function calcDias(ret: string, dev: string): number {
   const diffH = (new Date(dev).getTime() - new Date(ret).getTime()) / 3600000
   if (diffH <= 0) return 0
@@ -18,6 +35,31 @@ function calcDias(ret: string, dev: string): number {
   if (resto <= 1) return Math.max(1, full)
   if (resto > 4)  return full + 1
   return full + Math.floor(resto * 2) / 8
+}
+
+// ── Validações server-side ────────────────────────────────────────────────
+function validarEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+}
+
+function validarWhatsApp(wpp: string): boolean {
+  const digits = wpp.replace(/\D/g, '')
+  return digits.length >= 10 && digits.length <= 13
+}
+
+function validarCPF(cpf: string): boolean {
+  const c = cpf.replace(/\D/g, '')
+  if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(c[i]) * (10 - i)
+  let r = (sum * 10) % 11
+  if (r === 10 || r === 11) r = 0
+  if (r !== parseInt(c[9])) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(c[i]) * (11 - i)
+  r = (sum * 10) % 11
+  if (r === 10 || r === 11) r = 0
+  return r === parseInt(c[10])
 }
 
 function err(msg: string, status = 400) {
@@ -29,10 +71,18 @@ function err(msg: string, status = 400) {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
+  // ── Rate limit ────────────────────────────────────────────────────────
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return new Response(JSON.stringify({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }), {
+      status: 429, headers: { ...CORS, 'Content-Type': 'application/json' },
+    })
+  }
+
   try {
     const body = await req.json()
 
-    // ── Validação de campos obrigatórios ────────────────────
+    // ── Campos obrigatórios ───────────────────────────────────────────
     const required = [
       'tenant_id', 'categoria_id', 'cliente_nome', 'cliente_email',
       'cliente_whatsapp', 'data_retirada', 'data_devolucao',
@@ -42,18 +92,32 @@ Deno.serve(async (req: Request) => {
       if (!body[f]) return err(`Campo obrigatório ausente: ${f}`)
     }
 
+    // ── Validações de formato ─────────────────────────────────────────
+    if (!validarEmail(body.cliente_email)) {
+      return err('E-mail inválido.')
+    }
+    if (!validarWhatsApp(body.cliente_whatsapp)) {
+      return err('WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).')
+    }
+    if (body.cliente_cpf) {
+      const cpfLimpo = String(body.cliente_cpf).replace(/\D/g, '')
+      if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) {
+        return err('CPF inválido.')
+      }
+    }
+
     const dias = calcDias(body.data_retirada, body.data_devolucao)
     if (dias <= 0) return err('Período inválido: devolução deve ser após a retirada.')
 
-    // ── Cliente Supabase com service_role (bypassa RLS) ─────
+    // ── Cliente Supabase com service_role ─────────────────────────────
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? SUPABASE_ANON
     const sb = createClient(SUPABASE_URL, serviceKey)
 
-    // ── Valida tenant ────────────────────────────────────────
+    // ── Valida tenant ─────────────────────────────────────────────────
     const { data: tenant } = await sb.from('tenants').select('id').eq('id', body.tenant_id).eq('ativo', true).single()
     if (!tenant) return err('Tenant inválido.')
 
-    // ── Busca preços reais do banco ──────────────────────────
+    // ── Busca preços reais do banco ───────────────────────────────────
     const [{ data: cat }, { data: prot }] = await Promise.all([
       sb.from('categorias')
         .select('id, slug, preco_diaria, ativo')
@@ -72,7 +136,7 @@ Deno.serve(async (req: Request) => {
     if (!cat?.ativo) return err('Categoria inválida ou inativa.')
     if (body.protecao_id && !prot?.ativo) return err('Proteção inválida ou inativa.')
 
-    // ── Aplica sazonalidade (server-side) ───────────────────
+    // ── Aplica sazonalidade ───────────────────────────────────────────
     const dataRet = body.data_retirada.slice(0, 10)
     const { data: sazon } = await sb.from('sazonalidade')
       .select('precos')
@@ -88,13 +152,12 @@ Deno.serve(async (req: Request) => {
       if (pr != null) precoCat = Number(pr)
     }
 
-    // ── Calcula valores server-side ──────────────────────────
+    // ── Calcula valores server-side ───────────────────────────────────
     const baseCat  = precoCat * dias
     const baseProt = prot
       ? (prot.tipo_preco === 'per_day' ? parseFloat(prot.preco) * dias : parseFloat(prot.preco))
       : 0
 
-    // Valida e recalcula adicionais
     let totalAdd = 0
     const itensInsert: any[] = []
     if (body.itens?.length) {
@@ -123,7 +186,7 @@ Deno.serve(async (req: Request) => {
 
     const valor_estimado = Math.round((baseCat + baseProt + totalAdd) * 100) / 100
 
-    // ── Monta observações ────────────────────────────────────
+    // ── Monta observações ─────────────────────────────────────────────
     const obsCompleto = [
       body.observacoes     || null,
       body.companhia_aerea ? `Cia: ${body.companhia_aerea}` : null,
@@ -132,7 +195,7 @@ Deno.serve(async (req: Request) => {
       `Pessoas: ${body.pessoas ?? 1}`,
     ].filter(Boolean).join(' | ') || null
 
-    // ── Insere solicitação ───────────────────────────────────
+    // ── Insere solicitação ────────────────────────────────────────────
     const { data: sol, error: solErr } = await sb.from('solicitacoes').insert({
       tenant_id:        body.tenant_id,
       categoria_id:     body.categoria_id,
@@ -156,7 +219,6 @@ Deno.serve(async (req: Request) => {
 
     if (solErr) throw new Error(solErr.message)
 
-    // ── Insere itens ─────────────────────────────────────────
     if (itensInsert.length > 0) {
       const { error: itErr } = await sb.from('solicitacao_itens').insert(
         itensInsert.map(i => ({ ...i, solicitacao_id: sol.id }))
@@ -164,7 +226,7 @@ Deno.serve(async (req: Request) => {
       if (itErr) throw new Error(itErr.message)
     }
 
-    console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado }))
+    console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado, ip }))
 
     return new Response(JSON.stringify({ ok: true, id: sol.id, numero: sol.numero, valor_estimado }), {
       headers: { ...CORS, 'Content-Type': 'application/json' },
