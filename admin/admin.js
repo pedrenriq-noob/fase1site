@@ -6,8 +6,9 @@ import { renderAdicionais, bindAdicionais }       from './pages/adicionais.js'
 import { renderSazonalidade, bindSazonalidade }   from './pages/sazonalidade.js'
 import { renderReservas, bindReservas }           from './pages/reservas.js'
 import { renderTranslados, bindTranslados }       from './pages/translados.js'
-import { renderDashboard }                        from './pages/dashboard.js'
+import { renderDashboard, bindDashboard }          from './pages/dashboard.js'
 import { renderLocais, bindLocais }               from './pages/locais.js'
+import { renderAuditoria }                        from './pages/auditoria_page.js'
 
 // ============================================================
 // AUTH
@@ -47,7 +48,7 @@ async function navegar(pagina) {
 
     try {
         switch (pagina) {
-            case 'dashboard':    el.innerHTML = await renderDashboard();    break
+            case 'dashboard':    el.innerHTML = await renderDashboard();    bindDashboard();    break
             case 'categorias':   el.innerHTML = await renderCategorias();   bindCategorias();   break
             case 'protecoes':    el.innerHTML = await renderProtecoes();    bindProtecoes();    break
             case 'adicionais':   el.innerHTML = await renderAdicionais();   bindAdicionais();   break
@@ -55,6 +56,7 @@ async function navegar(pagina) {
             case 'reservas':     el.innerHTML = await renderReservas();     bindReservas();     break
             case 'translados':   el.innerHTML = await renderTranslados();   bindTranslados();   break
             case 'locais':       el.innerHTML = await renderLocais();       bindLocais();       break
+            case 'auditoria':   el.innerHTML = await renderAuditoria();    break
             default:             el.innerHTML = '<p>Página não encontrada.</p>'
         }
     } catch (err) {
@@ -168,6 +170,31 @@ function mostrarLogin() {
             btnLoader.style.display = 'none'
         }
     })
+
+    // Esqueci minha senha
+    document.getElementById('btn-forgot')?.addEventListener('click', () => {
+        const area = document.getElementById('forgot-form-area')
+        area.style.display = area.style.display === 'none' ? 'block' : 'none'
+    })
+
+    document.getElementById('btn-forgot-send')?.addEventListener('click', async () => {
+        const email = document.getElementById('forgot-email')?.value.trim()
+        const msgEl = document.getElementById('forgot-msg')
+        if (!email) { msgEl.textContent = 'Informe o e-mail.'; msgEl.style.color = '#ef4444'; return }
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + window.location.pathname,
+        })
+
+        if (error) {
+            msgEl.textContent = error.message
+            msgEl.style.color = '#ef4444'
+        } else {
+            msgEl.textContent = 'Link enviado! Verifique seu e-mail.'
+            msgEl.style.color = '#16a34a'
+            document.getElementById('btn-forgot-send').disabled = true
+        }
+    })
 }
 
 function mostrarApp(user) {
@@ -213,10 +240,91 @@ function mostrarApp(user) {
         }
     })
 
+    // Alterar senha
+    document.getElementById('btn-alterar-senha')?.addEventListener('click', () => {
+        abrirModal('🔑 Alterar Senha', `
+            <div class="form-group">
+                <label>Senha atual *</label>
+                <input type="password" id="senha-atual" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div class="form-group">
+                <label>Nova senha *</label>
+                <input type="password" id="senha-nova" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>Confirme a nova senha *</label>
+                <input type="password" id="senha-conf" placeholder="Repita a nova senha" autocomplete="new-password">
+            </div>
+            <div id="senha-err" style="color:#ef4444;font-size:13px;margin-top:4px"></div>
+        `, async () => {
+            const atual = document.getElementById('senha-atual').value
+            const nova  = document.getElementById('senha-nova').value
+            const conf  = document.getElementById('senha-conf').value
+            const errEl = document.getElementById('senha-err')
+
+            if (!atual || !nova || !conf) { errEl.textContent = 'Preencha todos os campos.'; return false }
+            if (nova.length < 8)          { errEl.textContent = 'A nova senha deve ter ao menos 8 caracteres.'; return false }
+            if (nova !== conf)            { errEl.textContent = 'As senhas não coincidem.'; return false }
+
+            // Re-autentica com senha atual antes de alterar
+            const { data: { user } } = await supabase.auth.getUser()
+            const { error: reAuthErr } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: atual,
+            })
+            if (reAuthErr) { errEl.textContent = 'Senha atual incorreta.'; return false }
+
+            const { error } = await supabase.auth.updateUser({ password: nova })
+            if (error) { errEl.textContent = error.message; return false }
+        })
+    })
+
     // Badge translados
     atualizarBadgeTranslados()
 
     navegar('dashboard')
 }
 
-document.addEventListener('DOMContentLoaded', init)
+// Detecta retorno do link de redefinição de senha (token no hash da URL)
+async function verificarResetToken() {
+    const hash = window.location.hash
+    if (!hash.includes('type=recovery')) return false
+
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error || !session) return false
+
+    // Limpa o hash da URL sem recarregar
+    history.replaceState(null, '', window.location.pathname)
+
+    // Abre o modal de nova senha diretamente no app
+    mostrarApp(session.user)
+    abrirModal('🔑 Redefinir Senha', `
+        <p style="font-size:13px;color:#374151;margin-bottom:12px">Defina sua nova senha:</p>
+        <div class="form-group">
+            <label>Nova senha *</label>
+            <input type="password" id="reset-nova" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label>Confirme a nova senha *</label>
+            <input type="password" id="reset-conf" placeholder="Repita a nova senha" autocomplete="new-password">
+        </div>
+        <div id="reset-err" style="color:#ef4444;font-size:13px;margin-top:4px"></div>
+    `, async () => {
+        const nova  = document.getElementById('reset-nova').value
+        const conf  = document.getElementById('reset-conf').value
+        const errEl = document.getElementById('reset-err')
+
+        if (nova.length < 8) { errEl.textContent = 'A nova senha deve ter ao menos 8 caracteres.'; return false }
+        if (nova !== conf)   { errEl.textContent = 'As senhas não coincidem.'; return false }
+
+        const { error } = await supabase.auth.updateUser({ password: nova })
+        if (error) { errEl.textContent = error.message; return false }
+    })
+
+    return true
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const handled = await verificarResetToken()
+    if (!handled) init()
+})

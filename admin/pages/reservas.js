@@ -1,5 +1,6 @@
 // pages/reservas.js
 import { supabase, TENANT_ID, toast, abrirModal } from '../admin.js'
+import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 
 const STATUS_LABELS = {
     solicitada: 'Solicitada',
@@ -100,11 +101,23 @@ export function bindReservas() {
     // Troca de status inline
     document.querySelectorAll('.status-select').forEach(sel => {
         sel.addEventListener('change', async () => {
-            const id         = sel.dataset.id
-            const novoStatus = sel.value
+            const id          = sel.dataset.id
+            const novoStatus  = sel.value
             const statusAtual = sel.dataset.status
 
             if (novoStatus === statusAtual) return
+
+            const executarTroca = async (motivo) => {
+                const ok = await trocarStatus(id, novoStatus, statusAtual, motivo)
+                if (ok) {
+                    sel.dataset.status = novoStatus
+                    const cor = STATUS_COR[novoStatus] ?? '#64748b'
+                    sel.style.borderColor = cor
+                    sel.style.color = cor
+                } else {
+                    sel.value = statusAtual
+                }
+            }
 
             if (novoStatus === 'cancelada') {
                 const motivo = prompt('Motivo do cancelamento (obrigatório):')
@@ -113,15 +126,13 @@ export function bindReservas() {
                     toast('Informe o motivo do cancelamento.', 'error')
                     return
                 }
-                await trocarStatus(id, novoStatus, motivo.trim())
+                confirmarComSenha(
+                    `Confirme o <strong>cancelamento</strong> da reserva.<br>Motivo: <em>${motivo.trim()}</em>`,
+                    () => executarTroca(motivo.trim())
+                )
             } else {
-                await trocarStatus(id, novoStatus)
+                await executarTroca()
             }
-
-            sel.dataset.status = novoStatus
-            const cor = STATUS_COR[novoStatus] ?? '#64748b'
-            sel.style.borderColor = cor
-            sel.style.color = cor
         })
     })
 
@@ -387,23 +398,29 @@ ${r.motivo_cancelamento ? `<section><h2>Motivo Cancelamento</h2><p style="font-s
 }
 
 async function excluirReserva(id, num) {
-    if (!confirm(`Excluir reserva #${num}?\nEsta ação não pode ser desfeita.`)) return
+    confirmarComSenha(
+        `Você está prestes a <strong>excluir permanentemente</strong> a reserva <strong>#${num}</strong>.<br>Esta ação não pode ser desfeita.`,
+        async () => {
+            const { data: antes } = await supabase
+                .from('solicitacoes').select('*').eq('id', id).single()
 
-    const { error } = await supabase
-        .from('solicitacoes')
-        .delete()
-        .eq('id', id)
-        .eq('tenant_id', TENANT_ID)
+            const { error } = await supabase
+                .from('solicitacoes')
+                .delete()
+                .eq('id', id)
+                .eq('tenant_id', TENANT_ID)
 
-    if (error) { toast(error.message, 'error'); return }
+            if (error) { toast(error.message, 'error'); return }
 
-    toast(`Reserva #${num} excluída.`, 'success')
-
-    const row = document.querySelector(`[data-action="excluir"][data-id="${id}"]`)?.closest('tr')
-    row?.remove()
+            await registrarAuditoria('excluir', 'reserva', id, `Reserva #${num} excluída`, antes, null)
+            toast(`Reserva #${num} excluída.`, 'success')
+            const row = document.querySelector(`[data-action="excluir"][data-id="${id}"]`)?.closest('tr')
+            row?.remove()
+        }
+    )
 }
 
-async function trocarStatus(id, status, motivo = null) {
+async function trocarStatus(id, status, statusAnterior, motivo = null) {
     const payload = { status }
     if (motivo) payload.motivo_cancelamento = motivo
 
@@ -417,6 +434,13 @@ async function trocarStatus(id, status, motivo = null) {
         toast(error.message, 'error')
         return false
     }
+
+    await registrarAuditoria(
+        'status', 'reserva', id,
+        `Status alterado: ${STATUS_LABELS[statusAnterior]} → ${STATUS_LABELS[status]}`,
+        { status: statusAnterior },
+        { status, motivo_cancelamento: motivo ?? undefined }
+    )
 
     toast(`Status atualizado: ${STATUS_LABELS[status]}`, 'success')
     return true

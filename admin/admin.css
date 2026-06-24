@@ -286,6 +286,23 @@ body {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===================== DASHBOARD FILTROS ===================== */
+.dash-filtro-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    background: var(--white);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    white-space: nowrap;
+}
+.dash-filtro-btn:hover { border-color: var(--orange); color: var(--orange); }
+.dash-filtro-btn.active { background: var(--orange); border-color: var(--orange); color: #fff; font-weight: 600; }
+
 /* ===================== PAGE HEADER ===================== */
 .page-header {
     display: flex;

@@ -34,6 +34,19 @@
                 <span id="login-btn-loader" style="display:none">Entrando...</span>
             </button>
         </form>
+
+        <div id="forgot-area" style="margin-top:16px">
+            <button type="button" id="btn-forgot" style="background:none;border:none;color:var(--accent,#ff6a00);font-size:13px;cursor:pointer;padding:0;font-family:inherit;text-decoration:underline">Esqueci minha senha</button>
+        </div>
+
+        <div id="forgot-form-area" style="display:none;margin-top:16px;border-top:1.5px solid #e5e7eb;padding-top:16px">
+            <p style="font-size:13px;color:#374151;margin-bottom:10px">Informe seu e-mail para receber o link de redefinição:</p>
+            <div class="form-group">
+                <input type="email" id="forgot-email" placeholder="admin@igufoz.com.br" style="width:100%">
+            </div>
+            <div id="forgot-msg" style="font-size:12px;margin-bottom:8px"></div>
+            <button type="button" id="btn-forgot-send" class="btn-primary btn-block">Enviar link de redefinição</button>
+        </div>
     </div>
 </div>
 
@@ -66,6 +79,9 @@
             <a href="#" class="nav-item" data-page="locais">
                 <span class="nav-icon">📍</span> Locais
             </a>
+            <a href="#" class="nav-item" data-page="auditoria">
+                <span class="nav-icon">🕵️</span> Auditoria
+            </a>
             <div class="nav-section-label">Operação</div>
             <a href="#" class="nav-item" data-page="reservas">
                 <span class="nav-icon">📋</span> Reservas
@@ -81,6 +97,7 @@
                 <div class="sidebar-user-avatar" id="sidebar-avatar">—</div>
                 <div class="sidebar-user-name" id="sidebar-user-name">Carregando...</div>
             </div>
+            <button id="btn-alterar-senha" class="btn-logout" title="Alterar senha">🔑 Senha</button>
             <button id="logout-btn" class="btn-logout" title="Sair">↪ Sair</button>
         </div>
     </aside>

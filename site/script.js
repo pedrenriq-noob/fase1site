@@ -75,8 +75,9 @@ async function loadData() {
   S.protecoes    = rP.data ?? []
   S.adicionais   = rA.data ?? []
   S.sazonalidade = rS.data ?? []
+  if (rL.error) console.warn('[igufoz] locais query error:', rL.error.message)
   // locais: se a tabela ainda não existe no banco, usa lista de fallback
-  S.locais = (rL.data && rL.data.length > 0) ? rL.data : [
+  S.locais = (!rL.error && rL.data && rL.data.length > 0) ? rL.data : [
     { nome: 'Av. Brasil, 90 — Centro',                        permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: false, is_aeroporto: false },
     { nome: 'Av. das Cataratas, 1419 — Vila Yolanda',         permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: true,  is_aeroporto: false },
     { nome: 'Estacionamento Leva e Trás 24h — Aeroporto',     permite_retirada: false, permite_devolucao: true, hora_retirada_inicio: null,    hora_retirada_fim: null,    hora_devolucao_inicio: null,    hora_devolucao_fim: null,    disponivel_domingo: true,  is_aeroporto: true  },
@@ -358,9 +359,9 @@ function renderStep1(c) {
     S.retData = e.target.value
     document.getElementById('devData').min = e.target.value
     if (S.devData && S.devData < S.retData) { S.devData = '' }
-    calcDias(); renderStep1(c)
+    calcDias(); renderStep1(c); updateSummary()
   })
-  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c) })
+  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary() })
   document.getElementById('retLocal').addEventListener('change', e => { S.retLocal = e.target.value })
   document.getElementById('devLocal').addEventListener('change', e => { S.devLocal = e.target.value; syncAeroAdd(); updateSummary() })
 }
@@ -759,12 +760,14 @@ function bindSbPeriod() {
     if (devEl) devEl.min = e.target.value
     if (S.devData && S.devData < S.retData) S.devData = ''
     calcDias()
+    if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
   })
   document.getElementById('sb-devData')?.addEventListener('change', e => {
     S.devData = e.target.value
     calcDias()
+    if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
   })
@@ -1254,10 +1257,12 @@ window.selectHora = function(id, value) {
   if (id === 'devHora' || id === 'sb-devHora') S.devHora = value
   calcDias()
   if (id.startsWith('sb-')) {
+    if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
   } else {
     renderStep1(document.getElementById('content'))
+    updateSummary()
   }
 }
 

@@ -1,5 +1,6 @@
 // pages/locais.js
 import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { registrarAuditoria } from './auditoria.js'
 
 const fmt = t => t ? t.slice(0, 5) : '—'
 
@@ -192,14 +193,23 @@ async function abrirFormLocal(id = null) {
             : await supabase.from('locais').insert(payload)
 
         if (error) { toast(error.message, 'error'); return false }
+
+        await registrarAuditoria(
+            id ? 'atualizar' : 'criar', 'local', id ?? null,
+            id ? `Local "${nome}" atualizado` : `Local "${nome}" criado`,
+            id ? l : null, payload
+        )
     })
 }
 
 async function excluirLocal(id, nome) {
     if (!confirm(`Excluir "${nome}"?\nEsta ação não pode ser desfeita.`)) return
 
+    const { data: antes } = await supabase.from('locais').select('*').eq('id', id).single()
     const { error } = await supabase.from('locais').delete().eq('id', id)
     if (error) { toast(error.message, 'error'); return }
+
+    await registrarAuditoria('excluir', 'local', id, `Local "${nome}" excluído`, antes, null)
     toast(`"${nome}" excluído.`, 'success')
 
     const el = document.getElementById('page-content')
