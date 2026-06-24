@@ -988,68 +988,40 @@ window.submitReservation = async function() {
     const cat  = S.categorias.find(x => x.id === S.catId)
     const prot = S.protecoes.find(x => x.id === S.protId)
     if (!cat) throw new Error('Categoria não encontrada. Recarregue a página e tente novamente.')
-    const preco = getPreco(cat)
-    const dias  = S.dias || 1
-    const baseCat  = preco * dias
-    const baseProt = prot ? (prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco) : 0
-    const totalAdd = S.adicionais_sel.reduce((s, a) => s + a.subtotal, 0)
-    const total    = baseCat + baseProt + totalAdd
 
-    const obsCompleto = [
-      S.obs || null,
-      S.companhia ? `Cia: ${S.companhia}` : null,
-      S.voo       ? `Voo: ${S.voo}`       : null,
-      S.pouso     ? `Pouso: ${S.pouso}`   : null,
-      `Pessoas: ${S.pessoas}`,
-    ].filter(Boolean).join(' | ') || null
-
-    const solId = crypto.randomUUID()
-    const { error: solErr } = await supabase
-      .from('solicitacoes')
-      .insert({
-        id:               solId,
+    // Envia para Edge Function — preços são recalculados e validados server-side
+    const res = await fetch('https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/criar-solicitacao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF' },
+      body: JSON.stringify({
         tenant_id:        TENANT_ID,
         categoria_id:     S.catId,
-        protecao_id:      S.protId,
+        protecao_id:      S.protId      || null,
         cliente_nome:     S.nome,
         cliente_email:    S.email,
         cliente_whatsapp: S.whatsapp.replace(/\D/g, ''),
         cliente_cpf:      S.cpf.replace(/\D/g, ''),
+        companhia_aerea:  S.companhia   || null,
         data_retirada:    `${S.retData}T${S.retHora}:00`,
         data_devolucao:   `${S.devData}T${S.devHora}:00`,
         local_retirada:   S.retLocal,
         local_devolucao:  S.devLocal,
-        valor_estimado:   total,
         pessoas:          S.pessoas,
-        numero_voo:       S.voo        || null,
-        horario_pouso:    S.pouso      || null,
-        companhia_aerea:  S.companhia  || null,
-        status:           'solicitada',
-        observacoes:      obsCompleto,
-      })
+        numero_voo:       S.voo         || null,
+        horario_pouso:    S.pouso       || null,
+        observacoes:      S.obs         || null,
+        itens: S.adicionais_sel.map(a => ({
+          adicional_id: a.id,
+          quantidade:   a.quantidade,
+        })),
+      }),
+    })
 
-    if (solErr) throw new Error(solErr.message)
-    const sol = { id: solId }
+    const resultado = await res.json()
+    if (!res.ok) throw new Error(resultado.error ?? `Erro ${res.status}`)
 
-    if (S.adicionais_sel.length > 0) {
-      const { error: itErr } = await supabase.from('solicitacao_itens').insert(
-        S.adicionais_sel.map(a => ({
-          solicitacao_id: sol.id,
-          adicional_id:   a.id,
-          quantidade:     a.quantidade,
-          preco_unitario: a.preco,
-          tipo_preco:     a.tipo_preco,
-        }))
-      )
-      if (itErr) throw new Error(itErr.message)
-    }
-
-    // Dispara notificação por email após todos os inserts concluídos
-    fetch('https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/notificar-reserva', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF' },
-      body: JSON.stringify({ record: { id: sol.id, tenant_id: TENANT_ID, categoria_id: S.catId, protecao_id: S.protId, cliente_nome: S.nome, cliente_email: S.email, cliente_whatsapp: S.whatsapp.replace(/\D/g,''), cliente_cpf: S.cpf.replace(/\D/g,''), data_retirada: `${S.retData}T${S.retHora}:00`, data_devolucao: `${S.devData}T${S.devHora}:00`, local_retirada: S.retLocal, local_devolucao: S.devLocal, valor_estimado: total, pessoas: S.pessoas, numero_voo: S.voo || null, horario_pouso: S.pouso || null, observacoes: obsCompleto } }),
-    }).catch(() => {}) // silencia erros de rede — não bloqueia o fluxo do cliente
+    const total = resultado.valor_estimado
+    const dias  = S.dias || 1
 
     // Limpa rascunho salvo
     try { sessionStorage.removeItem(SESSION_KEY) } catch (_) {}

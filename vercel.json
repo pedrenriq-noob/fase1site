@@ -1,6 +1,10 @@
 {
+  "redirects": [
+    { "source": "/admin", "destination": "/admin/", "permanent": false }
+  ],
   "rewrites": [
+    { "source": "/admin/",    "destination": "/admin/index.html" },
     { "source": "/admin/(.*)", "destination": "/admin/$1" },
-    { "source": "/(.*)",       "destination": "/site/$1"  }
+    { "source": "/(.*)",       "destination": "/site/$1" }
   ]
 }

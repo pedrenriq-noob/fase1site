@@ -155,7 +155,7 @@ async function abrirFormCategoria(id = null) {
         }
 
         const { error } = id
-            ? await supabase.from('categorias').update(payload).eq('id', id)
+            ? await supabase.from('categorias').update(payload).eq('id', id).eq('tenant_id', TENANT_ID)
             : await supabase.from('categorias').insert(payload)
 
         if (error) { toast(error.message, 'error'); return false }
@@ -165,7 +165,7 @@ async function abrirFormCategoria(id = null) {
 async function excluirCategoria(id, nome) {
     if (!confirm(`Excluir "${nome}"?\nEsta ação não pode ser desfeita.`)) return
 
-    const { error } = await supabase.from('categorias').delete().eq('id', id)
+    const { error } = await supabase.from('categorias').delete().eq('id', id).eq('tenant_id', TENANT_ID)
     if (error) { toast(error.message, 'error'); return }
     toast(`"${nome}" excluída.`, 'success')
 
