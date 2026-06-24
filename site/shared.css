@@ -53,15 +53,16 @@ a { color: inherit; text-decoration: none; }
 }
 
 .brand-logo {
-  height: 48px;
+  height: 110px;
   width: auto;
   display: block;
   object-fit: contain;
+  margin: -16px 0;
 }
 
 .footer-logo {
-  height: 56px;
-  margin-bottom: 14px;
+  height: 84px;
+  margin-bottom: 10px;
 }
 
 .nav-links {
