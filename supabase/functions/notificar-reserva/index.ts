@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const RESEND_KEY    = 're_51Rozuwe_Mk85nNbiLfteKshDW64jgaeh'
+const RESEND_KEY    = Deno.env.get('RESEND_API_KEY') ?? ''
 const FROM_EMAIL    = 'Igufoz Reservas <onboarding@resend.dev>'
 const CENTRAL_EMAIL = 'pedrenriq@gmail.com'
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
@@ -104,7 +104,7 @@ body{font-family:Arial,sans-serif;background:#f4f6fb;margin:0;padding:0}
     </div>
     <div class="tot"><span>Valor Estimado</span><span>${fmt(row.valor_estimado ?? 0)}</span></div>
     <p style="font-size:13px;color:#6b7280;margin-bottom:10px">Em caso de dúvidas, entre em contato pelo WhatsApp:</p>
-    <a class="btn" href="https://wa.me/554599999999">💬 Falar no WhatsApp</a>
+    <a class="btn" href="https://wa.me/5545988182995">💬 Falar no WhatsApp</a>
   </div>
   <div class="ftr">Igufoz Aluguel de Veículos · Foz do Iguaçu · PR<br>Este e-mail foi gerado automaticamente.</div>
 </div></body></html>`
@@ -189,15 +189,32 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!RESEND_KEY) {
+      console.error('RESEND_API_KEY não configurada')
+      return new Response('misconfigured', { status: 500, headers: CORS })
+    }
+
     const payload = await req.json()
     const row = payload?.record as any
-    if (!row) return new Response('no record', { status: 400, headers: CORS })
+    if (!row?.id) return new Response('no record id', { status: 400, headers: CORS })
 
     console.log(JSON.stringify({ event: 'notificar-reserva', id: row.id }))
 
     // Busca categoria, proteção e adicionais para montar tabela de valores
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? SUPABASE_ANON
     const sb = createClient(SUPABASE_URL, serviceKey)
+
+    // Verifica se a solicitação realmente existe no banco antes de enviar email
+    const { data: solCheck, error: solCheckErr } = await sb
+      .from('solicitacoes')
+      .select('id, tenant_id')
+      .eq('id', row.id)
+      .single()
+    if (solCheckErr || !solCheck) {
+      console.error('Solicitação não encontrada:', row.id)
+      return new Response('solicitacao not found', { status: 404, headers: CORS })
+    }
+
     const [{ data: solRow }, { data: cat }, { data: prot }, { data: itens }] = await Promise.all([
       sb.from('solicitacoes').select('numero').eq('id', row.id).single(),
       row.categoria_id

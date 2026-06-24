@@ -138,8 +138,8 @@ function filtrar() {
     const status = document.getElementById('f-status').value
 
     document.querySelectorAll('#reservas-tabela tbody tr').forEach(tr => {
-        const nome   = tr.cells[1]?.textContent.toLowerCase() ?? ''
-        const wpp    = tr.cells[2]?.textContent.toLowerCase() ?? ''
+        const nome   = tr.cells[2]?.textContent.toLowerCase() ?? ''
+        const wpp    = tr.cells[3]?.textContent.toLowerCase() ?? ''
         const stEl   = tr.querySelector('.status-badge, .status-select')
         const stVal  = stEl?.dataset?.status ?? stEl?.textContent?.trim() ?? ''
 
@@ -275,7 +275,7 @@ async function trocarStatus(id, status, motivo = null) {
 
 function transicoesPossiveis(status) {
     const mapa = {
-        solicitada: ['solicitada', 'em_analise', 'confirmada', 'cancelada'],
+        solicitada: ['solicitada', 'em_analise', 'cancelada'],
         em_analise: ['em_analise', 'confirmada', 'cancelada'],
         confirmada: ['confirmada', 'concluida',  'cancelada'],
         concluida:  ['concluida'],

@@ -79,7 +79,7 @@ async function loadData() {
   S.locais = (rL.data && rL.data.length > 0) ? rL.data : [
     { nome: 'Av. Brasil, 90 — Centro',                        permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: false, is_aeroporto: false },
     { nome: 'Av. das Cataratas, 1419 — Vila Yolanda',         permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: true,  is_aeroporto: false },
-    { nome: 'Estacionamento Leva e Trás 24h — Aeroporto',     permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: null,    hora_retirada_fim: null,    hora_devolucao_inicio: null,    hora_devolucao_fim: null,    disponivel_domingo: true,  is_aeroporto: true  },
+    { nome: 'Estacionamento Leva e Trás 24h — Aeroporto',     permite_retirada: false, permite_devolucao: true, hora_retirada_inicio: null,    hora_retirada_fim: null,    hora_devolucao_inicio: null,    hora_devolucao_fim: null,    disponivel_domingo: true,  is_aeroporto: true  },
   ]
 }
 
@@ -210,7 +210,7 @@ function renderLanding(c) {
     <div class="hero-left">
       <div class="hero-eyebrow">FOZ DO IGUAÇU · FRONTEIRA</div>
       <h1 class="hero-title">Alugue seu carro<br>na Tríplice Fronteira</h1>
-      <p class="hero-sub">Retirada no aeroporto ou centro.<br>Frota moderna, processo simples.</p>
+      <p class="hero-sub">Retirada na Av. Brasil ou Av. das Cataratas.<br>Frota moderna, processo simples.</p>
       <div class="hero-tags">
         <span class="hero-tag">Aeroporto IGU</span>
         <span class="hero-tag">Fronteira PY/AR</span>
