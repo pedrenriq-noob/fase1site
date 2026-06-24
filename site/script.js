@@ -314,7 +314,7 @@ function renderStep1(c) {
         <label for="retData">Retirada *</label>
         <div class="date-time-group">
           <input type="date" id="retData" min="${minDate()}" value="${S.retData}">
-          ${renderHoraPicker('retHora', 8, 23, S.retHora, 'Horário de retirada')}
+          ${renderHoraPicker('retHora', 8, 18, S.retHora, 'Horário de retirada')}
         </div>
         ${avisoRetirada(S.retData, S.retHora)}
       </div>
@@ -756,7 +756,7 @@ function updateSummary() {
         <span>Retirada</span>
         <div class="sb-date-group">
           <input type="date" id="sb-retData" class="sb-input" value="${S.retData}" min="${minDate()}">
-          ${renderHoraPicker('sb-retHora', 8, 23, S.retHora, 'Hora de retirada')}
+          ${renderHoraPicker('sb-retHora', 8, 18, S.retHora, 'Hora de retirada')}
         </div>
       </div>
       <div class="sb-period-row">
