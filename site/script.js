@@ -421,6 +421,7 @@ window.selectCat = function(id) {
 function renderStep2(c) {
   c.innerHTML = `
   <div class="main-content">
+    <button class="top-back" onclick="prevStep()">← Voltar</button>
     <h2>🛡 Escolha a Proteção</h2>
     <p style="margin-bottom:16px;color:var(--muted);font-size:13px">Selecione uma opção — ou avance sem proteção (caução de R$ 25.000,00)</p>
     <div id="protList">
@@ -460,6 +461,7 @@ function renderStep3(c) {
 
   c.innerHTML = `
   <div class="main-content">
+    <button class="top-back" onclick="prevStep()">← Voltar</button>
     <h2>➕ Adicionais</h2>
     <p style="margin-bottom:16px;color:var(--muted);font-size:13px">Escolha itens adicionais (opcional)</p>
     <div>
@@ -549,6 +551,7 @@ function renderStep4(c) {
 
   c.innerHTML = `
   <div class="main-content">
+    <button class="top-back" onclick="prevStep()">← Voltar</button>
     <h2>👤 Seus Dados</h2>
 
     <div class="form-row-2">
