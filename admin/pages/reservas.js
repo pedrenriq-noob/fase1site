@@ -58,8 +58,9 @@ export async function renderReservas() {
                        </select>`
                 }
             </td>
-            <td>
+            <td style="display:flex;gap:6px;align-items:center">
                 <button class="btn-icon" data-action="detalhe" data-id="${r.id}">👁 Ver</button>
+                <button class="btn-danger btn-sm" data-action="excluir" data-id="${r.id}" data-num="${numFmt}" title="Excluir reserva">🗑</button>
             </td>
         </tr>`
     }).join('')
@@ -127,6 +128,10 @@ export function bindReservas() {
     // Detalhes da reserva
     document.querySelectorAll('[data-action="detalhe"]').forEach(btn =>
         btn.addEventListener('click', () => verReserva(btn.dataset.id)))
+
+    // Excluir reserva
+    document.querySelectorAll('[data-action="excluir"]').forEach(btn =>
+        btn.addEventListener('click', () => excluirReserva(btn.dataset.id, btn.dataset.num)))
 
     // Filtro de busca
     document.getElementById('btn-filtrar')?.addEventListener('click', filtrar)
@@ -251,6 +256,23 @@ async function verReserva(id) {
     abrirModal(`📋 #${numFmt} — ${r.cliente_nome}`, corpo, null)
     document.getElementById('modal-save-btn').style.display = 'none'
     document.getElementById('modal-cancel-btn').textContent = 'Fechar'
+}
+
+async function excluirReserva(id, num) {
+    if (!confirm(`Excluir reserva #${num}?\nEsta ação não pode ser desfeita.`)) return
+
+    const { error } = await supabase
+        .from('solicitacoes')
+        .delete()
+        .eq('id', id)
+        .eq('tenant_id', TENANT_ID)
+
+    if (error) { toast(error.message, 'error'); return }
+
+    toast(`Reserva #${num} excluída.`, 'success')
+
+    const row = document.querySelector(`[data-action="excluir"][data-id="${id}"]`)?.closest('tr')
+    row?.remove()
 }
 
 async function trocarStatus(id, status, motivo = null) {
