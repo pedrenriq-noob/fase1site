@@ -36,10 +36,25 @@
 
     <!-- Step indicator -->
     <div class="steps" id="steps-bar">
-      <div class="step" data-step="1">1. 📅 Período</div>
-      <div class="step" data-step="2">2. 🛡 Proteção</div>
-      <div class="step" data-step="3">3. ➕ Adicionais</div>
-      <div class="step" data-step="4">4. 👤 Seus Dados</div>
+      <div class="step" data-step="1">
+        <div class="step-circle">🚗</div>
+        <span class="step-lbl">Período</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step" data-step="2">
+        <div class="step-circle">🛡</div>
+        <span class="step-lbl">Proteção</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step" data-step="3">
+        <div class="step-circle">➕</div>
+        <span class="step-lbl">Adicionais</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step" data-step="4">
+        <div class="step-circle">✅</div>
+        <span class="step-lbl">Confirmação</span>
+      </div>
     </div>
 
     <!-- Dynamic content -->
@@ -47,7 +62,7 @@
 
     <!-- Sidebar resumo -->
     <aside class="summary" id="summary">
-      <h3>Resumo do Pedido</h3>
+      <h3>Status da reserva</h3>
       <div id="summaryContent" aria-live="polite"></div>
     </aside>
 

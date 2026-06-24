@@ -385,13 +385,15 @@ function renderCatCards() {
       onkeydown="${keyFn}"
       data-id="${cat.id}"
       aria-label="${esc(cat.nome)}, R$ ${fmtN(preco)} por dia${esgotado ? ', indisponível' : ''}">
-      ${sel ? '<div class="cat-selected-badge" aria-hidden="true">✓ Selecionado</div>' : ''}
+      ${sel ? '<div class="cat-selected-badge" aria-hidden="true">✓</div>' : ''}
       ${img}
       <div class="category-card-body">
         <h3>${esc(cat.nome)}</h3>
-        <p>${esc(cat.transmissao ?? '')}</p>
-        <p>${esc(cat.descricao ?? '')}</p>
-        <p class="price">R$ ${fmtN(preco)}/dia${esgotado ? ' — <em>Indisponível</em>' : ''}</p>
+        <p class="cat-trans">${esc(cat.transmissao ?? '')}</p>
+      </div>
+      <div class="cat-price-col">
+        <span class="price-label">Valor Diário</span>
+        <span class="price">${esgotado ? '<em>Indisponível</em>' : `R$ ${fmtN(preco)}`}</span>
       </div>
     </div>`
   }).join('')

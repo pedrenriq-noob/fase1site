@@ -121,44 +121,64 @@ body {
 }
 
 /* ============================================
-   STEPS — pílulas horizontais
+   STEPS — círculos com linha
    ============================================ */
 .steps {
   display: flex;
-  gap: 6px;
-  padding: 14px 20px;
-  background: var(--bg);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px 28px 14px;
+  background: var(--white);
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  gap: 0;
 }
 
 .step {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  padding: 7px 6px;
-  background: var(--white);
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  border: 1.5px solid var(--border);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
   cursor: default;
 }
 
-.step.active {
-  background: var(--orange);
-  color: var(--white);
-  border-color: var(--orange);
-  box-shadow: 0 3px 10px rgba(255,107,0,.3);
+.step-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f0f4f8;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  transition: all .2s;
 }
 
-/* step-num e step-label não existem mais no HTML (usamos texto direto) */
-.step-num, .step-label { display: none; }
+.step-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.step.active .step-circle {
+  background: var(--orange);
+  border-color: var(--orange);
+  box-shadow: 0 4px 12px rgba(255,107,0,.35);
+}
+
+.step.active .step-lbl { color: var(--orange); font-weight: 700; }
+
+.step-connector {
+  flex: 1 1 48px;
+  max-width: 100px;
+  height: 2px;
+  background: var(--border);
+  margin-top: 22px;
+}
+
+.step-num { display: none; }
 
 /* ============================================
    LANDING PAGE (passo 0)
@@ -337,7 +357,7 @@ body {
 /* ============================================
    FLOW — CONTEÚDO DAS ETAPAS
    ============================================ */
-.main-content { padding: 20px; }
+.main-content { max-width: 760px; margin: 0 auto; padding: 24px 28px; }
 
 #content h2 {
   font-family: 'Poppins', sans-serif;
@@ -422,81 +442,104 @@ input[type="checkbox"] {
   line-height: 1.5;
 }
 
-/* Categorias */
+/* Categorias — lista horizontal */
 .category-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 4px;
 }
 
 .category-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
   background: var(--white);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all .2s ease;
-  overflow: hidden;
-  position: relative; /* needed for badge */
+  transition: border-color .15s, box-shadow .15s;
+  position: relative;
 }
 
-.category-card:hover {
-  border-color: var(--orange);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
+.category-card:hover { border-color: var(--orange); box-shadow: var(--shadow-sm); }
 
 .category-card.selected {
-  border: 2.5px solid var(--orange);
+  border: 2px solid var(--orange);
   background: var(--orange-lt);
-  box-shadow: 0 0 0 3px rgba(255,107,0,.18), 0 4px 16px rgba(255,107,0,.2);
-  transform: translateY(-1px);
 }
+
+.category-card.esgotado { opacity: .5; cursor: not-allowed; }
 
 .cat-selected-badge {
   position: absolute;
-  top: 7px;
-  left: 7px;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
   background: var(--orange);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
-  letter-spacing: .03em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
   z-index: 1;
-  box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
 
-.category-img { width: 100%; height: 110px; object-fit: cover; display: block; }
+.category-img {
+  width: 120px;
+  height: 72px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #f5f7fa;
+  border-radius: 6px;
+  display: block;
+}
 
-.category-card-body { padding: 10px 12px 12px; }
+.category-card-body { flex: 1; padding: 0; min-width: 0; }
 
 .category-card h3 {
   font-family: 'Poppins', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--blue);
-  margin-bottom: 2px;
+  color: var(--text);
+  margin-bottom: 3px;
 }
 
-.category-card p {
-  font-size: 11.5px;
+.category-card .cat-trans {
+  font-size: 12px;
   color: var(--muted);
-  line-height: 1.4;
-  margin: 2px 0;
+  margin: 0;
+}
+
+.category-card p:not(.cat-trans) { display: none; }
+
+.cat-price-col {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.price-label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 3px;
 }
 
 .category-card .price {
-  display: inline-block;
-  font-size: 14px;
+  display: block;
+  font-size: 15px;
   font-weight: 700;
   color: var(--orange);
-  margin-top: 6px;
-  background: var(--orange-lt);
-  padding: 4px 10px;
-  border-radius: 20px;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
 }
 
 /* Botões */
@@ -543,19 +586,19 @@ input[type="checkbox"] {
 /* Resumo / Sidebar */
 .summary {
   margin: 0;
-  padding: 16px 20px;
-  background: var(--bg);
-  border-top: 3px solid var(--orange);
+  padding: 22px 24px;
+  background: var(--white);
+  border-top: none;
 }
 
 .summary h3 {
   font-family: 'Poppins', sans-serif;
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--blue);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .summary-item {
@@ -775,7 +818,7 @@ input[type="checkbox"] {
 @media (min-width: 860px) {
   #app.mode-flow {
     display: grid;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 360px;
     grid-template-rows: auto auto 1fr;
     height: calc(100vh - 78px);
     overflow: hidden;
