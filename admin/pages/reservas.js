@@ -18,18 +18,25 @@ const STATUS_COR = {
     cancelada:  '#ef4444',
 }
 
+const PAGE_SIZE = 50
+let _paginaAtual = 0
+let _totalReservas = 0
+
 export async function renderReservas() {
-    const { data: reservas, error } = await supabase
+    _paginaAtual = 0
+    const { data: reservas, error, count } = await supabase
         .from('solicitacoes')
         .select(`
             id, numero, status, cliente_nome, cliente_whatsapp, cliente_email,
             data_retirada, data_devolucao, valor_estimado, criado_em,
             categorias ( nome )
-        `)
+        `, { count: 'exact' })
         .eq('tenant_id', TENANT_ID)
         .order('criado_em', { ascending: false })
+        .range(0, PAGE_SIZE - 1)
 
     if (error) throw error
+    _totalReservas = count ?? 0
 
     const linhas = (reservas ?? []).map(r => {
         const status = r.status
@@ -94,10 +101,73 @@ export async function renderReservas() {
                 <p>Nenhuma reserva ainda.</p>
             </div>`}
         </div>
+        ${_totalReservas > PAGE_SIZE ? `
+        <div id="paginacao-bar" style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <span id="paginacao-info" style="font-size:13px;color:var(--muted)">Exibindo ${Math.min(PAGE_SIZE, _totalReservas)} de ${_totalReservas}</span>
+            <button id="btn-carregar-mais" class="btn-secondary btn-sm">Carregar mais</button>
+        </div>` : ''}
     </div>`
 }
 
 export function bindReservas() {
+    // Paginação
+    document.getElementById('btn-carregar-mais')?.addEventListener('click', async () => {
+        _paginaAtual++
+        const from = _paginaAtual * PAGE_SIZE
+        const to   = from + PAGE_SIZE - 1
+        const { data, error } = await supabase
+            .from('solicitacoes')
+            .select(`id, numero, status, cliente_nome, cliente_whatsapp, cliente_email,
+                data_retirada, data_devolucao, valor_estimado, criado_em, categorias(nome)`)
+            .eq('tenant_id', TENANT_ID)
+            .order('criado_em', { ascending: false })
+            .range(from, to)
+        if (error || !data?.length) return
+        const tbody = document.querySelector('#reservas-tabela tbody')
+        if (!tbody) return
+        data.forEach(r => {
+            const status = r.status
+            const cor    = STATUS_COR[status] ?? '#64748b'
+            const isFinal = status === 'concluida' || status === 'cancelada'
+            const numFmt  = r.numero ? String(r.numero).padStart(4, '0') : '—'
+            const opts    = transicoesPossiveis(status).map(s =>
+                `<option value="${s}" ${s === status ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')
+            const tr = document.createElement('tr')
+            tr.innerHTML = `
+                <td style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
+                <td style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
+                <td class="td-name">${esc(r.cliente_nome)}</td>
+                <td style="font-size:12px">${esc(r.cliente_whatsapp)}</td>
+                <td>${esc(r.categorias?.nome ?? '—')}</td>
+                <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
+                <td style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
+                <td>${isFinal
+                    ? `<span class="status-badge status-${status}">${STATUS_LABELS[status]}</span>`
+                    : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${r.id}" data-status="${status}">${opts}</select>`
+                }</td>
+                <td style="display:flex;gap:6px;align-items:center">
+                    <button class="btn-icon" data-action="detalhe" data-id="${r.id}">👁 Ver</button>
+                    <button class="btn-danger btn-sm" data-action="excluir" data-id="${r.id}" data-num="${numFmt}">🗑</button>
+                </td>`
+            tbody.appendChild(tr)
+            // rebind eventos na nova linha
+            tr.querySelector('[data-action="detalhe"]')?.addEventListener('click', () => verReserva(r.id))
+            tr.querySelector('[data-action="excluir"]')?.addEventListener('click', () => excluirReserva(r.id, numFmt))
+            tr.querySelector('.status-select')?.addEventListener('change', async (e) => {
+                const novoStatus = e.target.value
+                if (novoStatus === status) return
+                await trocarStatus(r.id, novoStatus, status, '')
+                e.target.dataset.status = novoStatus
+            })
+        })
+        const exibindo = Math.min((_paginaAtual + 1) * PAGE_SIZE, _totalReservas)
+        const info = document.getElementById('paginacao-info')
+        if (info) info.textContent = `Exibindo ${exibindo} de ${_totalReservas}`
+        if (exibindo >= _totalReservas) {
+            document.getElementById('btn-carregar-mais')?.remove()
+        }
+    })
+
     // Troca de status inline
     document.querySelectorAll('.status-select').forEach(sel => {
         sel.addEventListener('change', async () => {
@@ -167,7 +237,7 @@ function filtrar() {
 }
 
 async function verReserva(id) {
-    const [{ data: r }, { data: itens }] = await Promise.all([
+    const [{ data: r, error: rErr }, { data: itens, error: itErr }] = await Promise.all([
         supabase
             .from('solicitacoes')
             .select(`*, numero, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco)`)
@@ -179,7 +249,8 @@ async function verReserva(id) {
             .eq('solicitacao_id', id),
     ])
 
-    if (!r) { toast('Reserva não encontrada.', 'error'); return }
+    if (rErr || !r) { toast('Reserva não encontrada.', 'error'); return }
+    if (itErr) console.warn('[verReserva] erro ao buscar itens:', itErr.message)
 
     const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
     const fmtDt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'

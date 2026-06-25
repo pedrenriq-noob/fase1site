@@ -408,7 +408,7 @@ document.addEventListener('click', e => {
       const add = DATA.adds.find(a => a.id === id)
       if (add?.is_cadeirinha) {
         const catLimit = DATA.catLimits?.find(c => c.id === S.catId)
-        const maxCad = catLimit?.max_cadeirinhas ?? 0
+        const maxCad = catLimit?.max_cadeirinhas ?? 2
         const cadAtual = Object.entries(S.addSel)
           .filter(([sid]) => DATA.adds.find(a => a.id === sid)?.is_cadeirinha)
           .reduce((sum, [sid]) => sum + (S.addSel[sid] || 0), 0)
@@ -447,7 +447,7 @@ function wireAddQty() {
       const add = DATA.adds.find(a => a.id === id)
       if (add?.is_cadeirinha) {
         const catLimit = DATA.catLimits?.find(c => c.id === S.catId)
-        const maxCad = catLimit?.max_cadeirinhas ?? 0
+        const maxCad = catLimit?.max_cadeirinhas ?? 2
         const outrasQtd = Object.entries(S.addSel)
           .filter(([sid]) => sid !== id && DATA.adds.find(a => a.id === sid)?.is_cadeirinha)
           .reduce((sum, [sid]) => sum + (S.addSel[sid] || 0), 0)
