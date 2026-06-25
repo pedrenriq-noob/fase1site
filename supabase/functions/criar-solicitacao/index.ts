@@ -4,9 +4,18 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 
-const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://igufoz.com.br,https://www.igufoz.com.br').split(',').map(s => s.trim())
+// P-05: CORS restritivo via env var ALLOWED_ORIGINS (vírgula-separado)
+// Se não configurado, permite qualquer origem (necessário enquanto domínio não estiver fixo)
+const ALLOWED_ORIGINS_RAW = Deno.env.get('ALLOWED_ORIGINS')
+const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW ? ALLOWED_ORIGINS_RAW.split(',').map(s => s.trim()) : null
 
 function getCors(origin: string | null) {
+  if (!ALLOWED_ORIGINS) {
+    return {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    }
+  }
   const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin':  allowed,
