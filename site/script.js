@@ -449,7 +449,7 @@ window.selectCat = function(id) {
       if (errEl) errEl.innerHTML = `<div class="step-error" style="margin-top:8px">⚠️ ${limMsg}</div>`
       renderStep3(document.getElementById('content'))
     } else {
-      alert(`⚠️ ${limMsg}`)
+      showToast(`⚠️ ${limMsg}`, 'warning')
     }
   }
 
@@ -570,7 +570,7 @@ window.addQty = function(id, delta) {
   const limCad  = cat?.max_cadeirinhas ?? 2
 
   if (a.is_cadeirinha && delta > 0 && getTotalCad() >= limCad) {
-    alert(`Limite de ${limCad} cadeirinhas para este veículo.`); return
+    showToast(`Limite de ${limCad} cadeirinha${limCad !== 1 ? 's' : ''} para este veículo.`, 'warning'); return
   }
 
   const idx = S.adicionais_sel.findIndex(x => x.id === id)
@@ -1378,6 +1378,16 @@ function fmtDate(iso) {
 function esc(s) {
   if (!s) return ''
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function showToast(msg, type = 'info') {
+  const colors = { info: '#d1ecf1:#0c5460:#bee5eb', warning: '#fff3cd:#856404:#ffc107', error: '#f8d7da:#721c24:#f5c6cb' }
+  const [bg, text, border] = (colors[type] || colors.info).split(':')
+  const el = document.createElement('div')
+  el.style.cssText = `position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;background:${bg};color:${text};border:1.5px solid ${border};border-radius:10px;padding:12px 20px;font-size:13px;max-width:360px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.15);animation:fadeIn .2s ease`
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 4000)
 }
 
 function maskCPF(v) {

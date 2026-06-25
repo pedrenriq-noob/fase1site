@@ -77,7 +77,8 @@ export function confirmarComSenha(msg, onConfirm) {
         btnOk.textContent = 'Verificando...'
         errEl.textContent = ''
 
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user } }            = await supabase.auth.getUser()
+        const { data: { session: sessaoAtual } } = await supabase.auth.getSession()
         const { error } = await supabase.auth.signInWithPassword({ email: user.email, password: senha })
 
         if (error) {
@@ -87,6 +88,14 @@ export function confirmarComSenha(msg, onConfirm) {
             input.value = ''
             input.focus()
             return
+        }
+
+        // Restaura sessão original para não rotacionar tokens nem gerar novo log de login
+        if (sessaoAtual) {
+            await supabase.auth.setSession({
+                access_token:  sessaoAtual.access_token,
+                refresh_token: sessaoAtual.refresh_token,
+            })
         }
 
         fechar()

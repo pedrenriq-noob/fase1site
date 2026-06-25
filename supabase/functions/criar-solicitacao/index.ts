@@ -4,9 +4,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://igufoz.com.br,https://www.igufoz.com.br').split(',').map(s => s.trim())
+
+function getCors(origin: string | null) {
+  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin':  allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  }
 }
 
 const rateMap = new Map<string, { count: number; reset: number }>()
@@ -59,13 +65,13 @@ function validarCPF(cpf: string): boolean {
   return r === parseInt(c[10])
 }
 
-function err(msg: string, status = 400) {
-  return new Response(JSON.stringify({ error: msg }), {
+Deno.serve(async (req: Request) => {
+  const origin = req.headers.get('origin')
+  const CORS = getCors(origin)
+  const err = (msg: string, status = 400) => new Response(JSON.stringify({ error: msg }), {
     status, headers: { ...CORS, 'Content-Type': 'application/json' },
   })
-}
 
-Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'

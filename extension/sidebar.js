@@ -1,14 +1,25 @@
 'use strict'
 
+// ── CONFIG ── (DT-01: extensão não suporta ES modules; centralizar quando houver build step)
+// Para trocar de tenant, edite apenas os 3 valores abaixo.
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
+// ─────────────────────────────────────────────────────────────
 
 const fmtN    = v  => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
 const pad     = n  => String(n).padStart(2, '0')
 const esc     = s  => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 const chevron = `<svg class="chevron" width="11" height="7" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+
+function showToastExt(msg) {
+  const el = document.createElement('div')
+  el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;background:#fff3cd;color:#856404;border:1.5px solid #ffc107;border-radius:10px;padding:10px 18px;font-size:12px;max-width:300px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.15)'
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 3500)
+}
 
 let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
 let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
@@ -413,7 +424,7 @@ document.addEventListener('click', e => {
           .filter(([sid]) => DATA.adds.find(a => a.id === sid)?.is_cadeirinha)
           .reduce((sum, [sid]) => sum + (S.addSel[sid] || 0), 0)
         if (cadAtual >= maxCad) {
-          alert(`Esta categoria permite no máximo ${maxCad} cadeirinha(s)/assento(s).`)
+          showToastExt(`Esta categoria permite no máximo ${maxCad} cadeirinha(s)/assento(s).`)
           return
         }
       }
