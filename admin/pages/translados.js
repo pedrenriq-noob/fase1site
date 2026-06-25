@@ -12,26 +12,15 @@ export async function renderTranslados() {
         `)
         .eq('tenant_id', TENANT_ID)
         .not('numero_voo', 'is', null)
-        .order('criado_em', { ascending: false })
+        .in('status', ['solicitada', 'em_analise'])
+        .order('data_retirada', { ascending: true })
 
     if (error) throw error
 
-    const STATUS_TRANSLADO = {
-        solicitada: 'pendente',
-        em_analise: 'pendente',
-        confirmada: 'confirmado',
-        concluida:  'confirmado',
-        cancelada:  'cancelado',
-    }
+    const pendentes = reservas ?? []
 
-    const pendentes = (reservas ?? []).filter(r => ['solicitada','em_analise'].includes(r.status))
-    const historico = (reservas ?? []).filter(r => !['solicitada','em_analise'].includes(r.status))
-
-    const cardTranslado = (r) => {
-        const tStatus = STATUS_TRANSLADO[r.status] ?? 'pendente'
-        const isPendente = tStatus === 'pendente'
-        return `
-    <div class="translado-card ${tStatus}" data-id="${r.id}">
+    const cardTranslado = (r) => `
+    <div class="translado-card pendente" data-id="${r.id}">
         <div class="translado-info">
             <strong>✈️ ${r.companhia_aerea ? r.companhia_aerea + ' · ' : ''}Voo ${r.numero_voo}</strong>
             <span>🛬 Pouso: ${r.horario_pouso ?? '—'} · Retirada: ${fmtDt(r.data_retirada)}</span>
@@ -42,13 +31,10 @@ export async function renderTranslados() {
             ${r.observacoes ? `<span style="font-size:12px;color:#64748b">📝 ${r.observacoes}</span>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <span class="status-badge status-${r.status === 'confirmada' || r.status === 'concluida' ? 'confirmada' : r.status === 'cancelada' ? 'cancelada' : 'solicitada'}">
-                ${isPendente ? '⏳ Pendente' : tStatus === 'confirmado' ? '✅ Confirmado' : '❌ Cancelado'}
-            </span>
+            <span class="status-badge status-solicitada">⏳ Pendente</span>
             <span style="font-size:11px;color:#94a3b8">Reserva: ${r.status}</span>
         </div>
     </div>`
-    }
 
     return `
     <div class="page-header">
@@ -56,18 +42,12 @@ export async function renderTranslados() {
     </div>
 
     <h3 style="font-size:15px;font-weight:600;color:#0f2b4f;margin-bottom:12px">
-        Pendentes (${pendentes.length})
+        Aguardando agendamento (${pendentes.length})
     </h3>
 
     ${pendentes.length
         ? pendentes.map(cardTranslado).join('')
-        : '<div class="card"><div class="empty-state"><div class="empty-icon">✅</div><p>Nenhum translado pendente.</p></div></div>'}
-
-    ${historico.length ? `
-    <h3 style="font-size:15px;font-weight:600;color:#64748b;margin:24px 0 12px">
-        Histórico (${historico.length})
-    </h3>
-    ${historico.map(cardTranslado).join('')}` : ''}`
+        : '<div class="card"><div class="empty-state"><div class="empty-icon">✅</div><p>Nenhum translado pendente.</p></div></div>'}`
 }
 
 export function bindTranslados() {
