@@ -1,5 +1,5 @@
 // pages/reservas.js
-import { supabase, TENANT_ID, toast, abrirModal } from '../admin.js'
+import { supabase, TENANT_ID, toast, abrirModal, esc } from '../admin.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 
 const STATUS_LABELS = {
@@ -45,9 +45,9 @@ export async function renderReservas() {
         <tr>
             <td style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
             <td style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
-            <td class="td-name">${r.cliente_nome}</td>
-            <td style="font-size:12px">${r.cliente_whatsapp}</td>
-            <td>${r.categorias?.nome ?? '—'}</td>
+            <td class="td-name">${esc(r.cliente_nome)}</td>
+            <td style="font-size:12px">${esc(r.cliente_whatsapp)}</td>
+            <td>${esc(r.categorias?.nome ?? '—')}</td>
             <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
             <td style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
             <td>
@@ -232,16 +232,16 @@ async function verReserva(id) {
     const corpo = `
     <div style="display:grid;gap:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
-            <div><strong>Cliente</strong><br>${r.cliente_nome}</div>
-            <div><strong>CPF</strong><br>${r.cliente_cpf ?? '—'}</div>
-            <div><strong>WhatsApp</strong><br>${r.cliente_whatsapp}</div>
-            <div><strong>E-mail</strong><br>${r.cliente_email ?? '—'}</div>
+            <div><strong>Cliente</strong><br>${esc(r.cliente_nome)}</div>
+            <div><strong>CPF</strong><br>${esc(r.cliente_cpf ?? '—')}</div>
+            <div><strong>WhatsApp</strong><br>${esc(r.cliente_whatsapp)}</div>
+            <div><strong>E-mail</strong><br>${esc(r.cliente_email ?? '—')}</div>
             <div><strong>Retirada</strong><br>${fmtDt(r.data_retirada)}</div>
             <div><strong>Devolução</strong><br>${fmtDt(r.data_devolucao)}</div>
-            <div><strong>Local Retirada</strong><br>${r.local_retirada ?? '—'}</div>
-            <div><strong>Local Devolução</strong><br>${r.local_devolucao ?? '—'}</div>
-            <div><strong>Voo</strong><br>${r.numero_voo ?? '—'}</div>
-            <div><strong>Pessoas</strong><br>${r.pessoas ?? '—'}</div>
+            <div><strong>Local Retirada</strong><br>${esc(r.local_retirada ?? '—')}</div>
+            <div><strong>Local Devolução</strong><br>${esc(r.local_devolucao ?? '—')}</div>
+            <div><strong>Voo</strong><br>${esc(r.numero_voo ?? '—')}</div>
+            <div><strong>Pessoas</strong><br>${esc(String(r.pessoas ?? '—'))}</div>
         </div>
         <div style="border-top:1px solid var(--border);padding-top:12px">
             <strong style="font-size:13px;display:block;margin-bottom:8px">Produtos e Valores</strong>

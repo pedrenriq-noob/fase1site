@@ -82,8 +82,7 @@
         <label>
           <span>Local de retirada</span>
           <select id="qs-local">
-            <option>Av. Brasil, 90 - Centro</option>
-            <option>Av. das Cataratas, 1419 - Vila Yolanda</option>
+            <option value="">Carregando...</option>
           </select>
         </label>
         <label>
@@ -390,6 +389,32 @@ O desbloqueio ocorre após a devolução do veículo, no prazo definido pelo seu
     </section>
   </footer>
 
+  <script type="module">
+    // Carrega locais de retirada ativos do banco e popula o select
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const _sb = createClient(
+      'https://lxfnqzuzohudqwibgdic.supabase.co',
+      'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
+    )
+    const TENANT_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
+    const sel = document.getElementById('qs-local')
+    _sb.from('locais')
+      .select('nome')
+      .eq('tenant_id', TENANT_ID)
+      .eq('ativo', true)
+      .eq('permite_retirada', true)
+      .order('ordem')
+      .then(({ data }) => {
+        if (data && data.length) {
+          sel.innerHTML = data.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('')
+        } else {
+          sel.innerHTML = '<option value="">Nenhum local disponível</option>'
+        }
+      })
+      .catch(() => {
+        sel.innerHTML = '<option value="">Av. Brasil, 90 — Centro</option><option value="Av. das Cataratas, 1419 — Vila Yolanda">Av. das Cataratas, 1419 — Vila Yolanda</option>'
+      })
+  </script>
   <script>
     // Formulário de busca rápida: salva datas na sessionStorage e redireciona para o fluxo de reserva
     document.getElementById('quickSearchForm').addEventListener('submit', function (e) {

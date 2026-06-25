@@ -1,5 +1,5 @@
 // pages/dashboard.js
-import { supabase, TENANT_ID } from '../admin.js'
+import { supabase, TENANT_ID, esc } from '../admin.js'
 
 export async function renderDashboard() {
     return `
@@ -235,9 +235,9 @@ async function carregarDashboard(de, ate) {
         <tr>
             <td>${new Date(r.criado_em).toLocaleDateString('pt-BR')}</td>
             <td>${r.numero ? `<strong>#${String(r.numero).padStart(4, '0')}</strong>` : '—'}</td>
-            <td>${r.cliente_nome ?? '—'}</td>
-            <td>${r.categorias?.nome ?? '—'}</td>
-            <td>${r.protecoes?.nome ?? '<span style="color:var(--muted)">—</span>'}</td>
+            <td>${esc(r.cliente_nome ?? '—')}</td>
+            <td>${esc(r.categorias?.nome ?? '—')}</td>
+            <td>${r.protecoes?.nome ? esc(r.protecoes.nome) : '<span style="color:var(--muted)">—</span>'}</td>
             <td><span class="status-badge status-${r.status}">${labelStatus(r.status)}</span></td>
             <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
         </tr>`).join('')

@@ -97,6 +97,10 @@ export { TENANT_ID, supabase }
 // TOAST
 // ============================================================
 
+export function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export function toast(msg, tipo = 'info') {
     const el = document.getElementById('toast')
     el.textContent = msg

@@ -1,5 +1,6 @@
 // pages/categorias.js
 import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { registrarAuditoria } from './auditoria.js'
 
 export async function renderCategorias() {
     const { data: cats, error } = await supabase
@@ -159,14 +160,23 @@ async function abrirFormCategoria(id = null) {
             : await supabase.from('categorias').insert(payload)
 
         if (error) { toast(error.message, 'error'); return false }
+
+        await registrarAuditoria(
+            id ? 'atualizar' : 'criar', 'categoria', id ?? null,
+            id ? `Categoria "${nome}" atualizada` : `Categoria "${nome}" criada`,
+            id ? cat : null, payload
+        )
     })
 }
 
 async function excluirCategoria(id, nome) {
     if (!confirm(`Excluir "${nome}"?\nEsta ação não pode ser desfeita.`)) return
 
+    const { data: antes } = await supabase.from('categorias').select('*').eq('id', id).single()
     const { error } = await supabase.from('categorias').delete().eq('id', id).eq('tenant_id', TENANT_ID)
     if (error) { toast(error.message, 'error'); return }
+
+    await registrarAuditoria('excluir', 'categoria', id, `Categoria "${nome}" excluída`, antes, null)
     toast(`"${nome}" excluída.`, 'success')
 
     const el = document.getElementById('page-content')

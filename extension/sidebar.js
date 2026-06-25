@@ -41,13 +41,14 @@ async function loadData() {
   loading.className = 'state-msg'
   loading.textContent = 'Carregando dados…'
   try {
-    const [cats, prots, adds, sazon] = await Promise.all([
+    const [cats, prots, adds, catLimits, sazon] = await Promise.all([
       sbFetch('categorias',   'id,nome,slug,preco_diaria', '&order=ordem.asc'),
       sbFetch('protecoes',    'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
-      sbFetch('adicionais',   'id,nome,preco,tipo_preco,permite_quantidade',  '&order=ordem.asc'),
+      sbFetch('adicionais',   'id,nome,preco,tipo_preco,permite_quantidade,is_cadeirinha',  '&order=ordem.asc'),
+      sbFetch('categorias',   'id,max_cadeirinhas', '').catch(() => []),
       sbFetch('sazonalidade', 'data_inicio,data_fim,precos', '').catch(() => []),
     ])
-    DATA = { cats, prots, adds, sazon }
+    DATA = { cats, prots, adds, catLimits, sazon }
     renderForm()
   } catch (e) {
     console.error('[Igufoz]', e)
@@ -178,15 +179,15 @@ function renderForm() {
       <div class="period-grid">
         <div class="period-cell">
           <label for="retData">Retirada — data</label>
-          <input type="date" id="retData" value="${esc(S.retData)}">
+          <input type="date" id="retData" value="${esc(S.retData)}" min="${new Date().toISOString().slice(0,10)}">
         </div>
         <div class="period-cell">
           <label>Retirada — hora</label>
-          ${horaPickerHTML('retHora', 8, 23, S.retHora)}
+          ${horaPickerHTML('retHora', 8, 18, S.retHora)}
         </div>
         <div class="period-cell">
           <label for="devData">Devolução — data</label>
-          <input type="date" id="devData" value="${esc(S.devData)}">
+          <input type="date" id="devData" value="${esc(S.devData)}" min="${new Date().toISOString().slice(0,10)}">
         </div>
         <div class="period-cell">
           <label>Devolução — hora</label>
@@ -271,6 +272,15 @@ function updatePrimeVisual() {
 function wireEvents() {
   document.getElementById('retData')?.addEventListener('input', e => {
     S.retData = e.target.value
+    // Garante que devolução não pode ser anterior à retirada
+    const devInput = document.getElementById('devData')
+    if (devInput) {
+      devInput.min = S.retData || new Date().toISOString().slice(0,10)
+      if (S.devData && S.devData < S.retData) {
+        S.devData = S.retData
+        devInput.value = S.retData
+      }
+    }
     // Se painel de categoria estiver aberto, atualiza preços (sazonalidade)
     if (openPanel === 'cat') {
       const panel = document.getElementById('panel-cat')
@@ -394,6 +404,19 @@ document.addEventListener('click', e => {
     if (S.addSel[id] > 0) {
       delete S.addSel[id]
     } else {
+      // Verifica limite de cadeirinhas da categoria selecionada
+      const add = DATA.adds.find(a => a.id === id)
+      if (add?.is_cadeirinha) {
+        const catLimit = DATA.catLimits?.find(c => c.id === S.catId)
+        const maxCad = catLimit?.max_cadeirinhas ?? 0
+        const cadAtual = Object.entries(S.addSel)
+          .filter(([sid]) => DATA.adds.find(a => a.id === sid)?.is_cadeirinha)
+          .reduce((sum, [sid]) => sum + (S.addSel[sid] || 0), 0)
+        if (cadAtual >= maxCad) {
+          alert(`Esta categoria permite no máximo ${maxCad} cadeirinha(s)/assento(s).`)
+          return
+        }
+      }
       S.addSel[id] = 1
     }
     // Re-render only the adicionais panel content (avoid closing it)
@@ -420,7 +443,20 @@ function wireAddQty() {
     inp.addEventListener('click', e => e.stopPropagation())
     inp.addEventListener('input', () => {
       const id = inp.dataset.qtyId
-      S.addSel[id] = Math.max(1, parseInt(inp.value) || 1)
+      const novoQty = Math.max(1, parseInt(inp.value) || 1)
+      const add = DATA.adds.find(a => a.id === id)
+      if (add?.is_cadeirinha) {
+        const catLimit = DATA.catLimits?.find(c => c.id === S.catId)
+        const maxCad = catLimit?.max_cadeirinhas ?? 0
+        const outrasQtd = Object.entries(S.addSel)
+          .filter(([sid]) => sid !== id && DATA.adds.find(a => a.id === sid)?.is_cadeirinha)
+          .reduce((sum, [sid]) => sum + (S.addSel[sid] || 0), 0)
+        const permitido = Math.max(1, maxCad - outrasQtd)
+        S.addSel[id] = Math.min(novoQty, permitido)
+        inp.value = S.addSel[id]
+      } else {
+        S.addSel[id] = novoQty
+      }
       calc()
     })
   })
