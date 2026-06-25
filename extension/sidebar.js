@@ -7,6 +7,20 @@ const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
 // ─────────────────────────────────────────────────────────────
 
+const CAT_DESCRICAO = {
+  'GRUPO B':              'Mobi, C3 ou similar — MANUAL',
+  'GRUPO C':              'Onix, Argo, 208, Polo ou similar — MANUAL',
+  'GRUPO D':              'Cronos ou similar — AUTOMÁTICO',
+  'GRUPO D+':             'Cronos ou similar — AUTOMÁTICO',
+  'GRUPO E':              'Onix Premier ou similar — AUTOMÁTICO',
+  'GRUPO F':              'Tera, Pulse ou similar — AUTOMÁTICO',
+  'GRUPO G':              '2008, Fastback ou similar — AUTOMÁTICO',
+  'GRUPO H':              'Spin ou similar — AUTOMÁTICO',
+  'GRUPO H (7 LUGARES)':  'Spin ou similar — AUTOMÁTICO',
+  'GRUPO I':              'Virtus, Onix Plus ou similar — AUTOMÁTICO',
+  'GRUPO J':              'Tiggo 5x ou similar — AUTOMÁTICO',
+}
+
 const fmtN    = v  => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmtDate = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
 const pad     = n  => String(n).padStart(2, '0')
@@ -679,6 +693,7 @@ function copyCotacao() {
     `⏱ Período:   ${diasFmt} diária${dias !== 1 ? 's' : ''}`,
     '',
     cat  ? `🚘 ${cat.nome} — R$ ${fmtN(precoD)}/dia` : null,
+    cat  ? (CAT_DESCRICAO[cat.nome.trim().toUpperCase()] ?? null) : null,
     prot && baseProt > 0 ? `🛡 ${prot.nome}` : null,
     linhasAdds ? `\n*Adicionais:*\n${linhasAdds.trimEnd()}` : null,
     '',
