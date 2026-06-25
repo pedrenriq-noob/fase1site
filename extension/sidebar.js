@@ -700,7 +700,7 @@ function copyCotacao() {
     primeAtivo ? `💰 Total: R$ ${fmtN(total)}` : `💰 *Total estimado: R$ ${fmtN(total)}*`,
     primeAtivo ? `⭐ *Com prime: R$ ${fmtN(primeTotalCopy)}*` : null,
     '',
-    '_Valores sujeitos a confirmação._',
+    '_Valores válidos por 48 horas._',
     msgExtra ? `\n${msgExtra}` : null,
   ].filter(l => l !== null).join('\n')
 
