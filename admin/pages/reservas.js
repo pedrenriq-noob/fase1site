@@ -519,7 +519,7 @@ async function trocarStatus(id, status, statusAnterior, motivo = null) {
 
 function transicoesPossiveis(status) {
     const mapa = {
-        solicitada: ['solicitada', 'em_analise', 'cancelada'],
+        solicitada: ['solicitada', 'em_analise', 'confirmada', 'cancelada'],
         em_analise: ['em_analise', 'confirmada', 'cancelada'],
         confirmada: ['confirmada', 'concluida',  'cancelada'],
         concluida:  ['concluida'],
