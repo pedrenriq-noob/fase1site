@@ -1,5 +1,5 @@
 // pages/sazonalidade.js
-import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { supabase, TENANT_ID, abrirModal, toast, initSortable } from '../admin.js'
 
 export async function renderSazonalidade() {
     const [{ data: periodos }, { data: cats }] = await Promise.all([
@@ -18,8 +18,8 @@ export async function renderSazonalidade() {
                 ${s.nome}
                 ${ativo ? '<span class="td-badge per_day" style="margin-left:8px;font-size:10px">🟢 Ativa</span>' : ''}
             </td>
-            <td>${fmtData(s.data_inicio)}</td>
-            <td>${fmtData(s.data_fim)}</td>
+            <td data-sort-val="${s.data_inicio}">${fmtData(s.data_inicio)}</td>
+            <td data-sort-val="${s.data_fim}">${fmtData(s.data_fim)}</td>
             <td>${qtdCats} categoria${qtdCats !== 1 ? 's' : ''} configurada${qtdCats !== 1 ? 's' : ''}</td>
             <td class="actions">
                 <button class="btn-icon" data-action="editar" data-id="${s.id}">✏️ Editar</button>
@@ -45,7 +45,7 @@ export async function renderSazonalidade() {
             ${periodos?.length ? `
             <table>
                 <thead><tr>
-                    <th>Nome</th><th>Início</th><th>Fim</th><th>Configuração</th><th>Ações</th>
+                    <th data-sort="text">Nome</th><th data-sort="date">Início</th><th data-sort="date">Fim</th><th>Configuração</th><th>Ações</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -65,6 +65,8 @@ export function bindSazonalidade() {
 
     document.querySelectorAll('[data-action="excluir"]').forEach(btn =>
         btn.addEventListener('click', () => excluir(btn.dataset.id, btn.dataset.nome)))
+
+    initSortable(document.querySelector('.table-wrap table'))
 }
 
 async function abrirForm(id = null) {

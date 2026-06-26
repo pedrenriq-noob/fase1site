@@ -1,5 +1,5 @@
 // pages/locais.js
-import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { supabase, TENANT_ID, abrirModal, toast, initSortable } from '../admin.js'
 import { registrarAuditoria } from './auditoria.js'
 
 const fmt = t => t ? t.slice(0, 5) : '—'
@@ -48,10 +48,10 @@ export async function renderLocais() {
             <table>
                 <thead><tr>
                     <th></th>
-                    <th>Nome / Endereço</th>
+                    <th data-sort="text">Nome / Endereço</th>
                     <th>Horários</th>
-                    <th style="text-align:center">Domingo</th>
-                    <th>Status</th>
+                    <th data-sort="text" style="text-align:center">Domingo</th>
+                    <th data-sort="text">Status</th>
                     <th>Ações</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
@@ -83,6 +83,8 @@ export function bindLocais() {
     document.querySelectorAll('[data-action="excluir"]').forEach(btn => {
         btn.addEventListener('click', () => excluirLocal(btn.dataset.id, btn.dataset.nome))
     })
+
+    initSortable(document.querySelector('.table-wrap table'))
 }
 
 async function abrirFormLocal(id = null) {

@@ -101,6 +101,53 @@ export function esc(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+// ============================================================
+// SORTING
+// ============================================================
+
+export function initSortable(tableEl) {
+    if (!tableEl) return
+    const headers = tableEl.querySelectorAll('thead th[data-sort]')
+    let sortCol = -1, sortAsc = true
+
+    headers.forEach((th, idx) => {
+        th.style.cursor = 'pointer'
+        th.style.userSelect = 'none'
+        th.addEventListener('click', () => {
+            const type = th.dataset.sort
+            if (sortCol === idx) { sortAsc = !sortAsc } else { sortCol = idx; sortAsc = true }
+            headers.forEach(h => { h.dataset.sortDir = ''; h.querySelector('.sort-arrow')?.remove() })
+            th.dataset.sortDir = sortAsc ? 'asc' : 'desc'
+            const arrow = document.createElement('span')
+            arrow.className = 'sort-arrow'
+            arrow.style.cssText = 'margin-left:4px;font-size:10px;color:#94a3b8'
+            arrow.textContent = sortAsc ? '▲' : '▼'
+            th.appendChild(arrow)
+
+            const tbody = tableEl.querySelector('tbody')
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+            rows.sort((a, b) => {
+                const aCell = a.querySelectorAll('td')[idx]
+                const bCell = b.querySelectorAll('td')[idx]
+                if (!aCell || !bCell) return 0
+                const aVal = aCell.dataset.sortVal ?? aCell.textContent.trim()
+                const bVal = bCell.dataset.sortVal ?? bCell.textContent.trim()
+                let cmp = 0
+                if (type === 'num') {
+                    cmp = (parseFloat(aVal.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0)
+                        - (parseFloat(bVal.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0)
+                } else if (type === 'date') {
+                    cmp = new Date(aVal) - new Date(bVal)
+                } else {
+                    cmp = aVal.localeCompare(bVal, 'pt-BR', { sensitivity: 'base' })
+                }
+                return sortAsc ? cmp : -cmp
+            })
+            rows.forEach(r => tbody.appendChild(r))
+        })
+    })
+}
+
 export function toast(msg, tipo = 'info') {
     const el = document.getElementById('toast')
     el.textContent = msg

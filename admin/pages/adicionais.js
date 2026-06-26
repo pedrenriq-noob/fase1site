@@ -1,5 +1,5 @@
 // pages/adicionais.js
-import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { supabase, TENANT_ID, abrirModal, toast, initSortable } from '../admin.js'
 
 export async function renderAdicionais() {
     const { data: adds, error } = await supabase
@@ -34,7 +34,7 @@ export async function renderAdicionais() {
             ${adds?.length ? `
             <table>
                 <thead><tr>
-                    <th>Nome</th><th>Preço</th><th>Tipo</th><th style="text-align:center">Qtd?</th><th style="text-align:center">Estoque</th><th>Descrição</th><th>Ações</th>
+                    <th data-sort="text">Nome</th><th data-sort="num">Preço</th><th data-sort="text">Tipo</th><th style="text-align:center">Qtd?</th><th data-sort="num" style="text-align:center">Estoque</th><th>Descrição</th><th>Ações</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -54,6 +54,8 @@ export function bindAdicionais() {
 
     document.querySelectorAll('[data-action="excluir"]').forEach(btn =>
         btn.addEventListener('click', () => excluir(btn.dataset.id, btn.dataset.nome)))
+
+    initSortable(document.querySelector('.table-wrap table'))
 }
 
 async function abrirForm(id = null) {

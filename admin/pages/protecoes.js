@@ -1,5 +1,5 @@
 // pages/protecoes.js
-import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { supabase, TENANT_ID, abrirModal, toast, initSortable } from '../admin.js'
 
 export async function renderProtecoes() {
     const { data: prot, error } = await supabase
@@ -32,7 +32,7 @@ export async function renderProtecoes() {
             ${prot?.length ? `
             <table>
                 <thead><tr>
-                    <th>Nome</th><th>Preço</th><th>Tipo</th><th>Descrição</th><th>Ações</th>
+                    <th data-sort="text">Nome</th><th data-sort="num">Preço</th><th data-sort="text">Tipo</th><th>Descrição</th><th>Ações</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -52,6 +52,8 @@ export function bindProtecoes() {
 
     document.querySelectorAll('[data-action="excluir"]').forEach(btn =>
         btn.addEventListener('click', () => excluir(btn.dataset.id, btn.dataset.nome)))
+
+    initSortable(document.querySelector('.table-wrap table'))
 }
 
 async function abrirForm(id = null) {

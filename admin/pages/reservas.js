@@ -1,5 +1,5 @@
 // pages/reservas.js
-import { supabase, TENANT_ID, toast, abrirModal, esc } from '../admin.js'
+import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable } from '../admin.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 
 const STATUS_LABELS = {
@@ -50,13 +50,13 @@ export async function renderReservas() {
         const numFmt = r.numero ? String(r.numero).padStart(4, '0') : '—'
         return `
         <tr>
-            <td style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
-            <td style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
+            <td data-sort-val="${r.numero ?? 0}" style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
+            <td data-sort-val="${r.criado_em ?? ''}" style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
             <td class="td-name">${esc(r.cliente_nome)}</td>
             <td style="font-size:12px">${esc(r.cliente_whatsapp)}</td>
             <td>${esc(r.categorias?.nome ?? '—')}</td>
-            <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
-            <td style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
+            <td data-sort-val="${r.valor_estimado ?? 0}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
+            <td data-sort-val="${r.data_retirada ?? ''}" style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
             <td>
                 ${isFinal
                     ? `<span class="status-badge status-${status}">${STATUS_LABELS[status]}</span>`
@@ -92,7 +92,7 @@ export async function renderReservas() {
             ${reservas?.length ? `
             <table>
                 <thead><tr>
-                    <th>#</th><th>Enviado em</th><th>Cliente</th><th>WhatsApp</th><th>Veículo</th><th>Total</th><th>Retirada</th><th>Status</th><th></th>
+                    <th data-sort="num">#</th><th data-sort="date">Enviado em</th><th data-sort="text">Cliente</th><th data-sort="text">WhatsApp</th><th data-sort="text">Veículo</th><th data-sort="num">Total</th><th data-sort="date">Retirada</th><th data-sort="text">Status</th><th></th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -134,13 +134,13 @@ export function bindReservas() {
                 `<option value="${s}" ${s === status ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')
             const tr = document.createElement('tr')
             tr.innerHTML = `
-                <td style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
-                <td style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
+                <td data-sort-val="${r.numero ?? 0}" style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
+                <td data-sort-val="${r.criado_em ?? ''}" style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
                 <td class="td-name">${esc(r.cliente_nome)}</td>
                 <td style="font-size:12px">${esc(r.cliente_whatsapp)}</td>
                 <td>${esc(r.categorias?.nome ?? '—')}</td>
-                <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
-                <td style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
+                <td data-sort-val="${r.valor_estimado ?? 0}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
+                <td data-sort-val="${r.data_retirada ?? ''}" style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
                 <td>${isFinal
                     ? `<span class="status-badge status-${status}">${STATUS_LABELS[status]}</span>`
                     : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${r.id}" data-status="${status}">${opts}</select>`
@@ -217,6 +217,9 @@ export function bindReservas() {
     // Filtro de busca
     document.getElementById('btn-filtrar')?.addEventListener('click', filtrar)
     document.getElementById('f-busca')?.addEventListener('keydown', e => { if (e.key === 'Enter') filtrar() })
+
+    // Sorting
+    initSortable(document.querySelector('#reservas-tabela table'))
 }
 
 function filtrar() {

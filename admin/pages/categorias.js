@@ -1,5 +1,5 @@
 // pages/categorias.js
-import { supabase, TENANT_ID, abrirModal, toast } from '../admin.js'
+import { supabase, TENANT_ID, abrirModal, toast, initSortable } from '../admin.js'
 import { registrarAuditoria } from './auditoria.js'
 
 export async function renderCategorias() {
@@ -38,7 +38,7 @@ export async function renderCategorias() {
             ${cats?.length ? `
             <table>
                 <thead><tr>
-                    <th>Imagem</th><th>Nome</th><th>Preço/Dia</th><th>Câmbio</th><th style="text-align:center">Frota</th><th>Capacidade</th><th>Status</th><th>Ações</th>
+                    <th>Imagem</th><th data-sort="text">Nome</th><th data-sort="num">Preço/Dia</th><th data-sort="text">Câmbio</th><th data-sort="num" style="text-align:center">Frota</th><th data-sort="text">Capacidade</th><th data-sort="text">Status</th><th>Ações</th>
                 </tr></thead>
                 <tbody>${linhas}</tbody>
             </table>` : `
@@ -61,6 +61,8 @@ export function bindCategorias() {
     document.querySelectorAll('[data-action="excluir"]').forEach(btn => {
         btn.addEventListener('click', () => excluirCategoria(btn.dataset.id, btn.dataset.nome))
     })
+
+    initSortable(document.querySelector('.table-wrap table'))
 }
 
 async function abrirFormCategoria(id = null) {

@@ -1,5 +1,5 @@
 // pages/dashboard.js
-import { supabase, TENANT_ID, esc } from '../admin.js'
+import { supabase, TENANT_ID, esc, initSortable } from '../admin.js'
 import { verReserva } from './reservas.js'
 
 export async function renderDashboard() {
@@ -188,13 +188,13 @@ async function carregarDashboard(de, ate) {
     // ── Tabela recentes ──────────────────────────────────────────────────────
     const linhas = recentes.map(r => `
         <tr>
-            <td>${new Date(r.criado_em).toLocaleDateString('pt-BR')}</td>
-            <td>${r.numero ? `<strong>#${String(r.numero).padStart(4, '0')}</strong>` : '—'}</td>
+            <td data-sort-val="${r.criado_em ?? ''}">${new Date(r.criado_em).toLocaleDateString('pt-BR')}</td>
+            <td data-sort-val="${r.numero ?? 0}">${r.numero ? `<strong>#${String(r.numero).padStart(4, '0')}</strong>` : '—'}</td>
             <td>${esc(r.cliente_nome ?? '—')}</td>
             <td>${esc(r.cat_nome ?? '—')}</td>
             <td>${r.prot_nome ? esc(r.prot_nome) : '<span style="color:var(--muted)">—</span>'}</td>
             <td><span class="status-badge status-${r.status}">${labelStatus(r.status)}</span></td>
-            <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
+            <td data-sort-val="${r.valor_estimado ?? 0}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
             <td><button class="btn-ver-dash" data-id="${r.id}" style="padding:4px 10px;font-size:12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit">👁 Ver</button></td>
         </tr>`).join('')
 
@@ -204,7 +204,7 @@ async function carregarDashboard(de, ate) {
         <div class="table-wrap">
             <table>
                 <thead><tr>
-                    <th>Data</th><th>#</th><th>Cliente</th><th>Categoria</th><th>Proteção</th><th>Status</th><th>Valor Estimado</th><th></th>
+                    <th data-sort="date">Data</th><th data-sort="num">#</th><th data-sort="text">Cliente</th><th data-sort="text">Categoria</th><th data-sort="text">Proteção</th><th data-sort="text">Status</th><th data-sort="num">Valor Estimado</th><th></th>
                 </tr></thead>
                 <tbody>
                     ${linhas || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">Nenhuma reserva neste período.</td></tr>'}
@@ -216,6 +216,8 @@ async function carregarDashboard(de, ate) {
     tabelaEl.querySelectorAll('.btn-ver-dash').forEach(btn =>
         btn.addEventListener('click', () => verReserva(btn.dataset.id))
     )
+
+    initSortable(tabelaEl.querySelector('table'))
 }
 
 const CORES = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4']
