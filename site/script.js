@@ -57,6 +57,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadSession()
   if (!S.retData) S.retData = minDate()
   await loadData()
+  // Pré-seleciona categoria vinda do card da frota na landing
+  try {
+    const qsCat = sessionStorage.getItem('qs_cat')
+    if (qsCat) {
+      const match = S.categorias.find(c => c.slug === qsCat)
+      if (match) S.catId = match.id
+      sessionStorage.removeItem('qs_cat')
+    }
+  } catch (_) {}
   renderStep()
   // Fecha hora pickers ao clicar fora
   document.addEventListener('click', e => {
