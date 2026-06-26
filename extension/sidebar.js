@@ -55,6 +55,7 @@ Pra avançar, me envia a foto da sua CNH e o comprovante de residência que já 
 async function sbFetch(table, select, extra = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}?select=${select}&tenant_id=eq.${TENANT_ID}&ativo=eq.true${extra}`
   const r = await fetch(url, {
+    cache: 'no-store',
     headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
   })
   if (!r.ok) throw new Error(`${table} HTTP ${r.status}: ${await r.text().catch(() => '')}`)
@@ -652,6 +653,22 @@ function calc() {
   if (primeRow) primeRow.style.display  = primeAtivo ? '' : 'none'
   if (primeEl)  primeEl.textContent     = primeAtivo ? `R$ ${fmtN(primeTotal)}` : ''
   if (lblEl)    lblEl.textContent       = primeAtivo ? 'Total sem prime' : 'Total estimado'
+
+  // Atualiza preços nos cards de categoria (sazonalidade muda conforme data selecionada)
+  document.querySelectorAll('[data-cat-id]').forEach(el => {
+    const c = DATA.cats.find(x => x.id === el.dataset.catId)
+    if (!c) return
+    const preco = getPreco(c)
+    const sazon = preco !== c.preco_diaria
+    const priceEl = el.querySelector('.col-opt-price')
+    if (priceEl) priceEl.textContent = `R$ ${fmtN(preco)}/dia${sazon ? ' 🔶' : ''}`
+  })
+  // Atualiza label do botão da categoria se uma estiver selecionada
+  const catLabelEl = document.querySelector('[data-panel="categoria"] .col-btn-label')
+  if (catLabelEl && S.catId) {
+    const selCat = DATA.cats.find(x => x.id === S.catId)
+    if (selCat) catLabelEl.textContent = `${selCat.nome} — R$ ${fmtN(getPreco(selCat))}/dia`
+  }
 
   return { dias, diasFmt, baseCat, baseProt, baseAdds, baseExtras, total, primeTotal }
 }
