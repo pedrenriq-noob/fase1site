@@ -8,8 +8,8 @@ const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
 // ─────────────────────────────────────────────────────────────
 
 const NOME_WHATSAPP = {
-  'Aut. Travessia + CV 3d': 'Autorização de travessia com Carta Verde até 3 dias',
-  'Aut. Travessia + CV 7d': 'Autorização de travessia com Carta Verde até 7 dias',
+  'Aut. Travessia + CV 3d': 'Aut. c/ Carta Verde 3 dias',
+  'Aut. Travessia + CV 7d': 'Aut. c/ Carta Verde 7 dias',
 }
 
 const CAT_DESCRICAO = {
@@ -681,8 +681,11 @@ function calc() {
       </div>`)
     }
     if (prot && baseProt > 0) {
+      const protSub = prot.tipo_preco === 'per_day' && dias > 0
+        ? `${diasFmt} diária${dias !== 1 ? 's' : ''} × R$ ${fmtN(prot.preco)}`
+        : ''
       linhas.push(`<div class="resumo-item">
-        <div class="resumo-nome">○ ${esc(prot.nome)}</div>
+        <div><div class="resumo-nome">○ ${esc(prot.nome)}</div>${protSub ? `<div class="resumo-sub">${protSub}</div>` : ''}</div>
         <span class="resumo-preco">R$ ${fmtN(baseProt)}</span>
       </div>`)
     }
@@ -770,7 +773,7 @@ function copyCotacao() {
     '',
     cat  ? `🚘 ${cat.nome} — R$ ${fmtN(precoD)}/dia` : null,
     cat  ? (CAT_DESCRICAO[cat.nome.trim().toUpperCase()] ?? null) : null,
-    prot && baseProt > 0 ? `🛡 ${prot.nome}` : null,
+    prot && baseProt > 0 ? `🛡 ${prot.nome}: R$ ${fmtN(baseProt)}` : null,
     linhasAdds ? `\n*Adicionais:*\n${linhasAdds.trimEnd()}` : null,
     '',
     primeAtivo ? `💰 Total: R$ ${fmtN(total)}` : `💰 *Total estimado: R$ ${fmtN(total)}*`,
