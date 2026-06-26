@@ -189,6 +189,18 @@
       flex-shrink: 0; background: #fff;
       border-top: 2px solid var(--border); padding: 11px 14px;
     }
+    /* Resumo de itens selecionados */
+    .resumo { margin-bottom: 10px; display: flex; flex-direction: column; gap: 0; }
+    .resumo-item {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 5px 0; border-bottom: 1px solid var(--border);
+    }
+    .resumo-item:last-child { border-bottom: none; }
+    .resumo-nome { font-size: 12px; font-weight: 700; color: var(--text); }
+    .resumo-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .resumo-preco { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; margin-left: 8px; }
+    .resumo-cat-preco { color: var(--blue); }
+
     .dias-badge { font-size: 11px; color: var(--muted); margin-bottom: 5px; text-align: right; }
     .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
     .total-label { font-size: 13px; font-weight: 600; }
@@ -226,7 +238,7 @@
   </div>
 
   <div class="footer" id="footer" style="display:none">
-    <div class="dias-badge" id="diasBadge"></div>
+    <div class="resumo" id="resumo"></div>
     <div class="total-row">
       <span class="total-label" id="totalLabel">Total estimado</span>
       <span class="total-value" id="totalVal">R$ 0,00</span>

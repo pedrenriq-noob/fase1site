@@ -664,7 +664,44 @@ function calc() {
   const primeEl   = document.getElementById('primeVal')
   const lblEl     = document.getElementById('totalLabel')
 
-  if (badge)   badge.textContent  = dias > 0 ? `${diasFmt} diária${dias !== 1 ? 's' : ''}` : ''
+  // Resumo de itens selecionados no footer
+  const resumoEl = document.getElementById('resumo')
+  if (resumoEl) {
+    const linhas = []
+    if (cat) {
+      const sub = dias > 0 ? `${diasFmt} diária${dias !== 1 ? 's' : ''} × R$ ${fmtN(precoD)}` : `R$ ${fmtN(precoD)}/dia`
+      linhas.push(`<div class="resumo-item">
+        <div><div class="resumo-nome">${esc(cat.nome)}</div><div class="resumo-sub">${sub}</div></div>
+        <span class="resumo-preco resumo-cat-preco">R$ ${fmtN(baseCat)}</span>
+      </div>`)
+    }
+    if (prot && baseProt > 0) {
+      linhas.push(`<div class="resumo-item">
+        <div class="resumo-nome">○ ${esc(prot.nome)}</div>
+        <span class="resumo-preco">R$ ${fmtN(baseProt)}</span>
+      </div>`)
+    }
+    Object.entries(S.addSel).forEach(([id, qty]) => {
+      if (!qty) return
+      const a = DATA.adds.find(x => x.id === id)
+      if (!a) return
+      const sub = a.tipo_preco === 'per_day' ? a.preco * qty * (dias || 1) : a.preco * qty
+      linhas.push(`<div class="resumo-item">
+        <div class="resumo-nome">+ ${esc(a.nome)}${qty > 1 ? ` (${qty}×)` : ''}</div>
+        <span class="resumo-preco">R$ ${fmtN(sub)}</span>
+      </div>`)
+    })
+    S.extras.forEach(e => {
+      if (!e.desc && !e.preco) return
+      linhas.push(`<div class="resumo-item">
+        <div class="resumo-nome">✏️ ${esc(e.desc || 'Item extra')}</div>
+        <span class="resumo-preco">R$ ${fmtN(e.preco)}</span>
+      </div>`)
+    })
+    resumoEl.innerHTML = linhas.join('')
+  }
+
+  if (badge)   badge.textContent  = ''
   if (val)     val.textContent    = `R$ ${fmtN(total)}`
   if (primeRow) primeRow.style.display  = primeAtivo ? '' : 'none'
   if (primeEl)  primeEl.textContent     = primeAtivo ? `R$ ${fmtN(primeTotal)}` : ''
