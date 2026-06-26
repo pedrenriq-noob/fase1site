@@ -34,6 +34,8 @@
       document.documentElement.style.marginRight = open ? '360px' : ''
     } catch (_) {}
     chrome.storage.local.set({ igufozOpen: open })
+    // Recarrega dados ao abrir para refletir alterações do admin
+    if (open) frame.contentWindow?.postMessage({ igufozReload: true }, '*')
   }
 
   toggle.addEventListener('click', () => setOpen(!open))

@@ -731,6 +731,11 @@ document.addEventListener('DOMContentLoaded', () => {
   loadData()
 })
 
+// Recarrega dados quando a aba é aberta (sinal do content.js)
+window.addEventListener('message', e => {
+  if (e.data?.igufozReload) { loadData(); return }
+})
+
 // Resposta do content script após relay de clipboard
 window.addEventListener('message', e => {
   if (e.data?.igufozCopied == null) return
