@@ -1350,7 +1350,10 @@ window.toggleHoraPicker = function(id) {
 }
 
 window.selectHora = function(id, value) {
-  if (id === 'retHora' || id === 'sb-retHora') S.retHora = value
+  if (id === 'retHora' || id === 'sb-retHora') {
+    S.retHora = value
+    if (!S.devHora) S.devHora = value
+  }
   if (id === 'devHora' || id === 'sb-devHora') S.devHora = value
   calcDias()
   if (id.startsWith('sb-')) {

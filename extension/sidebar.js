@@ -525,7 +525,20 @@ function refreshPanels() {
 
 // ── Update hora picker display ────────────────────────────
 function updateHora(id, val) {
-  if (id === 'retHora') S.retHora = val
+  if (id === 'retHora') {
+    S.retHora = val
+    if (!S.devHora) {
+      S.devHora = val
+      const devBtn = document.querySelector('[data-hora-id="devHora"]')
+      if (devBtn) {
+        devBtn.querySelector('span').textContent = val
+        devBtn.classList.remove('placeholder')
+      }
+      document.querySelectorAll('#hora-dd-devHora .hora-opt').forEach(o =>
+        o.classList.toggle('selected', o.dataset.horaVal === val)
+      )
+    }
+  }
   if (id === 'devHora') S.devHora = val
   const btn = document.querySelector(`[data-hora-id="${id}"]`)
   if (btn) {
