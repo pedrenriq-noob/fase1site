@@ -8,14 +8,15 @@
   background: #FF6B00;
   border: none;
   border-radius: 8px 0 0 8px;
-  width: 40px;
-  height: 56px;
+  width: 28px;
+  height: 72px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: -2px 0 12px rgba(0,0,0,.2);
   transition: background .2s, right .3s;
+  padding: 0;
 }
 #igufoz-toggle:hover { background: #e55e00; }
 #igufoz-toggle.igufoz-toggle-open { right: 360px; }

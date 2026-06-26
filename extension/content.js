@@ -20,7 +20,7 @@
   const toggle = document.createElement('button')
   toggle.id = 'igufoz-toggle'
   toggle.title = 'Igufoz Cotação'
-  toggle.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>`
+  toggle.innerHTML = `<span style="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-size:13px;font-weight:900;letter-spacing:2px;color:#1D3FAE;font-family:Arial,sans-serif;line-height:1">IGU</span>`
   document.body.appendChild(toggle)
 
   let open = false
