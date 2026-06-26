@@ -236,7 +236,7 @@ function filtrar() {
     })
 }
 
-async function verReserva(id) {
+export async function verReserva(id) {
     const [{ data: r, error: rErr }, { data: itens, error: itErr }] = await Promise.all([
         supabase
             .from('solicitacoes')

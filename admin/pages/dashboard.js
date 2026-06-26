@@ -1,5 +1,6 @@
 // pages/dashboard.js
 import { supabase, TENANT_ID, esc } from '../admin.js'
+import { verReserva } from './reservas.js'
 
 export async function renderDashboard() {
     return `
@@ -194,6 +195,7 @@ async function carregarDashboard(de, ate) {
             <td>${r.prot_nome ? esc(r.prot_nome) : '<span style="color:var(--muted)">—</span>'}</td>
             <td><span class="status-badge status-${r.status}">${labelStatus(r.status)}</span></td>
             <td class="td-price">${fmtMoney(r.valor_estimado)}</td>
+            <td><button class="btn-ver-dash" data-id="${r.id}" style="padding:4px 10px;font-size:12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit">👁 Ver</button></td>
         </tr>`).join('')
 
     tabelaEl.innerHTML = `
@@ -202,14 +204,18 @@ async function carregarDashboard(de, ate) {
         <div class="table-wrap">
             <table>
                 <thead><tr>
-                    <th>Data</th><th>#</th><th>Cliente</th><th>Categoria</th><th>Proteção</th><th>Status</th><th>Valor Estimado</th>
+                    <th>Data</th><th>#</th><th>Cliente</th><th>Categoria</th><th>Proteção</th><th>Status</th><th>Valor Estimado</th><th></th>
                 </tr></thead>
                 <tbody>
-                    ${linhas || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">Nenhuma reserva neste período.</td></tr>'}
+                    ${linhas || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">Nenhuma reserva neste período.</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`
+
+    tabelaEl.querySelectorAll('.btn-ver-dash').forEach(btn =>
+        btn.addEventListener('click', () => verReserva(btn.dataset.id))
+    )
 }
 
 const CORES = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#06b6d4']

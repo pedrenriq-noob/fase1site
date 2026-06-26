@@ -1,5 +1,6 @@
 // pages/translados.js
 import { supabase, TENANT_ID, toast } from '../admin.js'
+import { verReserva } from './reservas.js'
 
 export async function renderTranslados() {
     const { data: reservas, error } = await supabase
@@ -33,6 +34,7 @@ export async function renderTranslados() {
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <span class="status-badge status-solicitada">⏳ Pendente</span>
             <span style="font-size:11px;color:#94a3b8">Reserva: ${r.status}</span>
+            <button class="btn-ver-translado" data-id="${r.id}" style="padding:5px 12px;font-size:12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit">👁 Ver reserva</button>
         </div>
     </div>`
 
@@ -51,7 +53,9 @@ export async function renderTranslados() {
 }
 
 export function bindTranslados() {
-    // status gerenciado pela página de Reservas — sem ações diretas aqui
+    document.querySelectorAll('.btn-ver-translado').forEach(btn =>
+        btn.addEventListener('click', () => verReserva(btn.dataset.id))
+    )
 }
 
 function fmtDt(str) {
