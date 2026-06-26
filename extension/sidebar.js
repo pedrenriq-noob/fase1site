@@ -7,6 +7,11 @@ const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
 // ─────────────────────────────────────────────────────────────
 
+const NOME_WHATSAPP = {
+  'Aut. Travessia + CV 3d': 'Autorização de travessia com Carta Verde até 3 dias',
+  'Aut. Travessia + CV 7d': 'Autorização de travessia com Carta Verde até 7 dias',
+}
+
 const CAT_DESCRICAO = {
   'GRUPO B':              'Mobi, C3 ou similar — MANUAL',
   'GRUPO C':              'Onix, Argo, 208, Polo ou similar — MANUAL',
@@ -743,7 +748,8 @@ function copyCotacao() {
     const a = DATA.adds.find(x => x.id === id)
     if (!a) return
     const sub = a.tipo_preco === 'per_day' ? a.preco * qty * (dias || 1) : a.preco * qty
-    linhasAdds += `  ➕ ${a.nome}${qty > 1 ? ` (${qty}×)` : ''}: R$ ${fmtN(sub)}\n`
+    const nomeWpp = NOME_WHATSAPP[a.nome] ?? a.nome
+    linhasAdds += `  ➕ ${nomeWpp}${qty > 1 ? ` (${qty}×)` : ''}: R$ ${fmtN(sub)}\n`
   })
   S.extras.forEach(e => {
     if (e.desc || e.preco) linhasAdds += `  ✏️ ${e.desc || 'Item extra'}: R$ ${fmtN(e.preco)}\n`
