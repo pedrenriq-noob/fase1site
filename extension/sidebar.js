@@ -64,8 +64,10 @@ async function sbFetch(table, select, extra = '') {
 
 async function loadData() {
   const loading = document.getElementById('loading')
-  loading.className = 'state-msg'
-  loading.textContent = 'Carregando dados…'
+  if (loading) {
+    loading.className = 'state-msg'
+    loading.textContent = 'Carregando dados…'
+  }
   try {
     const [cats, prots, adds, catLimits, sazon] = await Promise.all([
       sbFetch('categorias',   'id,nome,slug,preco_diaria', '&order=ordem.asc'),
