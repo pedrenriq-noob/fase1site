@@ -416,7 +416,23 @@ O desbloqueio ocorre após a devolução do veículo, no prazo definido pelo seu
       })
   </script>
   <script>
-    // Formulário de busca rápida: salva datas na sessionStorage e redireciona para o fluxo de reserva
+    // Pré-preenche retirada com D+1 e sincroniza devolução
+    ;(function () {
+      const retEl = document.getElementById('qs-ret')
+      const devEl = document.getElementById('qs-dev')
+      const amanha = new Date(); amanha.setDate(amanha.getDate() + 1)
+      const amanhaISO = amanha.toISOString().slice(0, 10)
+      retEl.min = amanhaISO
+      retEl.value = amanhaISO
+      devEl.min = amanhaISO
+      devEl.value = amanhaISO
+      retEl.addEventListener('change', function () {
+        devEl.min = retEl.value
+        if (!devEl.value || devEl.value < retEl.value) devEl.value = retEl.value
+      })
+    })()
+
+    // Formulário de busca rápida: salva datas na sessionStorage e redireciona (datas opcionais)
     document.getElementById('quickSearchForm').addEventListener('submit', function (e) {
       e.preventDefault()
       const ret = document.getElementById('qs-ret').value
