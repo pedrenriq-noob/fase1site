@@ -55,6 +55,7 @@ function loadSession() {
 // ── BOOT ──────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   loadSession()
+  if (!S.retData) S.retData = minDate()
   await loadData()
   renderStep()
   // Fecha hora pickers ao clicar fora
@@ -280,7 +281,7 @@ function renderLanding(c) {
     if (retEl.value) devEl.min = retEl.value
     retEl.addEventListener('change', () => {
       devEl.min = retEl.value
-      if (devEl.value && devEl.value < retEl.value) devEl.value = ''
+      if (!devEl.value || devEl.value < retEl.value) devEl.value = retEl.value
     })
   }
 }
@@ -375,8 +376,14 @@ function renderStep1(c) {
   // Eventos
   document.getElementById('retData').addEventListener('change', e => {
     S.retData = e.target.value
-    document.getElementById('devData').min = e.target.value
-    if (S.devData && S.devData < S.retData) { S.devData = '' }
+    const devEl = document.getElementById('devData')
+    if (devEl) {
+      devEl.min = S.retData
+      if (!S.devData || S.devData < S.retData) {
+        S.devData = S.retData
+        devEl.value = S.retData
+      }
+    }
     calcDias(); renderStep1(c); updateSummary()
   })
   document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary() })
@@ -836,8 +843,13 @@ function bindSbPeriod() {
   document.getElementById('sb-retData')?.addEventListener('change', e => {
     S.retData = e.target.value
     const devEl = document.getElementById('sb-devData')
-    if (devEl) devEl.min = e.target.value
-    if (S.devData && S.devData < S.retData) S.devData = ''
+    if (devEl) {
+      devEl.min = S.retData
+      if (!S.devData || S.devData < S.retData) {
+        S.devData = S.retData
+        devEl.value = S.retData
+      }
+    }
     calcDias()
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()

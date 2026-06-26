@@ -35,9 +35,11 @@ function showToastExt(msg) {
   setTimeout(() => el.remove(), 3500)
 }
 
+const _amanha = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) }
+
 let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
 let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-               retData: '', retHora: '', devData: '', devHora: '', prime: false }
+               retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false }
 let openPanel = null
 let openHora  = null
 
@@ -300,11 +302,10 @@ function updatePrimeVisual() {
 function wireEvents() {
   document.getElementById('retData')?.addEventListener('input', e => {
     S.retData = e.target.value
-    // Garante que devolução não pode ser anterior à retirada
     const devInput = document.getElementById('devData')
     if (devInput) {
       devInput.min = S.retData || new Date().toISOString().slice(0,10)
-      if (S.devData && S.devData < S.retData) {
+      if (!S.devData || S.devData < S.retData) {
         S.devData = S.retData
         devInput.value = S.retData
       }
@@ -737,7 +738,7 @@ function copyCotacao() {
 // ── Reset ─────────────────────────────────────────────────
 function resetForm() {
   S         = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-                retData: '', retHora: '', devData: '', devHora: '', prime: false }
+                retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false }
   openPanel = null
   openHora  = null
   renderForm()
