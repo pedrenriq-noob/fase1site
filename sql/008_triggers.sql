@@ -93,7 +93,7 @@ BEGIN
 
     -- Transições permitidas
     IF NOT (
-        (OLD.status = 'solicitada'  AND NEW.status IN ('em_analise', 'cancelada'))  OR
+        (OLD.status = 'solicitada'  AND NEW.status IN ('em_analise', 'confirmada', 'cancelada'))  OR
         (OLD.status = 'em_analise'  AND NEW.status IN ('confirmada', 'cancelada'))  OR
         (OLD.status = 'confirmada'  AND NEW.status IN ('concluida',  'cancelada'))  OR
         (OLD.status = NEW.status)   -- sem mudança: sempre permitido
