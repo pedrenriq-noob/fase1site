@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Igufoz — Disponibilidade",
+  "version": "1.0.0",
+  "description": "Consulta disponibilidade de veículos por período em tempo real.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://lxfnqzuzohudqwibgdic.supabase.co/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Disponibilidade Igufoz",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    }
+  }
+}

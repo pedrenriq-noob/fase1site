@@ -15,5 +15,26 @@
       "port": 3002,
       "autoPort": true
     }
+  ,{
+      "name": "passeios-sidebar",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3003", "passeios-extension"],
+      "port": 3003,
+      "autoPort": true
+    }
+  ,{
+      "name": "cadeirinhas",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3004", "cadeirinhas-extension"],
+      "port": 3004,
+      "autoPort": true
+    }
+  ,{
+      "name": "disponibilidade",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3005", "disponibilidade-extension"],
+      "port": 3005,
+      "autoPort": true
+    }
   ]
 }
