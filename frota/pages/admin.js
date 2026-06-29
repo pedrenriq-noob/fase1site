@@ -219,7 +219,12 @@ export async function init(container, params) {
     const atualizados = rows.filter(r => existingMap.has(r['locacao-numero']));
     const encerrar    = (existing || []).filter(r => r.locacao_numero && !importedNums.has(r.locacao_numero));
 
-    const reservas = rows.map(rowToReserva);
+    // Dedupe by locacao_numero: if the same number appears in both CSVs
+    // (or twice in the same file), keep only the last occurrence so the
+    // upsert chunk never contains two rows with the same (tenant_id, locacao_numero).
+    const reservasMap = new Map();
+    rows.forEach(r => reservasMap.set(r['locacao-numero'], rowToReserva(r)));
+    const reservas = Array.from(reservasMap.values());
 
     previewEl.innerHTML = `
       <div class="card mb-md">
