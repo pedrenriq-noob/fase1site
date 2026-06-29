@@ -1,4 +1,4 @@
-import { requireAuth, signOut, renderLoginPage, getSession } from './auth.js';
+import { requireAuth, signOut, renderLoginPage, getSession, getUser } from './auth.js';
 import { unsubscribeAll } from './realtime.js';
 import { logger } from './utils.js';
 
@@ -10,7 +10,9 @@ const ROUTES = {
   '/veiculo/:placa': () => import('../pages/veiculo-detalhe.js'),
   '/disponibilidade':() => import('../pages/disponibilidade.js'),
   '/reservas':       () => import('../pages/reservas.js'),
-  '/patio':          () => import('../pages/patio.js')
+  '/patio':          () => import('../pages/patio.js'),
+  '/admin':          () => import('../pages/admin.js'),
+  '/admin/:tab':     () => import('../pages/admin.js')
 };
 
 /* ===== Route Matching ===== */
@@ -56,7 +58,8 @@ function updateActiveNav(path) {
     const isActive =
       (route === 'dashboard' && (path === '/' || path === '/dashboard')) ||
       (route === 'veiculos' && (path.startsWith('/veiculo'))) ||
-      (route !== 'dashboard' && route !== 'veiculos' && path.startsWith(`/${route}`));
+      (route === 'admin' && path.startsWith('/admin')) ||
+      (route !== 'dashboard' && route !== 'veiculos' && route !== 'admin' && path.startsWith(`/${route}`));
 
     item.classList.toggle('active', isActive);
     item.setAttribute('aria-current', isActive ? 'page' : 'false');
@@ -138,6 +141,15 @@ async function render(hash) {
   }
 }
 
+/* ===== Admin Nav ===== */
+function showAdminNav() {
+  getUser().then(u => {
+    if (u?.role === 'admin') {
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+    }
+  });
+}
+
 /* ===== Init ===== */
 async function init() {
   const logoutBtn = document.getElementById('btn-logout');
@@ -150,6 +162,7 @@ async function init() {
   }
 
   window.addEventListener('auth:login', () => {
+    showAdminNav();
     const hash = window.location.hash || '#/dashboard';
     render(hash);
   });
@@ -163,6 +176,8 @@ async function init() {
     renderLoginPage();
     return;
   }
+
+  showAdminNav();
 
   const hash = window.location.hash || '#/dashboard';
   if (!hash || hash === '#' || hash === '#/login') {
