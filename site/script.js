@@ -61,7 +61,8 @@ function loadSession() {
 window.addEventListener('DOMContentLoaded', async () => {
   loadSession()
   if (!S.retData) S.retData = minDate()
-  await loadData()
+  const loaded = await loadData()
+  if (!loaded) return
   // Pré-seleciona categoria vinda do card da frota na landing
   try {
     const qsCat = sessionStorage.getItem('qs_cat')
@@ -94,23 +95,24 @@ async function loadData() {
   if (rC.error || rP.error || rA.error || rS.error) {
     document.getElementById('content').innerHTML =
       `<div style="padding:40px;text-align:center;color:#ef4444">Erro ao carregar dados. Tente recarregar a página.</div>`
-    return
+    return false
   }
   S.categorias   = rC.data ?? []
   S.protecoes    = rP.data ?? []
   S.adicionais   = rA.data ?? []
   S.sazonalidade = rS.data ?? []
-  if (rL.error) console.warn('[igufoz] locais query error:', rL.error.message)
   // locais: se a tabela ainda não existe no banco, usa lista de fallback
   S.locais = (!rL.error && rL.data && rL.data.length > 0) ? rL.data : [
     { nome: 'Av. Brasil, 90 — Centro',                        permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: false, is_aeroporto: false },
     { nome: 'Av. das Cataratas, 1419 — Vila Yolanda',         permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: true,  is_aeroporto: false },
     { nome: 'Estacionamento Leva e Trás 24h — Aeroporto',     permite_retirada: false, permite_devolucao: true, hora_retirada_inicio: null,    hora_retirada_fim: null,    hora_devolucao_inicio: null,    hora_devolucao_fim: null,    disponivel_domingo: true,  is_aeroporto: true  },
   ]
+  return true
 }
 
 // ── DISPONIBILIDADE REAL (I-Frotas) ───────────────────────
 let _dispDebounce = null
+let _dispAbortCtrl = null
 
 async function atualizarDisponibilidade() {
   if (!S.retData || !S.retHora || !S.devData || !S.devHora) return
@@ -119,6 +121,11 @@ async function atualizarDisponibilidade() {
   const dataSaida    = `${S.retData}T${S.retHora}:00`
   const dataRetorno  = `${S.devData}T${S.devHora}:00`
   if (new Date(dataRetorno) <= new Date(dataSaida)) return
+
+  // Cancela fetch anterior em voo para evitar race condition
+  if (_dispAbortCtrl) _dispAbortCtrl.abort()
+  _dispAbortCtrl = new AbortController()
+  const { signal } = _dispAbortCtrl
 
   // Marcar todas como "carregando"
   S.categorias.forEach(c => { S.disponibilidade[c.id] = 'loading' })
@@ -136,11 +143,12 @@ async function atualizarDisponibilidade() {
           data_saida:        dataSaida,
           data_retorno_prev: dataRetorno,
         }),
+        signal,
       })
       const data = await res.json()
-      S.disponibilidade[cat.id] = data.disponivel ?? null
-    } catch {
-      S.disponibilidade[cat.id] = null
+      S.disponibilidade[cat.id] = typeof data.disponivel === 'number' ? data.disponivel : null
+    } catch (e) {
+      if (e.name !== 'AbortError') S.disponibilidade[cat.id] = null
     }
   }))
 
@@ -156,6 +164,11 @@ function scheduleAtualizarDisponibilidade() {
   clearTimeout(_dispDebounce)
   _dispDebounce = setTimeout(atualizarDisponibilidade, 600)
 }
+
+window.addEventListener('beforeunload', () => {
+  clearTimeout(_dispDebounce)
+  if (_dispAbortCtrl) _dispAbortCtrl.abort()
+})
 
 // ── HELPERS DE LOCAIS ─────────────────────────────────────
 function locaisParaRetirada(data, hora) {
@@ -312,7 +325,7 @@ function renderLanding(c) {
         </div>
         <div class="form-group">
           <label>DEVOLUÇÃO</label>
-          <input type="date" id="land-dev" value="${S.devData}">
+          <input type="date" id="land-dev" min="${S.retData || minDate()}" value="${S.devData}">
         </div>
       </div>
       <div class="form-group">
@@ -406,14 +419,14 @@ function renderStep1(c) {
         <label for="retLocal">Local de Retirada *</label>
         <select id="retLocal">
           <option value="">Selecione...</option>
-          ${locRet.map(l => `<option${l.nome === S.retLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
+          ${locRet.map(l => `<option value="${esc(l.nome)}"${l.nome === S.retLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
         </select>
       </div>
       <div>
         <label for="devLocal">Local de Devolução *</label>
         <select id="devLocal">
           <option value="">Selecione...</option>
-          ${locDev.map(l => `<option${l.nome === S.devLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
+          ${locDev.map(l => `<option value="${esc(l.nome)}"${l.nome === S.devLocal ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -462,9 +475,10 @@ function renderCatCards() {
     const preco = getPreco(cat)
     const dispReal = S.disponibilidade[cat.id]
     // dispReal: undefined = ainda não carregou, 'loading' = buscando, number = resultado, null = sem dados frota
+    // null = erro no fetch (não bloqueia compra, frota não confirmada)
     const esgotado = dispReal !== undefined && dispReal !== 'loading' && dispReal !== null
       ? dispReal === 0
-      : (cat.quantidade_frota != null && cat.quantidade_frota <= 0)
+      : (dispReal === undefined && cat.quantidade_frota != null && cat.quantidade_frota <= 0)
     const loading = dispReal === 'loading'
     const sel      = S.catId === cat.id
     const img      = cat.imagem_url
@@ -925,6 +939,7 @@ function bindSbPeriod() {
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
+    scheduleAtualizarDisponibilidade()
   })
   document.getElementById('sb-devData')?.addEventListener('change', e => {
     S.devData = e.target.value
@@ -932,6 +947,7 @@ function bindSbPeriod() {
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
+    scheduleAtualizarDisponibilidade()
   })
 }
 
@@ -1026,6 +1042,8 @@ function mostrarModalSemProtecao() {
 
   btnCanc.addEventListener('click', () => overlay.remove())
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+  overlay.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.remove() })
+  setTimeout(() => btnCanc.focus(), 50)
 
   btnConf.addEventListener('click', () => {
     overlay.remove()
@@ -1124,7 +1142,7 @@ function validate() {
     let hasErr = false
     const cat  = S.categorias.find(x => x.id === S.catId)
     if (S.pessoas > (cat?.max_pessoas ?? 5)) { markErr('cli-pessoas', `Máximo ${cat?.max_pessoas ?? 5} pessoas para este veículo.`); hasErr = true }
-    if (!S.email.includes('@'))              { markErr('cli-email',   'Informe um e-mail válido.');                                  hasErr = true }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.email)) { markErr('cli-email', 'Informe um e-mail válido.'); hasErr = true }
     if (S.whatsapp.replace(/\D/g,'').length < 10) { markErr('cli-wpp', 'Informe um WhatsApp válido com DDD.');                      hasErr = true }
     if (!S.estrangeiro && !validarCPF(S.cpf)) { markErr('cli-cpf',   'CPF inválido. Verifique os números.');                        hasErr = true }
     if (S.estrangeiro && !S.cpf)              { markErr('cli-doc',   'Informe o documento de identificação.');                       hasErr = true }
@@ -1202,7 +1220,7 @@ window.submitReservation = async function() {
     showSuccess(waMsg, total)
 
   } catch (e) {
-    if (errEl) errEl.innerHTML = `<div class="step-error">Erro ao enviar: ${e.message}</div>`
+    if (errEl) errEl.innerHTML = `<div class="step-error">Erro ao enviar: ${esc(e.message)}</div>`
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar Solicitação 🚀' }
   }
 }
@@ -1227,7 +1245,7 @@ function buildWhatsMsg(cat, prot, total, dias) {
 `\u{1F4CB} *IGUFOZ – NOVA RESERVA*
 
 \u{1F464} *${S.nome}*
-CPF: ${maskCPF(S.cpf)}
+CPF: ${S.cpf.replace(/\D/g,'').replace(/(\d{3})\d{3}(\d{3})(\d{2})/, '$1.***.***-$3')}
 \u{1F4F1} ${maskWpp(S.whatsapp)} | ✉ ${S.email}
 
 ${linhaVoo}

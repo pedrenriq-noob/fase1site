@@ -1,12 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { checkDisponibilidade } from '../check-disponibilidade/index.ts'
+import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
 
-const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
-const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
-
-// P-05: CORS restritivo via env var ALLOWED_ORIGINS (vírgula-separado)
-// Se não configurado, permite qualquer origem (necessário enquanto domínio não estiver fixo)
 const ALLOWED_ORIGINS_RAW = Deno.env.get('ALLOWED_ORIGINS')
 const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW ? ALLOWED_ORIGINS_RAW.split(',').map(s => s.trim()) : null
 
@@ -75,6 +70,8 @@ function validarCPF(cpf: string): boolean {
   return r === parseInt(c[10])
 }
 
+const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin')
   const CORS = getCors(origin)
@@ -103,6 +100,9 @@ Deno.serve(async (req: Request) => {
       if (!body[f]) return err(`Campo obrigatório ausente: ${f}`)
     }
 
+    if (!uuidRe.test(body.tenant_id))    return err('tenant_id inválido.')
+    if (!uuidRe.test(body.categoria_id)) return err('categoria_id inválido.')
+
     if (!validarEmail(body.cliente_email)) return err('E-mail inválido.')
     if (!validarWhatsApp(body.cliente_whatsapp)) return err('WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).')
 
@@ -111,16 +111,23 @@ Deno.serve(async (req: Request) => {
       if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) return err('CPF inválido.')
     }
 
+    const pessoas = parseInt(body.pessoas) || 1
+    if (pessoas < 1 || pessoas > 20) return err('Número de pessoas inválido.')
+
+    const retDate = new Date(body.data_retirada)
+    const devDate = new Date(body.data_devolucao)
+    if (isNaN(retDate.getTime()) || isNaN(devDate.getTime())) return err('Datas inválidas.')
+
     const dias = calcDias(body.data_retirada, body.data_devolucao)
     if (dias <= 0) return err('Período inválido: devolução deve ser após a retirada.')
 
-    // P-03 FIX: service role obrigatório — sem fallback para anon key
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (!serviceKey) {
-      console.error('[criar-solicitacao] SUPABASE_SERVICE_ROLE_KEY não configurada')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !serviceKey) {
+      console.error('[criar-solicitacao] env vars não configuradas')
       return err('Erro de configuração do servidor. Contate o suporte.', 500)
     }
-    const sb = createClient(SUPABASE_URL, serviceKey)
+    const sb = createClient(supabaseUrl, serviceKey)
 
     const { data: tenant } = await sb.from('tenants').select('id').eq('id', body.tenant_id).eq('ativo', true).single()
     if (!tenant) return err('Tenant inválido.')
@@ -149,14 +156,14 @@ Deno.serve(async (req: Request) => {
         sb,
         body.tenant_id,
         cat.slug,
-        new Date(body.data_retirada),
-        new Date(body.data_devolucao),
+        retDate,
+        devDate,
       )
       if (disp.fonte === 'frota' && disp.disponivel === 0) {
         return err('Não há veículos disponíveis para esta categoria no período solicitado. Escolha outra categoria ou período.', 409)
       }
     } catch (dispErr) {
-      // Falha na verificação não bloqueia — apenas loga
+      // Falha na verificação não bloqueia (sistema de solicitações com aprovação manual)
       console.warn('[criar-solicitacao] check-disp falhou:', String(dispErr))
     }
 
@@ -213,11 +220,10 @@ Deno.serve(async (req: Request) => {
       body.companhia_aerea ? `Cia: ${body.companhia_aerea}` : null,
       body.numero_voo      ? `Voo: ${body.numero_voo}`      : null,
       body.horario_pouso   ? `Pouso: ${body.horario_pouso}` : null,
-      `Pessoas: ${body.pessoas ?? 1}`,
+      `Pessoas: ${pessoas}`,
       body.estrangeiro ? '[ESTRANGEIRO]' : null,
     ].filter(Boolean).join(' | ') || null
 
-    // TE-01 FIX: inserção atômica via RPC — solicitação + itens em uma única transação
     const { data: result, error: rpcErr } = await sb.rpc('inserir_solicitacao_completa', {
       p_sol: {
         tenant_id:        body.tenant_id,
@@ -235,7 +241,7 @@ Deno.serve(async (req: Request) => {
         local_retirada:   body.local_retirada,
         local_devolucao:  body.local_devolucao,
         valor_estimado,
-        pessoas:          body.pessoas          ?? 1,
+        pessoas,
         numero_voo:       body.numero_voo       ?? null,
         horario_pouso:    body.horario_pouso    ?? null,
         observacoes:      obsCompleto,
@@ -247,15 +253,15 @@ Deno.serve(async (req: Request) => {
 
     const sol = result as { id: string; numero: number }
 
-    console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado, ip }))
+    console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado }))
 
     return new Response(JSON.stringify({ ok: true, id: sol.id, numero: sol.numero, valor_estimado }), {
       headers: { ...CORS, 'Content-Type': 'application/json' },
     })
 
   } catch (e) {
-    console.error(String(e))
-    return new Response(JSON.stringify({ error: String(e) }), {
+    console.error('[criar-solicitacao]', String(e))
+    return new Response(JSON.stringify({ error: 'Erro interno. Tente novamente.' }), {
       status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
     })
   }
