@@ -397,18 +397,30 @@ function renderStep1(c) {
 
     <div class="period-row">
       <div class="period-group">
-        <label for="retData">Retirada *</label>
-        <div class="date-time-group">
-          <input type="date" id="retData" min="${minDate()}" value="${S.retData}">
-          ${renderHoraPicker('retHora', 8, 18, S.retHora, 'Horário de retirada')}
+        <label>Retirada *</label>
+        <div class="dt-block">
+          <div class="dt-row dt-date-row">
+            <span class="dt-sub-label">Data</span>
+            <input type="date" id="retData" min="${minDate()}" value="${S.retData}">
+          </div>
+          <div class="dt-row dt-time-row">
+            <span class="dt-sub-label">Hora</span>
+            ${renderHoraPicker('retHora', 8, 18, S.retHora, 'Horário de retirada')}
+          </div>
         </div>
         ${avisoRetirada(S.retData, S.retHora)}
       </div>
       <div class="period-group">
-        <label for="devData">Devolução *</label>
-        <div class="date-time-group">
-          <input type="date" id="devData" min="${S.retData || minDate()}" value="${S.devData}">
-          ${renderHoraPicker('devHora', 0, 23, S.devHora, 'Horário de devolução')}
+        <label>Devolução *</label>
+        <div class="dt-block">
+          <div class="dt-row dt-date-row">
+            <span class="dt-sub-label">Data</span>
+            <input type="date" id="devData" min="${S.retData || minDate()}" value="${S.devData}">
+          </div>
+          <div class="dt-row dt-time-row">
+            <span class="dt-sub-label">Hora</span>
+            ${renderHoraPicker('devHora', 0, 23, S.devHora, 'Horário de devolução')}
+          </div>
         </div>
         ${avisoDevolucao(S.devData, S.devHora)}
       </div>
@@ -454,10 +466,8 @@ function renderStep1(c) {
     const devEl = document.getElementById('devData')
     if (devEl) {
       devEl.min = S.retData
-      if (!S.devData || S.devData < S.retData) {
-        S.devData = S.retData
-        devEl.value = S.retData
-      }
+      S.devData = S.retData
+      devEl.value = S.retData
     }
     calcDias(); renderStep1(c); updateSummary(); scheduleAtualizarDisponibilidade()
   })
@@ -930,10 +940,8 @@ function bindSbPeriod() {
     const devEl = document.getElementById('sb-devData')
     if (devEl) {
       devEl.min = S.retData
-      if (!S.devData || S.devData < S.retData) {
-        S.devData = S.retData
-        devEl.value = S.retData
-      }
+      S.devData = S.retData
+      devEl.value = S.retData
     }
     calcDias()
     if (S.step === 1) renderStep1(document.getElementById('content'))
@@ -1441,7 +1449,7 @@ window.toggleHoraPicker = function(id) {
 window.selectHora = function(id, value) {
   if (id === 'retHora' || id === 'sb-retHora') {
     S.retHora = value
-    if (!S.devHora) S.devHora = value
+    S.devHora = value
   }
   if (id === 'devHora' || id === 'sb-devHora') S.devHora = value
   calcDias()

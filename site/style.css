@@ -437,6 +437,21 @@ input[type="checkbox"] {
 .date-time-group input  { flex: 2; min-width: 0; }
 .date-time-group select { flex: 1; min-width: 0; }
 
+.dt-block { display: flex; flex-direction: column; gap: 6px; }
+.dt-row { display: flex; align-items: center; gap: 8px; }
+.dt-sub-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  width: 32px;
+  flex-shrink: 0;
+}
+.dt-date-row input[type=date] { flex: 1; min-width: 0; }
+.dt-time-row .hora-picker { flex: 1; }
+
 .location-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
