@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="I-Frotas" />
+  <meta name="theme-color" content="#0f2b4f" />
+  <meta name="description" content="Gestão operacional da frota Igufoz" />
+
+  <title>I-Frotas</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <header class="app-header" id="app-header" style="display:none;">
+    <div class="header-inner">
+      <span class="header-logo">I-Frotas</span>
+      <div class="header-actions">
+        <span class="realtime-dot" id="realtime-dot" title="Tempo real"></span>
+        <button class="btn-icon" id="btn-logout" title="Sair" aria-label="Sair">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app" role="main">
+    <div class="loading-screen" id="loading-screen">
+      <div class="spinner"></div>
+      <p class="loading-text">Carregando I-Frotas…</p>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" id="bottom-nav" style="display:none;" role="navigation" aria-label="Navegação principal">
+    <a class="bottom-nav__item" href="#/dashboard" data-route="dashboard" aria-label="Dashboard">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a class="bottom-nav__item" href="#/veiculos" data-route="veiculos" aria-label="Veículos">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="1" y="3" width="15" height="13" rx="2"/>
+        <path d="M16 8h4l3 5v3h-7V8z"/>
+        <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+      <span class="nav-label">Veículos</span>
+    </a>
+    <a class="bottom-nav__item" href="#/disponibilidade" data-route="disponibilidade" aria-label="Disponibilidade">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <polyline points="9 16 11 18 15 14"/>
+      </svg>
+      <span class="nav-label">Disponib.</span>
+    </a>
+    <a class="bottom-nav__item" href="#/reservas" data-route="reservas" aria-label="Reservas">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      <span class="nav-label">Reservas</span>
+    </a>
+    <a class="bottom-nav__item" href="#/patio" data-route="patio" aria-label="Pátio">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+      </svg>
+      <span class="nav-label">Pátio</span>
+    </a>
+  </nav>
+
+  <div id="toast-container" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/frota/sw.js', { scope: '/frota/' })
+          .catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
