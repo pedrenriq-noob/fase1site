@@ -1,5 +1,8 @@
 import { supabase, TENANT_ID, WHATSAPP } from './supabase.js'
 
+const CHECK_DISP_URL = 'https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/check-disponibilidade'
+const SUPABASE_ANON  = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
+
 // ── STATE ──────────────────────────────────────────────────
 const S = {
   step: 1,
@@ -10,6 +13,8 @@ const S = {
   dias: 0,
   // dados carregados do Supabase
   categorias: [], protecoes: [], adicionais: [], sazonalidade: [], locais: [],
+  // disponibilidade real por categoria: { [catId]: number | null | 'loading' }
+  disponibilidade: {},
   // seleções
   catId: null,
   protId: null,
@@ -102,6 +107,54 @@ async function loadData() {
     { nome: 'Av. das Cataratas, 1419 — Vila Yolanda',         permite_retirada: true, permite_devolucao: true, hora_retirada_inicio: '08:00', hora_retirada_fim: '18:00', hora_devolucao_inicio: '08:00', hora_devolucao_fim: '18:00', disponivel_domingo: true,  is_aeroporto: false },
     { nome: 'Estacionamento Leva e Trás 24h — Aeroporto',     permite_retirada: false, permite_devolucao: true, hora_retirada_inicio: null,    hora_retirada_fim: null,    hora_devolucao_inicio: null,    hora_devolucao_fim: null,    disponivel_domingo: true,  is_aeroporto: true  },
   ]
+}
+
+// ── DISPONIBILIDADE REAL (I-Frotas) ───────────────────────
+let _dispDebounce = null
+
+async function atualizarDisponibilidade() {
+  if (!S.retData || !S.retHora || !S.devData || !S.devHora) return
+  if (!S.categorias.length) return
+
+  const dataSaida    = `${S.retData}T${S.retHora}:00`
+  const dataRetorno  = `${S.devData}T${S.devHora}:00`
+  if (new Date(dataRetorno) <= new Date(dataSaida)) return
+
+  // Marcar todas como "carregando"
+  S.categorias.forEach(c => { S.disponibilidade[c.id] = 'loading' })
+  _refreshCatGrid()
+
+  // Buscar em paralelo para todas as categorias
+  await Promise.all(S.categorias.map(async cat => {
+    try {
+      const res = await fetch(CHECK_DISP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({
+          tenant_id:         TENANT_ID,
+          categoria_slug:    cat.slug,
+          data_saida:        dataSaida,
+          data_retorno_prev: dataRetorno,
+        }),
+      })
+      const data = await res.json()
+      S.disponibilidade[cat.id] = data.disponivel ?? null
+    } catch {
+      S.disponibilidade[cat.id] = null
+    }
+  }))
+
+  _refreshCatGrid()
+}
+
+function _refreshCatGrid() {
+  const grid = document.getElementById('catGrid')
+  if (grid) grid.innerHTML = renderCatCards()
+}
+
+function scheduleAtualizarDisponibilidade() {
+  clearTimeout(_dispDebounce)
+  _dispDebounce = setTimeout(atualizarDisponibilidade, 600)
 }
 
 // ── HELPERS DE LOCAIS ─────────────────────────────────────
@@ -393,18 +446,26 @@ function renderStep1(c) {
         devEl.value = S.retData
       }
     }
-    calcDias(); renderStep1(c); updateSummary()
+    calcDias(); renderStep1(c); updateSummary(); scheduleAtualizarDisponibilidade()
   })
-  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary() })
+  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary(); scheduleAtualizarDisponibilidade() })
   document.getElementById('retLocal').addEventListener('change', e => { S.retLocal = e.target.value })
   document.getElementById('devLocal').addEventListener('change', e => { S.devLocal = e.target.value; syncAeroAdd(); updateSummary() })
+
+  // Carregar disponibilidade se datas já estão preenchidas (volta do step 2, etc.)
+  if (S.retData && S.retHora && S.devData && S.devHora) scheduleAtualizarDisponibilidade()
 }
 
 function renderCatCards() {
   if (!S.categorias.length) return '<p style="color:var(--muted);font-size:14px;padding:12px 0">Carregando categorias...</p>'
   return S.categorias.map(cat => {
-    const preco    = getPreco(cat)
-    const esgotado = cat.quantidade_frota != null && cat.quantidade_frota <= 0
+    const preco = getPreco(cat)
+    const dispReal = S.disponibilidade[cat.id]
+    // dispReal: undefined = ainda não carregou, 'loading' = buscando, number = resultado, null = sem dados frota
+    const esgotado = dispReal !== undefined && dispReal !== 'loading' && dispReal !== null
+      ? dispReal === 0
+      : (cat.quantidade_frota != null && cat.quantidade_frota <= 0)
+    const loading = dispReal === 'loading'
     const sel      = S.catId === cat.id
     const img      = cat.imagem_url
       ? `<img src="${esc(cat.imagem_url)}" alt="${esc(cat.nome)}" class="category-img" onerror="this.style.display='none'">`
@@ -421,6 +482,7 @@ function renderCatCards() {
       data-id="${cat.id}"
       aria-label="${esc(cat.nome)}, R$ ${fmtN(preco)} por dia${esgotado ? ', indisponível' : ''}">
       ${sel ? '<div class="cat-selected-badge" aria-hidden="true">✓</div>' : ''}
+      ${loading ? '<div class="cat-disp-badge cat-disp-loading" aria-hidden="true">verificando…</div>' : ''}
       ${img}
       <div class="category-card-body">
         <h3>${esc(cat.nome)}</h3>
@@ -1373,6 +1435,7 @@ window.selectHora = function(id, value) {
     renderStep1(document.getElementById('content'))
     updateSummary()
   }
+  scheduleAtualizarDisponibilidade()
 }
 
 function pousoOpts(sel) {

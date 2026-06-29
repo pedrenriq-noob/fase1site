@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { checkDisponibilidade } from '../check-disponibilidade/index.ts'
 
 const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
@@ -141,6 +142,23 @@ Deno.serve(async (req: Request) => {
 
     if (!cat?.ativo) return err('Categoria inválida ou inativa.')
     if (body.protecao_id && !prot?.ativo) return err('Proteção inválida ou inativa.')
+
+    // ── Verificação de disponibilidade em tempo real ──────────────────
+    try {
+      const disp = await checkDisponibilidade(
+        sb,
+        body.tenant_id,
+        cat.slug,
+        new Date(body.data_retirada),
+        new Date(body.data_devolucao),
+      )
+      if (disp.fonte === 'frota' && disp.disponivel === 0) {
+        return err('Não há veículos disponíveis para esta categoria no período solicitado. Escolha outra categoria ou período.', 409)
+      }
+    } catch (dispErr) {
+      // Falha na verificação não bloqueia — apenas loga
+      console.warn('[criar-solicitacao] check-disp falhou:', String(dispErr))
+    }
 
     const dataRet = body.data_retirada.slice(0, 10)
     const { data: sazon } = await sb.from('sazonalidade')
