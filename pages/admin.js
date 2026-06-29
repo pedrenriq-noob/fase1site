@@ -3,7 +3,7 @@ import { getUser } from '../js/auth.js';
 import { showToast, logger, escapeHtml } from '../js/utils.js';
 
 const ROLES = { admin: 'Admin', operador: 'Operador', balcao: 'Balcão' };
-const TABS = ['veiculos', 'usuarios', 'patios'];
+const TABS = ['veiculos', 'usuarios', 'patios', 'importacao'];
 
 export async function init(container, params) {
   const user = await getUser();
@@ -27,7 +27,8 @@ export async function init(container, params) {
       <div class="admin-tabs" role="tablist">
         <button class="admin-tab ${activeTab === 'veiculos' ? 'active' : ''}" data-tab="veiculos" role="tab">Veículos</button>
         <button class="admin-tab ${activeTab === 'usuarios' ? 'active' : ''}" data-tab="usuarios" role="tab">Usuários</button>
-        <button class="admin-tab ${activeTab === 'patios'   ? 'active' : ''}" data-tab="patios"   role="tab">Pátios</button>
+        <button class="admin-tab ${activeTab === 'patios'      ? 'active' : ''}" data-tab="patios"      role="tab">Pátios</button>
+        <button class="admin-tab ${activeTab === 'importacao' ? 'active' : ''}" data-tab="importacao" role="tab">Importação</button>
       </div>
 
       <div id="admin-panel"></div>
@@ -48,9 +49,279 @@ export async function init(container, params) {
   async function loadTab(tab) {
     const panel = document.getElementById('admin-panel');
     panel.innerHTML = `<div class="loading-screen" style="min-height:30vh;"><div class="spinner"></div></div>`;
-    if (tab === 'veiculos') await renderVeiculos(panel);
-    if (tab === 'usuarios') await renderUsuarios(panel);
-    if (tab === 'patios')   await renderPatios(panel);
+    if (tab === 'veiculos')   await renderVeiculos(panel);
+    if (tab === 'usuarios')   await renderUsuarios(panel);
+    if (tab === 'patios')     await renderPatios(panel);
+    if (tab === 'importacao') await renderImportacao(panel);
+  }
+
+  /* ================================================================
+     TAB IMPORTAÇÃO
+  ================================================================ */
+  async function renderImportacao(panel) {
+    panel.innerHTML = `
+      <div class="card mb-md">
+        <h2 class="section-title" style="margin-bottom:var(--space-sm)">Sincronização com Sistema Oficial</h2>
+        <p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:var(--space-md)">
+          Exporte os dois relatórios do sistema oficial e faça upload aqui. O sistema irá criar novas reservas,
+          atualizar as existentes e encerrar contratos que não aparecem mais como abertos.
+        </p>
+
+        <div class="form-grid" style="margin-bottom:var(--space-md)">
+          <div class="form-group">
+            <label class="form-label">Contratos Abertos (CSV)</label>
+            <input type="file" id="imp-contratos" accept=".csv" class="form-input" />
+            <span class="form-hint" id="imp-contratos-info" style="color:var(--text-secondary);font-size:0.8rem;"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reservas Futuras (CSV)</label>
+            <input type="file" id="imp-reservas" accept=".csv" class="form-input" />
+            <span class="form-hint" id="imp-reservas-info" style="color:var(--text-secondary);font-size:0.8rem;"></span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" id="imp-preview-btn" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Analisar
+        </button>
+      </div>
+
+      <div id="imp-preview" style="display:none;"></div>
+    `;
+
+    let parsedRows = [];
+
+    const checkReady = () => {
+      document.getElementById('imp-preview-btn').disabled =
+        !document.getElementById('imp-contratos').files.length &&
+        !document.getElementById('imp-reservas').files.length;
+    };
+
+    const readFile = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsText(file, 'windows-1252');
+    });
+
+    panel.querySelector('#imp-contratos').addEventListener('change', e => {
+      const f = e.target.files[0];
+      document.getElementById('imp-contratos-info').textContent = f ? f.name : '';
+      checkReady();
+    });
+    panel.querySelector('#imp-reservas').addEventListener('change', e => {
+      const f = e.target.files[0];
+      document.getElementById('imp-reservas-info').textContent = f ? f.name : '';
+      checkReady();
+    });
+
+    panel.querySelector('#imp-preview-btn').addEventListener('click', async () => {
+      const contratosFile = document.getElementById('imp-contratos').files[0];
+      const reservasFile  = document.getElementById('imp-reservas').files[0];
+      if (!contratosFile && !reservasFile) return;
+
+      parsedRows = [];
+      if (contratosFile) parsedRows.push(...parseCSV(await readFile(contratosFile)));
+      if (reservasFile)  parsedRows.push(...parseCSV(await readFile(reservasFile)));
+
+      await showPreview(parsedRows);
+    });
+  }
+
+  function parseCSV(text) {
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^﻿/, ''));
+    const rows = [];
+    let i = 1;
+    while (i < lines.length) {
+      let line = lines[i];
+      // Handle multiline fields (fields with embedded newlines enclosed in quotes)
+      while ((line.match(/"/g) || []).length % 2 !== 0 && i + 1 < lines.length) {
+        i++;
+        line += '\n' + lines[i];
+      }
+      const cols = [];
+      let cur = '', inQ = false;
+      for (let c = 0; c < line.length; c++) {
+        const ch = line[c];
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      cols.push(cur.trim());
+      if (cols.length >= headers.length - 1) {
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = (cols[idx] ?? '').replace(/^"|"$/g, '').trim(); });
+        if (obj['locacao-numero']) rows.push(obj);
+      }
+      i++;
+    }
+    return rows;
+  }
+
+  function normalizeCategoria(cat) {
+    if (!cat) return '';
+    return cat.trim()
+      .replace(/^J\s*-\s*PREMIUM$/i, 'J-PREMIUM')
+      .replace(/^U\s*-\s*UTILITARIO$/i, 'U-UTILITARIO')
+      .trim();
+  }
+
+  function parseBRDate(str) {
+    if (!str) return null;
+    // "28/06/2026 08:00" → ISO
+    const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+    if (!m) return null;
+    return new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}:00-03:00`).toISOString();
+  }
+
+  function rowToReserva(row) {
+    const placa = row['veiculo-placa'] || null;
+    return {
+      tenant_id:        TENANT_ID,
+      locacao_numero:   row['locacao-numero'],
+      locacao_id_ext:   parseInt(row['locacao-id']) || null,
+      cliente:          row['cliente'] || null,
+      condutor:         row['condutor'] || null,
+      categoria:        normalizeCategoria(row['locacao-grupo'] || row['veiculo-grupo']),
+      placa_atribuida:  placa || null,
+      data_saida:       parseBRDate(row['locacao-inicio']),
+      data_retorno_prev: parseBRDate(row['locacao-previsao']),
+      ponto_retirada:   row['locacao-pontovenda'] || null,
+      status:           placa ? 'CONFIRMADO' : 'PREVISTO',
+      obs:              row['locacao-obs'] || null,
+      frequencia:       row['locacao-frequencia'] || null,
+      sincronizado_em:  new Date().toISOString(),
+    };
+  }
+
+  async function showPreview(rows) {
+    const previewEl = document.getElementById('imp-preview');
+    previewEl.style.display = '';
+    previewEl.innerHTML = `<div class="loading-screen" style="min-height:10vh;"><div class="spinner"></div></div>`;
+
+    // Buscar reservas abertas no BD
+    const { data: existing, error } = await supabase
+      .from('frota_reservas')
+      .select('id, locacao_numero, placa_atribuida, status, data_retorno_prev')
+      .eq('tenant_id', TENANT_ID)
+      .in('status', ['CONFIRMADO', 'PREVISTO']);
+
+    if (error) { previewEl.innerHTML = `<div class="alert alert-error">Erro ao buscar dados: ${error.message}</div>`; return; }
+
+    const importedNums = new Set(rows.map(r => r['locacao-numero']));
+    const existingMap  = new Map((existing || []).map(r => [r.locacao_numero, r]));
+
+    const novos       = rows.filter(r => !existingMap.has(r['locacao-numero']));
+    const atualizados = rows.filter(r => existingMap.has(r['locacao-numero']));
+    const encerrar    = (existing || []).filter(r => r.locacao_numero && !importedNums.has(r.locacao_numero));
+
+    const reservas = rows.map(rowToReserva);
+
+    previewEl.innerHTML = `
+      <div class="card mb-md">
+        <h3 style="margin-bottom:var(--space-md)">Resumo da Importação</h3>
+        <div class="form-grid" style="gap:var(--space-sm);margin-bottom:var(--space-md)">
+          <div class="stat-card" style="background:var(--success-bg,#d1fae5);border-radius:8px;padding:var(--space-sm) var(--space-md);">
+            <div style="font-size:1.5rem;font-weight:700;color:#065f46;">${novos.length}</div>
+            <div style="font-size:0.8rem;color:#065f46;">Novos registros</div>
+          </div>
+          <div class="stat-card" style="background:var(--info-bg,#dbeafe);border-radius:8px;padding:var(--space-sm) var(--space-md);">
+            <div style="font-size:1.5rem;font-weight:700;color:#1e40af;">${atualizados.length}</div>
+            <div style="font-size:0.8rem;color:#1e40af;">Atualizações</div>
+          </div>
+          <div class="stat-card" style="background:var(--warning-bg,#fef9c3);border-radius:8px;padding:var(--space-sm) var(--space-md);">
+            <div style="font-size:1.5rem;font-weight:700;color:#854d0e;">${encerrar.length}</div>
+            <div style="font-size:0.8rem;color:#854d0e;">A encerrar</div>
+          </div>
+        </div>
+
+        ${encerrar.length > 0 ? `
+        <details style="margin-bottom:var(--space-md);">
+          <summary style="cursor:pointer;font-weight:600;color:var(--warning,#d97706);">
+            ⚠ ${encerrar.length} contrato${encerrar.length > 1 ? 's' : ''} que sumiu${encerrar.length > 1 ? 'ram' : ''} da lista (serão marcados como CONCLUÍDO)
+          </summary>
+          <table class="admin-table" style="margin-top:var(--space-sm)">
+            <thead><tr><th>Locação</th><th>Status atual</th><th>Placa</th></tr></thead>
+            <tbody>
+              ${encerrar.map(r => `<tr><td>${escapeHtml(r.locacao_numero)}</td><td>${r.status}</td><td>${r.placa_atribuida || '—'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </details>` : ''}
+
+        <button class="btn btn-primary" id="imp-sync-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px">
+            <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+          </svg>
+          Sincronizar Agora
+        </button>
+      </div>
+    `;
+
+    document.getElementById('imp-sync-btn').addEventListener('click', async () => {
+      await executarSync(reservas, encerrar);
+    });
+  }
+
+  async function executarSync(reservas, encerrar) {
+    const btn = document.getElementById('imp-sync-btn');
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    btn.textContent = 'Sincronizando…';
+
+    try {
+      // 1. Upsert todos os registros importados
+      const CHUNK = 50;
+      for (let i = 0; i < reservas.length; i += CHUNK) {
+        const chunk = reservas.slice(i, i + CHUNK);
+        const { error } = await supabase
+          .from('frota_reservas')
+          .upsert(chunk, { onConflict: 'tenant_id,locacao_numero' });
+        if (error) throw error;
+      }
+
+      // 2. Encerrar contratos que sumiram + atualizar status do veículo
+      for (const r of encerrar) {
+        await supabase.from('frota_reservas')
+          .update({ status: 'CONCLUIDO', sincronizado_em: new Date().toISOString() })
+          .eq('id', r.id);
+
+        if (r.placa_atribuida && r.status === 'CONFIRMADO') {
+          await supabase.from('frota_veiculos')
+            .update({ status: 'DEVOLVIDO', limpo: false, prev_retorno: null, patio_atual: null })
+            .eq('placa', r.placa_atribuida)
+            .eq('tenant_id', TENANT_ID)
+            .eq('status', 'LOCADO');
+        }
+      }
+
+      // 3. Atualizar status LOCADO nos veículos com contrato ativo
+      const confirmados = reservas.filter(r => r.placa_atribuida && r.status === 'CONFIRMADO');
+      for (const r of confirmados) {
+        await supabase.from('frota_veiculos')
+          .update({ status: 'LOCADO', prev_retorno: r.data_retorno_prev, patio_atual: null })
+          .eq('placa', r.placa_atribuida)
+          .eq('tenant_id', TENANT_ID);
+      }
+
+      const total = reservas.length;
+      const enc   = encerrar.length;
+      showToast(`Sync concluído: ${total} registros importados, ${enc} encerrados.`, 'success', 5000);
+      document.getElementById('imp-preview').innerHTML = `
+        <div class="alert alert-success">
+          ✓ Sincronização concluída — ${total} reservas/contratos importados, ${enc} encerrados.
+        </div>`;
+    } catch (err) {
+      logger.error('Sync error:', err);
+      showToast('Erro durante sincronização: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      btn.textContent = 'Sincronizar Agora';
+    }
   }
 
   /* ================================================================
