@@ -224,7 +224,11 @@ export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reserv
     // Locado — retorno previsto posterior ao início
     if (v.status === 'LOCADO') {
       const prevRetorno = v.prev_retorno ? new Date(v.prev_retorno) : null;
-      if (!prevRetorno || prevRetorno > inicioD) {
+      if (!prevRetorno) {
+        detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Locado — sem data de retorno previsto' });
+        continue;
+      }
+      if (prevRetorno > inicioD) {
         detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Locado — retorno previsto após início' });
         continue;
       }
@@ -293,7 +297,8 @@ export function showToast(message, type = 'info', duration = 3500) {
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `${icons[type] ?? icons.info}<span>${message}</span>`;
+  const escMsg = String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  toast.innerHTML = `${icons[type] ?? icons.info}<span>${escMsg}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {

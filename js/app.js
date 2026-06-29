@@ -1,4 +1,4 @@
-import { requireAuth, signOut, renderLoginPage, getSession, getUser } from './auth.js';
+import { requireAuth, signOut, renderLoginPage, getSession, getUser, clearUserCache } from './auth.js';
 import { unsubscribeAll } from './realtime.js';
 import { logger } from './utils.js';
 
@@ -144,9 +144,9 @@ async function render(hash) {
 /* ===== Admin Nav ===== */
 function showAdminNav() {
   getUser().then(u => {
-    if (u?.role === 'admin') {
-      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-    }
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = u?.role === 'admin' ? '' : 'none'
+    })
   });
 }
 
@@ -168,6 +168,7 @@ async function init() {
   });
 
   window.addEventListener('hashchange', () => {
+    clearUserCache()   // Re-verifica role a cada navegação
     render(window.location.hash);
   });
 

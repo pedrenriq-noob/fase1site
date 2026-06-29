@@ -210,7 +210,7 @@ export async function init(container, params) {
       .eq('tenant_id', TENANT_ID)
       .in('status', ['CONFIRMADO', 'PREVISTO']);
 
-    if (error) { previewEl.innerHTML = `<div class="alert alert-error">Erro ao buscar dados: ${error.message}</div>`; return; }
+    if (error) { previewEl.innerHTML = `<div class="alert alert-error">Erro ao buscar dados: ${escapeHtml(error.message)}</div>`; return; }
 
     const importedNums = new Set(rows.map(r => r['locacao-numero']));
     const existingMap  = new Map((existing || []).map(r => [r.locacao_numero, r]));
@@ -262,7 +262,11 @@ export async function init(container, params) {
       </div>
     `;
 
-    document.getElementById('imp-sync-btn').addEventListener('click', async () => {
+    // Remover listeners anteriores antes de re-registrar (previne duplo sync)
+    const syncBtnOld = document.getElementById('imp-sync-btn');
+    const syncBtn = syncBtnOld.cloneNode(true);
+    syncBtnOld.replaceWith(syncBtn);
+    syncBtn.addEventListener('click', async () => {
       await executarSync(reservas, encerrar);
     });
   }
@@ -300,12 +304,14 @@ export async function init(container, params) {
       }
 
       // 3. Atualizar status LOCADO nos veículos com contrato ativo
+      // Não sobrescreve MANUTENCAO: só atualiza veículos em status operacional
       const confirmados = reservas.filter(r => r.placa_atribuida && r.status === 'CONFIRMADO');
       for (const r of confirmados) {
         await supabase.from('frota_veiculos')
           .update({ status: 'LOCADO', prev_retorno: r.data_retorno_prev, patio_atual: null })
           .eq('placa', r.placa_atribuida)
-          .eq('tenant_id', TENANT_ID);
+          .eq('tenant_id', TENANT_ID)
+          .in('status', ['DISPONIVEL', 'LOCADO', 'DEVOLVIDO', 'NO_LAVADOR']);
       }
 
       const total = reservas.length;
@@ -317,7 +323,7 @@ export async function init(container, params) {
         </div>`;
     } catch (err) {
       logger.error('Sync error:', err);
-      showToast('Erro durante sincronização: ' + err.message, 'error');
+      showToast('Erro durante sincronização: ' + escapeHtml(err.message), 'error');
       btn.disabled = false;
       btn.classList.remove('btn-loading');
       btn.textContent = 'Sincronizar Agora';
@@ -627,7 +633,7 @@ export async function init(container, params) {
       btn.addEventListener('click', async () => {
         const novoAtivo = btn.dataset.ativo === 'true' ? false : true;
         const { error } = await supabase.from('frota_patios')
-          .update({ ativo: novoAtivo }).eq('id', btn.dataset.id);
+          .update({ ativo: novoAtivo }).eq('id', btn.dataset.id).eq('tenant_id', TENANT_ID);
         if (error) { showToast('Erro.', 'error'); return; }
         showToast(novoAtivo ? 'Local reativado.' : 'Local desativado.', 'success');
         loadTab('patios');
@@ -685,6 +691,10 @@ export async function init(container, params) {
   async function callAdminFn(body) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.hash = '/login';
+        return { error: 'Sessão expirada. Faça login novamente.' };
+      }
       const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-user-manager`, {
         method: 'POST',
         headers: {
@@ -695,7 +705,7 @@ export async function init(container, params) {
       });
       return await res.json();
     } catch (err) {
-      logger.error('callAdminFn:', err);
+      logger.error('callAdminFn:', err.message);
       return { error: 'Erro de conexão com o servidor.' };
     }
   }
