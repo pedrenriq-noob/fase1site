@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Igufoz Acessórios</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:      #0f2b4f;
+      --orange:    #FF6B00;
+      --orange-lt: #fff3ea;
+      --border:    #e2e8f0;
+      --muted:     #64748b;
+      --red:       #dc2626;
+      --green:     #16a34a;
+      --radius:    8px;
+      --text:      #1a2332;
+      --bg:        #f8fafc;
+    }
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--blue);
+      color: #fff;
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-title span { color: var(--orange); }
+    .btn-sync {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-sync:hover    { background: rgba(255,255,255,0.1); }
+    .btn-sync:disabled { opacity: 0.5; cursor: not-allowed; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* TOAST */
+    #toast {
+      position: fixed;
+      top: 8px; left: 50%;
+      transform: translateX(-50%) translateY(-60px);
+      background: var(--text); color: #fff;
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+    #toast.show    { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: var(--green); }
+    #toast.error   { background: var(--red); }
+    #toast.info    { background: var(--blue); }
+
+    /* SECTION */
+    .section {
+      background: #fff;
+      margin: 8px 8px 0;
+      border-radius: var(--radius);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .section:last-child { margin-bottom: 8px; }
+    .section-header {
+      padding: 7px 12px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-header-count {
+      background: var(--orange); color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px; font-weight: 700;
+    }
+    .empty-msg { padding: 14px; text-align: center; color: #94a3b8; font-size: 12px; }
+
+    /* STATUS CARDS */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 8px;
+    }
+    .status-card {
+      background: #f0f4ff;
+      border-radius: var(--radius); padding: 8px;
+      text-align: center;
+      border-left: 3px solid var(--blue);
+    }
+    .status-card-name {
+      font-size: 9px; font-weight: 700;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .status-card-count { font-size: 20px; font-weight: 800; color: var(--blue); line-height: 1; }
+    .status-card-sub   { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+    .status-card.warn  { border-left-color: var(--orange); background: var(--orange-lt); }
+    .status-card.warn .status-card-count { color: var(--orange); }
+    .status-card.ok    { border-left-color: var(--green); background: #f0fdf4; }
+    .status-card.ok   .status-card-count { color: var(--green); }
+    .last-sync { text-align: center; font-size: 10px; color: #94a3b8; padding: 3px 0 7px; }
+
+    /* SCROLL LIST */
+    .scroll-list { max-height: 190px; overflow-y: auto; }
+
+    /* RESERVA CARD */
+    .reserva-card {
+      display: flex; align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .reserva-card:last-child { border-bottom: none; }
+    .reserva-card.urgente    { background: var(--orange-lt); }
+    .rc-info  { flex: 1; min-width: 0; }
+    .rc-title { font-weight: 700; font-size: 12px; color: var(--text); }
+    .rc-sub   { font-size: 10px; color: #94a3b8; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .badge-urgente { font-size: 9px; background: var(--orange); color: #fff; border-radius: 8px; padding: 1px 5px; font-weight: 700; margin-left: 4px; }
+
+    /* LOCADO ITEM */
+    .locado-item {
+      display: flex; align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .locado-item:last-child  { border-bottom: none; }
+    .locado-item.atrasado    { background: #fef2f2; }
+    .locado-item.hoje        { background: var(--orange-lt); }
+    .locado-info { flex: 1; min-width: 0; }
+    .locado-title {
+      font-weight: 700; font-size: 12px;
+      display: flex; align-items: center; gap: 5px;
+      flex-wrap: wrap;
+    }
+    .locado-sub { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+    .marca { font-size: 10px; font-weight: 400; color: #94a3b8; }
+    .badge-atraso { font-size: 9px; background: var(--red); color: #fff; border-radius: 8px; padding: 1px 5px; font-weight: 700; }
+    .badge-hoje   { font-size: 9px; background: var(--orange); color: #fff; border-radius: 8px; padding: 1px 5px; font-weight: 700; }
+
+    /* BUTTONS */
+    .btn-saida {
+      background: var(--orange); color: #fff;
+      border: none; border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .btn-saida:hover    { background: #e05e00; }
+    .btn-saida:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-retorno {
+      background: var(--green); color: #fff;
+      border: none; border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .btn-retorno:hover    { background: #15803d; }
+    .btn-retorno:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-cancel-res {
+      background: #f1f5f9; color: var(--muted);
+      border: none; border-radius: 5px;
+      padding: 4px 7px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .btn-cancel-res:hover { background: var(--red); color: #fff; }
+
+    /* TABS */
+    .tab-header {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1; padding: 9px 0;
+      background: none; border: none;
+      font-size: 12px; font-weight: 700;
+      color: #94a3b8;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); background: var(--orange-lt); }
+
+    /* RESERVA BANNER (when confirming a reservation) */
+    .reserva-banner {
+      background: var(--blue);
+      color: #fff;
+      padding: 6px 12px;
+      font-size: 11px; font-weight: 600;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .banner-cancel {
+      background: rgba(255,255,255,0.2);
+      border: none; color: #fff;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 10px; font-weight: 700; cursor: pointer;
+    }
+
+    /* FORM */
+    .form-body { padding: 10px; }
+    .form-row  { margin-bottom: 8px; }
+    .form-row label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 3px;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .opt { font-size: 9px; font-weight: 400; color: #94a3b8; text-transform: none; }
+    .form-row select,
+    .form-row input[type="text"],
+    .form-row input[type="number"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      background: #fff; color: var(--text);
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    .form-row select:focus,
+    .form-row input:focus  { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,0,0.1); }
+    .form-row select:disabled { background: var(--bg); color: #94a3b8; }
+    .btn-primary {
+      width: 100%; padding: 9px;
+      background: var(--orange); color: #fff;
+      border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      margin-top: 2px;
+    }
+    .btn-primary:hover    { background: #e05e00; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    /* PREVISÃO */
+    .previsao-scroll { max-height: 240px; overflow-y: auto; }
+    .prev-data-header {
+      font-size: 11px; font-weight: 700; color: var(--orange);
+      padding: 7px 12px 3px;
+      border-top: 1px solid var(--border);
+    }
+    .prev-data-header:first-child { border-top: none; }
+    .prev-item {
+      display: flex; align-items: center;
+      padding: 4px 12px;
+      gap: 6px; font-size: 12px;
+    }
+    .prev-item.critico { background: #fef2f2; }
+    .prev-item.atencao { background: var(--orange-lt); }
+    .prev-cat  { font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prev-nums { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .prev-saida { color: var(--orange); margin-left: 4px; }
+    .prev-badge { font-size: 10px; border-radius: 10px; padding: 1px 7px; font-weight: 700; margin-left: 4px; }
+    .prev-badge.critico { background: var(--red); color: #fff; }
+    .prev-badge.atencao { background: #f59e0b; color: #fff; }
+    .prev-cad { font-size: 10px; color: #94a3b8; padding: 2px 12px 6px; }
+  </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-title"><span>Igufoz</span> Acessórios</div>
+  <button class="btn-sync" id="btnSync">
+    <span id="syncIcon">↻</span> Sincronizar
+  </button>
+</div>
+
+<!-- STATUS ATUAL -->
+<div class="section">
+  <div class="section-header">📊 Status Atual</div>
+  <div id="statusGrid" class="status-grid">
+    <div class="empty-msg" style="grid-column:1/-1">Clique em Sincronizar para carregar dados</div>
+  </div>
+  <div id="lastSync" class="last-sync"></div>
+</div>
+
+<!-- RESERVAS PREVISTAS -->
+<div class="section">
+  <div class="section-header">
+    📋 Reservas Previstas
+    <span id="reservasCount" class="section-header-count" style="display:none"></span>
+  </div>
+  <div id="reservasList" class="scroll-list">
+    <div class="empty-msg">Sincronize para ver reservas</div>
+  </div>
+</div>
+
+<!-- LOCADOS AGORA -->
+<div class="section">
+  <div class="section-header">
+    🔴 Locados Agora
+    <span id="locadosCount" class="section-header-count" style="display:none"></span>
+  </div>
+  <div id="locadosList" class="scroll-list">
+    <div class="empty-msg">Nenhum item locado</div>
+  </div>
+</div>
+
+<!-- FORM: SAÍDA / NOVA RESERVA -->
+<div class="section" id="sectionForm">
+  <div class="tab-header">
+    <button class="tab-btn active" id="tabSaida">⬆️ Saída</button>
+    <button class="tab-btn"        id="tabReserva">📅 Nova Reserva</button>
+  </div>
+
+  <!-- Banner quando confirmando uma reserva -->
+  <div id="reservaBanner" class="reserva-banner" style="display:none">
+    <span id="bannerText"></span>
+    <button class="banner-cancel" id="btnCancelarAtivo">✕ Cancelar</button>
+  </div>
+
+  <!-- Painel Saída Direta -->
+  <div id="panelSaida" class="form-body">
+    <div class="form-row">
+      <label>Categoria</label>
+      <select id="selectCategoria"><option value="">Selecione…</option></select>
+    </div>
+    <div class="form-row">
+      <label>Código do Item</label>
+      <select id="selectCodigo" disabled>
+        <option value="">Selecione a categoria primeiro…</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Prev. Retorno <span class="opt">(opcional)</span></label>
+      <input type="text" id="inputPrevRetorno" placeholder="Ex: 05/07/26 15:00" />
+    </div>
+    <button class="btn-primary" id="btnRegistrarSaida" disabled>▶ Registrar Saída</button>
+  </div>
+
+  <!-- Painel Nova Reserva -->
+  <div id="panelReserva" class="form-body" style="display:none">
+    <div class="form-row">
+      <label>Categoria</label>
+      <select id="selectCatRes"><option value="">Selecione…</option></select>
+    </div>
+    <div class="form-row">
+      <label>Quantidade</label>
+      <input type="number" id="inputQtd" value="1" min="1" max="20" />
+    </div>
+    <div class="form-row">
+      <label>Data de Saída</label>
+      <input type="text" id="inputDataSaida" placeholder="Ex: 05/07/2026" />
+    </div>
+    <div class="form-row">
+      <label>Data de Devolução <span class="opt">(opcional)</span></label>
+      <input type="text" id="inputDataDev" placeholder="Ex: 10/07/2026" />
+    </div>
+    <div class="form-row">
+      <label>Observação <span class="opt">(opcional)</span></label>
+      <input type="text" id="inputObsRes" placeholder="Ex: cliente João, hotel X…" />
+    </div>
+    <button class="btn-primary" id="btnAdicionarReserva" disabled>📅 Adicionar Reserva</button>
+  </div>
+</div>
+
+<!-- PREVISÃO DE DISPONIBILIDADE -->
+<div class="section">
+  <div class="section-header">🗓 Previsão de Disponibilidade</div>
+  <div id="previsaoList" class="previsao-scroll">
+    <div class="empty-msg">Sincronize para ver a previsão</div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
