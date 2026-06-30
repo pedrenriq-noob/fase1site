@@ -1,5 +1,5 @@
-# Claude Code (configurações locais da máquina)
-.claude/
+# Claude Code (apenas config local da máquina — CLAUDE.md e o framework são versionados)
+.claude/settings.local.json
 
 # Dependências
 node_modules/
