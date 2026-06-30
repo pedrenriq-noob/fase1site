@@ -3,8 +3,8 @@
     { "source": "/admin", "destination": "/admin/", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/admin/",    "destination": "/admin/index.html" },
-    { "source": "/admin/(.*)", "destination": "/admin/$1" },
-    { "source": "/(.*)",       "destination": "/site/$1" }
+    { "source": "/admin/",    "destination": "/apps/intake-admin/index.html" },
+    { "source": "/admin/(.*)", "destination": "/apps/intake-admin/$1" },
+    { "source": "/(.*)",       "destination": "/apps/site/$1" }
   ]
 }
