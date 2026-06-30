@@ -88,11 +88,12 @@ grupo_g → G
 grupo_h → H
 grupo_i → I
 grupo_j → J
-grupo_j_premium → 'J - PREMIUM'
 grupo_u → 'U - UTILITARIO'
 ```
 
 Esse mapa traduz o `slug` público da categoria (usado pelo site/extensões) para o texto livre armazenado em `frota_veiculos.categoria`/`frota_reservas.categoria`. **Regra frágil** (ver Parte 10): qualquer divergência de grafia entre este mapa e o texto real cadastrado na frota quebra silenciosamente a disponibilidade daquela categoria (caso real corrigido nesta sessão: GRUPO J).
+
+**Atualização**: a categoria J-PREMIUM foi eliminada do sistema (mesclada em "J") por decisão do dono do produto — não existe mais distinção entre as duas. `grupo_j_premium` foi removida do `SLUG_MAP`. U-UTILITARIO permanece como categoria distinta, com a mesma fragilidade de grafia ainda não corrigida (ver Parte 10, item 4).
 
 ## 5.7 Upgrade de categoria
 

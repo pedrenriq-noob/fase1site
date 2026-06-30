@@ -11,7 +11,6 @@ export const SLUG_MAP: Record<string, string> = {
   grupo_h:         'H',
   grupo_i:         'I',
   grupo_j:         'J',
-  grupo_j_premium: 'J - PREMIUM',
   grupo_u:         'U - UTILITARIO',
 }
 

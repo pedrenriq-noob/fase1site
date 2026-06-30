@@ -312,7 +312,7 @@ export function showToast(message, type = 'info', duration = 3500) {
 /* ===== Pontos ===== */
 export const PONTOS = ['Oklahoma', 'Brasil', 'Garagem', 'Lavador', 'Aeroporto', 'Hotel'];
 
-export const CATEGORIAS = ['B', 'C', 'D', 'D+', 'E', 'F', 'G', 'H', 'I', 'J', 'J-PREMIUM', 'U-UTILITARIO'];
+export const CATEGORIAS = ['B', 'C', 'D', 'D+', 'E', 'F', 'G', 'H', 'I', 'J', 'U-UTILITARIO'];
 
 /* ===== HTML Escaping ===== */
 export function escapeHtml(str) {

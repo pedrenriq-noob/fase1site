@@ -165,7 +165,7 @@ export async function init(container, params) {
   function normalizeCategoria(cat) {
     if (!cat) return '';
     return cat.trim()
-      .replace(/^J\s*-\s*PREMIUM$/i, 'J-PREMIUM')
+      .replace(/^J\s*-?\s*PREMIUM$/i, 'J')
       .replace(/^U\s*-\s*UTILITARIO$/i, 'U-UTILITARIO')
       .trim();
   }
@@ -402,7 +402,7 @@ export async function init(container, params) {
         <div class="form-group">
           <label class="form-label">Categoria <span class="required">*</span></label>
           <select class="form-select" id="v-cat">
-            ${['B','C','D','D+','E','F','G','H','I','J','J-PREMIUM','U-UTILITARIO'].map(c =>
+            ${['B','C','D','D+','E','F','G','H','I','J','U-UTILITARIO'].map(c =>
               `<option value="${c}" ${v?.categoria === c ? 'selected' : ''}>${c}</option>`
             ).join('')}
           </select>

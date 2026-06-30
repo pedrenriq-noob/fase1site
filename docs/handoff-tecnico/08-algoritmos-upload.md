@@ -35,17 +35,12 @@ Parser CSV escrito à mão (sem biblioteca):
 | `locacao-inicio`/`locacao-previsao` | `parseBRDate()`: regex `DD/MM/AAAA HH:MM` → ISO com timezone `-03:00` fixo | `data_saida`/`data_retorno_prev` |
 | (derivado) | `placa_atribuida ? 'CONFIRMADO' : 'PREVISTO'` | `status` |
 
-**🔴 Achado crítico de auditoria — bug latente não corrigido**: a função `normalizeCategoria()` (linha 165-171) normaliza para:
-```js
-.replace(/^J\s*-\s*PREMIUM$/i, 'J-PREMIUM')      // SEM espaços ao redor do hífen
-.replace(/^U\s*-\s*UTILITARIO$/i, 'U-UTILITARIO') // SEM espaços ao redor do hífen
-```
-Mas o `SLUG_MAP` em `supabase/functions/_shared/disponibilidade.ts` (corrigido **nesta mesma sessão**, ver Parte 5.6 e Parte 10) mapeia para:
-```js
-grupo_j_premium: 'J - PREMIUM',   // COM espaços
-grupo_u:         'U - UTILITARIO', // COM espaços
-```
-Essas duas strings **nunca vão bater** numa comparação `.eq('categoria', categoria)`. Ou seja: a próxima vez que o CSV de import trouxer um veículo/reserva de categoria J-PREMIUM ou U-UTILITARIO, ele será gravado em `frota_reservas.categoria` como `'J-PREMIUM'` (sem espaço), e `checkDisponibilidade()` vai procurar por `'J - PREMIUM'` (com espaço) — a reserva **não será contabilizada na disponibilidade**, reproduzindo exatamente o mesmo bug do GRUPO J que foi corrigido nesta sessão (Parte 10), só que pela importação em vez de cadastro manual. **Isso precisa ser corrigido antes da próxima sincronização que envolva essas duas categorias** — recomendação: padronizar os dois lados para o mesmo formato (sugestão: sem espaços, `'J-PREMIUM'`/`'U-UTILITARIO'`, e ajustar o `SLUG_MAP` de volta).
+**✅ Corrigido (atualização posterior a esta auditoria)**: a categoria J-PREMIUM foi **eliminada por decisão do dono do produto** — "J" e "J-PREMIUM" eram a mesma categoria na prática, então toda a distinção foi removida do sistema:
+- `normalizeCategoria()` agora normaliza qualquer variante de "J-PREMIUM"/"J - PREMIUM" direto para `'J'`.
+- `SLUG_MAP` não tem mais a entrada `grupo_j_premium` (categoria não existe mais como conceito).
+- As listas de opções de categoria em `apps/frota-ops/pages/admin.js` (formulário de veículo) e `apps/frota-ops/js/utils.js` (`CATEGORIAS`, usada na tela de Disponibilidade) não oferecem mais "J-PREMIUM" como opção.
+- Os 5 registros históricos em `frota_reservas` que tinham `categoria IN ('J-PREMIUM', 'J - PREMIUM')` foram migrados para `categoria = 'J'` diretamente no banco de produção.
+- `U-UTILITARIO` **não foi alterado** — continua existindo como categoria distinta, com espaços (`'U - UTILITARIO'`) no `SLUG_MAP`. A mesma divergência de formatação **ainda existe** entre `normalizeCategoria()` (gera `'U-UTILITARIO'`, sem espaço) e o `SLUG_MAP` (`'U - UTILITARIO'`, com espaço) — isso **não foi corrigido**, só o caso J-PREMIUM. Se a locadora de fato usa a categoria U-UTILITARIO operacionalmente, esse mesmo bug ainda vai se manifestar na próxima sincronização que envolva essa categoria.
 
 ### 13.4 Cálculo de diferenças (`showPreview`)
 
