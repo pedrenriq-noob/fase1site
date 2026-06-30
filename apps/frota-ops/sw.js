@@ -1,21 +1,21 @@
 const CACHE_NAME = 'i-frotas-v1';
 const STATIC_ASSETS = [
-  '/frota/',
-  '/frota/index.html',
-  '/frota/css/base.css',
-  '/frota/css/components.css',
-  '/frota/js/app.js',
-  '/frota/js/supabase.js',
-  '/frota/js/auth.js',
-  '/frota/js/utils.js',
-  '/frota/js/realtime.js',
-  '/frota/pages/dashboard.js',
-  '/frota/pages/veiculos.js',
-  '/frota/pages/veiculo-detalhe.js',
-  '/frota/pages/disponibilidade.js',
-  '/frota/pages/reservas.js',
-  '/frota/pages/patio.js',
-  '/frota/manifest.json'
+  '/frota-ops/',
+  '/frota-ops/index.html',
+  '/frota-ops/css/base.css',
+  '/frota-ops/css/components.css',
+  '/frota-ops/js/app.js',
+  '/frota-ops/js/supabase.js',
+  '/frota-ops/js/auth.js',
+  '/frota-ops/js/utils.js',
+  '/frota-ops/js/realtime.js',
+  '/frota-ops/pages/dashboard.js',
+  '/frota-ops/pages/veiculos.js',
+  '/frota-ops/pages/veiculo-detalhe.js',
+  '/frota-ops/pages/disponibilidade.js',
+  '/frota-ops/pages/reservas.js',
+  '/frota-ops/pages/patio.js',
+  '/frota-ops/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
         return response;
       }).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/frota/index.html');
+          return caches.match('/frota-ops/index.html');
         }
         return new Response('Offline', { status: 503 });
       });

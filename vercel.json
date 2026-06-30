@@ -1,10 +1,13 @@
 {
   "redirects": [
-    { "source": "/admin", "destination": "/admin/", "permanent": false }
+    { "source": "/admin", "destination": "/admin/", "permanent": false },
+    { "source": "/frota-ops", "destination": "/frota-ops/", "permanent": false }
   ],
   "rewrites": [
     { "source": "/admin/",    "destination": "/apps/intake-admin/index.html" },
     { "source": "/admin/(.*)", "destination": "/apps/intake-admin/$1" },
+    { "source": "/frota-ops/",    "destination": "/apps/frota-ops/index.html" },
+    { "source": "/frota-ops/(.*)", "destination": "/apps/frota-ops/$1" },
     { "source": "/(.*)",       "destination": "/apps/site/$1" }
   ]
 }

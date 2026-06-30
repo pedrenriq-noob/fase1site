@@ -14,26 +14,33 @@
       "runtimeArgs": [],
       "port": 3002,
       "autoPort": true
-    }
-  ,{
-      "name": "passeios-sidebar",
+    },
+    {
+      "name": "frota-ops",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3003", "passeios-extension"],
+      "runtimeArgs": ["serve", "-p", "3003", "apps/frota-ops"],
       "port": 3003,
       "autoPort": true
-    }
-  ,{
-      "name": "cadeirinhas",
+    },
+    {
+      "name": "acessorios",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3004", "cadeirinhas-extension"],
+      "runtimeArgs": ["serve", "-p", "3004", "extensions/acessorios"],
       "port": 3004,
       "autoPort": true
-    }
-  ,{
+    },
+    {
       "name": "disponibilidade",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "3005", "disponibilidade-extension"],
+      "runtimeArgs": ["serve", "-p", "3005", "extensions/disponibilidade"],
       "port": 3005,
+      "autoPort": true
+    },
+    {
+      "name": "cotacao-rapida",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3006", "extensions/cotacao-rapida"],
+      "port": 3006,
       "autoPort": true
     }
   ]
