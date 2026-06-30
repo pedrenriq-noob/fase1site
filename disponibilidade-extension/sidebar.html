@@ -28,14 +28,26 @@
       <label class="label">Retirada</label>
       <div class="dt-row">
         <input type="date" id="retData" class="input input-date" required>
-        <input type="time" id="retHora" class="input input-time" required>
+        <div class="hora-picker" id="retHora-picker">
+          <button type="button" class="hora-btn placeholder" id="retHora-btn" data-field="retHora">
+            <span class="hora-label">Hora</span>
+            <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="hora-dropdown" id="retHora-dropdown"></div>
+        </div>
       </div>
     </div>
     <div class="field-group">
       <label class="label">Devolução</label>
       <div class="dt-row">
         <input type="date" id="devData" class="input input-date" required>
-        <input type="time" id="devHora" class="input input-time" required>
+        <div class="hora-picker" id="devHora-picker">
+          <button type="button" class="hora-btn placeholder" id="devHora-btn" data-field="devHora">
+            <span class="hora-label">Hora</span>
+            <svg class="chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="hora-dropdown" id="devHora-dropdown"></div>
+        </div>
       </div>
     </div>
     <div id="form-err" class="form-err" hidden></div>
@@ -70,6 +82,6 @@
     <p>Nenhuma categoria encontrada.</p>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="sidebar.js"></script>
 </body>
 </html>

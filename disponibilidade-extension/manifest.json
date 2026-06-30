@@ -1,18 +1,31 @@
 {
   "manifest_version": 3,
-  "name": "Igufoz — Disponibilidade",
-  "version": "1.0.0",
-  "description": "Consulta disponibilidade de veículos por período em tempo real.",
+  "name": "Igufoz — Disponibilidade (D.I.F)",
+  "version": "2.0.0",
+  "description": "Sidebar de disponibilidade de frota para atendentes Igufoz. Funciona em qualquer aba.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://lxfnqzuzohudqwibgdic.supabase.co/*"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Disponibilidade Igufoz",
+    "default_title": "Igufoz Disponibilidade",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png"
     }
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["sidebar.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
