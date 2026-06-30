@@ -521,7 +521,19 @@ function renderCatCards() {
 }
 
 window.selectCat = function(id) {
-  const cat      = S.categorias.find(x => x.id === id)
+  const cat = S.categorias.find(x => x.id === id)
+  if (!cat) return
+
+  const dispCat = S.disponibilidade[id]
+  const esgotadoCat = dispCat !== undefined && dispCat !== 'loading' && dispCat !== null
+    ? dispCat === 0
+    : (dispCat === undefined && cat.quantidade_frota != null && cat.quantidade_frota <= 0)
+  if (esgotadoCat) {
+    showToast('Esta categoria está indisponível para o período selecionado.', 'warning')
+    updateSummary()
+    return
+  }
+
   const novoLim  = cat?.max_cadeirinhas ?? 2
   const totalCad = getTotalCad()
 
@@ -903,9 +915,13 @@ function updateSummary() {
     ? `<img src="${esc(cat.imagem_url)}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block" onerror="this.style.display='none'">`
     : ''
 
-  const catOpts = S.categorias.map(c =>
-    `<option value="${c.id}"${c.id === S.catId ? ' selected' : ''}>${esc(c.nome)} — R$ ${fmtN(getPreco(c))}</option>`
-  ).join('')
+  const catOpts = S.categorias.map(c => {
+    const dispC = S.disponibilidade[c.id]
+    const esgotadoC = dispC !== undefined && dispC !== 'loading' && dispC !== null
+      ? dispC === 0
+      : (dispC === undefined && c.quantidade_frota != null && c.quantidade_frota <= 0)
+    return `<option value="${c.id}"${c.id === S.catId ? ' selected' : ''}${esgotadoC ? ' disabled' : ''}>${esc(c.nome)} — ${esgotadoC ? 'Indisponível' : `R$ ${fmtN(getPreco(c))}`}</option>`
+  }).join('')
 
   let items = `
     <div class="summary-item"><span style="font-weight:600">${esc(cat.nome)}</span><span>R$ ${fmtN(baseCat)}</span></div>
