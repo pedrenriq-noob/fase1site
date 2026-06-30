@@ -61,7 +61,7 @@ async function navegar(pagina) {
         }
     } catch (err) {
         console.error('Erro ao carregar página:', err)
-        el.innerHTML = `<div class="alert alert-info">Erro ao carregar: ${err.message}</div>`
+        el.innerHTML = `<div class="alert alert-info">Erro ao carregar: ${esc(err.message)}</div>`
     }
 
     window.scrollTo(0, 0)

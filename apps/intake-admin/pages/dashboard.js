@@ -188,14 +188,14 @@ async function carregarDashboard(de, ate) {
     // ── Tabela recentes ──────────────────────────────────────────────────────
     const linhas = recentes.map(r => `
         <tr>
-            <td data-sort-val="${r.criado_em ?? ''}">${new Date(r.criado_em).toLocaleDateString('pt-BR')}</td>
-            <td data-sort-val="${r.numero ?? 0}">${r.numero ? `<strong>#${String(r.numero).padStart(4, '0')}</strong>` : '—'}</td>
+            <td data-sort-val="${esc(r.criado_em ?? '')}">${new Date(r.criado_em).toLocaleDateString('pt-BR')}</td>
+            <td data-sort-val="${esc(r.numero ?? 0)}">${r.numero ? `<strong>#${String(r.numero).padStart(4, '0')}</strong>` : '—'}</td>
             <td>${esc(r.cliente_nome ?? '—')}</td>
             <td>${esc(r.cat_nome ?? '—')}</td>
             <td>${r.prot_nome ? esc(r.prot_nome) : '<span style="color:var(--muted)">—</span>'}</td>
-            <td><span class="status-badge status-${r.status}">${labelStatus(r.status)}</span></td>
-            <td data-sort-val="${r.valor_estimado ?? 0}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
-            <td><button class="btn-ver-dash" data-id="${r.id}" style="padding:4px 10px;font-size:12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit">👁 Ver</button></td>
+            <td><span class="status-badge status-${esc(r.status)}">${esc(labelStatus(r.status))}</span></td>
+            <td data-sort-val="${esc(r.valor_estimado ?? 0)}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
+            <td><button class="btn-ver-dash" data-id="${esc(r.id)}" style="padding:4px 10px;font-size:12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit">👁 Ver</button></td>
         </tr>`).join('')
 
     tabelaEl.innerHTML = `

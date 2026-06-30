@@ -134,20 +134,20 @@ export function bindReservas() {
                 `<option value="${s}" ${s === status ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')
             const tr = document.createElement('tr')
             tr.innerHTML = `
-                <td data-sort-val="${r.numero ?? 0}" style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${numFmt}</td>
-                <td data-sort-val="${r.criado_em ?? ''}" style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
+                <td data-sort-val="${esc(r.numero ?? 0)}" style="font-weight:700;color:#FF6B00;letter-spacing:.5px">#${esc(numFmt)}</td>
+                <td data-sort-val="${esc(r.criado_em ?? '')}" style="font-size:12px;white-space:nowrap">${fmtData(r.criado_em)}</td>
                 <td class="td-name">${esc(r.cliente_nome)}</td>
                 <td style="font-size:12px">${esc(r.cliente_whatsapp)}</td>
                 <td>${esc(r.categorias?.nome ?? '—')}</td>
-                <td data-sort-val="${r.valor_estimado ?? 0}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
-                <td data-sort-val="${r.data_retirada ?? ''}" style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
+                <td data-sort-val="${esc(r.valor_estimado ?? 0)}" class="td-price">${fmtMoney(r.valor_estimado)}</td>
+                <td data-sort-val="${esc(r.data_retirada ?? '')}" style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
                 <td>${isFinal
-                    ? `<span class="status-badge status-${status}">${STATUS_LABELS[status]}</span>`
-                    : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${r.id}" data-status="${status}">${opts}</select>`
+                    ? `<span class="status-badge status-${esc(status)}">${esc(STATUS_LABELS[status])}</span>`
+                    : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${esc(r.id)}" data-status="${esc(status)}">${opts}</select>`
                 }</td>
                 <td style="display:flex;gap:6px;align-items:center">
-                    <button class="btn-icon" data-action="detalhe" data-id="${r.id}">👁 Ver</button>
-                    <button class="btn-danger btn-sm" data-action="excluir" data-id="${r.id}" data-num="${numFmt}">🗑</button>
+                    <button class="btn-icon" data-action="detalhe" data-id="${esc(r.id)}">👁 Ver</button>
+                    <button class="btn-danger btn-sm" data-action="excluir" data-id="${esc(r.id)}" data-num="${esc(numFmt)}">🗑</button>
                 </td>`
             tbody.appendChild(tr)
             // rebind eventos na nova linha
