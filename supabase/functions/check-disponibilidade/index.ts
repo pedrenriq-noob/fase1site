@@ -1,16 +1,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
+import { errJson, okJson } from '../_shared/http.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
 }
 
 Deno.serve(async (req: Request) => {
@@ -21,29 +16,35 @@ Deno.serve(async (req: Request) => {
     const { tenant_id, categoria_slug, data_saida, data_retorno_prev } = body
 
     if (!tenant_id || !categoria_slug || !data_saida || !data_retorno_prev) {
-      return json({ error: 'Campos obrigatórios: tenant_id, categoria_slug, data_saida, data_retorno_prev' }, 400)
+      return errJson(
+        'missing_fields',
+        'Campos obrigatórios: tenant_id, categoria_slug, data_saida, data_retorno_prev',
+        400, CORS,
+      )
     }
 
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRe.test(tenant_id)) return json({ error: 'tenant_id inválido' }, 400)
+    if (!uuidRe.test(tenant_id)) return errJson('invalid_tenant_id', 'tenant_id inválido', 400, CORS)
 
     const inicioD = new Date(data_saida)
     const fimD    = new Date(data_retorno_prev)
 
     if (isNaN(inicioD.getTime()) || isNaN(fimD.getTime()) || fimD <= inicioD) {
-      return json({ error: 'Período inválido.' }, 400)
+      return errJson('invalid_period', 'Período inválido.', 400, CORS)
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (!supabaseUrl || !serviceKey) return json({ error: 'Configuração do servidor incorreta.' }, 500)
+    if (!supabaseUrl || !serviceKey) {
+      return errJson('server_misconfigured', 'Configuração do servidor incorreta.', 500, CORS)
+    }
     const sb = createClient(supabaseUrl, serviceKey)
 
     const result = await checkDisponibilidade(sb, tenant_id, categoria_slug, inicioD, fimD)
-    return json(result)
+    return okJson(result, CORS)
 
   } catch (e) {
     console.error('[check-disponibilidade]', String(e))
-    return json({ error: 'Erro interno. Tente novamente.' }, 500)
+    return errJson('internal_error', 'Erro interno. Tente novamente.', 500, CORS)
   }
 })

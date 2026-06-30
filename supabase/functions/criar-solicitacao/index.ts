@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
+import { errJson, okJson } from '../_shared/http.ts'
 
 const ALLOWED_ORIGINS_RAW = Deno.env.get('ALLOWED_ORIGINS')
 const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW ? ALLOWED_ORIGINS_RAW.split(',').map(s => s.trim()) : null
@@ -20,21 +21,8 @@ function getCors(origin: string | null) {
   }
 }
 
-const rateMap = new Map<string, { count: number; reset: number }>()
 const RATE_LIMIT = 10
 const RATE_WINDOW = 60
-
-function checkRateLimit(ip: string): boolean {
-  const now = Math.floor(Date.now() / 1000)
-  const entry = rateMap.get(ip)
-  if (!entry || now > entry.reset) {
-    rateMap.set(ip, { count: 1, reset: now + RATE_WINDOW })
-    return true
-  }
-  if (entry.count >= RATE_LIMIT) return false
-  entry.count++
-  return true
-}
 
 function calcDias(ret: string, dev: string): number {
   const diffH = (new Date(dev).getTime() - new Date(ret).getTime()) / 3600000
@@ -75,17 +63,28 @@ const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('origin')
   const CORS = getCors(origin)
-  const err = (msg: string, status = 400) => new Response(JSON.stringify({ error: msg }), {
-    status, headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseUrl || !serviceKey) {
+    console.error('[criar-solicitacao] env vars não configuradas')
+    return errJson('server_misconfigured', 'Erro de configuração do servidor. Contate o suporte.', 500, CORS)
+  }
+  const sb = createClient(supabaseUrl, serviceKey)
+
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  if (!checkRateLimit(ip)) {
-    return new Response(JSON.stringify({ error: 'Muitas requisições. Tente novamente em 1 minuto.' }), {
-      status: 429, headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+  const { data: permitido, error: rlErr } = await sb.rpc('fn_checar_rate_limit', {
+    p_chave: `criar-solicitacao:${ip}`,
+    p_limite: RATE_LIMIT,
+    p_janela_segundos: RATE_WINDOW,
+  })
+  if (rlErr) {
+    console.error('[criar-solicitacao] rate limit check falhou:', rlErr.message)
+    // Falha no rate limiter não bloqueia a requisição legítima.
+  } else if (permitido === false) {
+    return errJson('rate_limited', 'Muitas requisições. Tente novamente em 1 minuto.', 429, CORS)
   }
 
   try {
@@ -97,40 +96,36 @@ Deno.serve(async (req: Request) => {
       'local_retirada', 'local_devolucao',
     ]
     for (const f of required) {
-      if (!body[f]) return err(`Campo obrigatório ausente: ${f}`)
+      if (!body[f]) return errJson('missing_field', `Campo obrigatório ausente: ${f}`, 400, CORS)
     }
 
-    if (!uuidRe.test(body.tenant_id))    return err('tenant_id inválido.')
-    if (!uuidRe.test(body.categoria_id)) return err('categoria_id inválido.')
+    if (!uuidRe.test(body.tenant_id))    return errJson('invalid_tenant_id', 'tenant_id inválido.', 400, CORS)
+    if (!uuidRe.test(body.categoria_id)) return errJson('invalid_categoria_id', 'categoria_id inválido.', 400, CORS)
 
-    if (!validarEmail(body.cliente_email)) return err('E-mail inválido.')
-    if (!validarWhatsApp(body.cliente_whatsapp)) return err('WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).')
+    if (!validarEmail(body.cliente_email)) return errJson('invalid_email', 'E-mail inválido.', 400, CORS)
+    if (!validarWhatsApp(body.cliente_whatsapp)) {
+      return errJson('invalid_whatsapp', 'WhatsApp inválido. Informe DDD + número (10 a 13 dígitos).', 400, CORS)
+    }
 
     if (!body.estrangeiro && body.cliente_cpf) {
       const cpfLimpo = String(body.cliente_cpf).replace(/\D/g, '')
-      if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) return err('CPF inválido.')
+      if (cpfLimpo.length > 0 && !validarCPF(cpfLimpo)) return errJson('invalid_cpf', 'CPF inválido.', 400, CORS)
     }
 
     const pessoas = parseInt(body.pessoas) || 1
-    if (pessoas < 1 || pessoas > 20) return err('Número de pessoas inválido.')
+    if (pessoas < 1 || pessoas > 20) return errJson('invalid_pessoas', 'Número de pessoas inválido.', 400, CORS)
 
     const retDate = new Date(body.data_retirada)
     const devDate = new Date(body.data_devolucao)
-    if (isNaN(retDate.getTime()) || isNaN(devDate.getTime())) return err('Datas inválidas.')
+    if (isNaN(retDate.getTime()) || isNaN(devDate.getTime())) {
+      return errJson('invalid_dates', 'Datas inválidas.', 400, CORS)
+    }
 
     const dias = calcDias(body.data_retirada, body.data_devolucao)
-    if (dias <= 0) return err('Período inválido: devolução deve ser após a retirada.')
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (!supabaseUrl || !serviceKey) {
-      console.error('[criar-solicitacao] env vars não configuradas')
-      return err('Erro de configuração do servidor. Contate o suporte.', 500)
-    }
-    const sb = createClient(supabaseUrl, serviceKey)
+    if (dias <= 0) return errJson('invalid_period', 'Período inválido: devolução deve ser após a retirada.', 400, CORS)
 
     const { data: tenant } = await sb.from('tenants').select('id').eq('id', body.tenant_id).eq('ativo', true).single()
-    if (!tenant) return err('Tenant inválido.')
+    if (!tenant) return errJson('invalid_tenant', 'Tenant inválido.', 400, CORS)
 
     const [{ data: cat }, { data: prot }] = await Promise.all([
       sb.from('categorias')
@@ -147,8 +142,8 @@ Deno.serve(async (req: Request) => {
         : Promise.resolve({ data: null }),
     ])
 
-    if (!cat?.ativo) return err('Categoria inválida ou inativa.')
-    if (body.protecao_id && !prot?.ativo) return err('Proteção inválida ou inativa.')
+    if (!cat?.ativo) return errJson('invalid_categoria', 'Categoria inválida ou inativa.', 400, CORS)
+    if (body.protecao_id && !prot?.ativo) return errJson('invalid_protecao', 'Proteção inválida ou inativa.', 400, CORS)
 
     // ── Verificação de disponibilidade em tempo real ──────────────────
     try {
@@ -160,7 +155,11 @@ Deno.serve(async (req: Request) => {
         devDate,
       )
       if (disp.fonte === 'frota' && disp.disponivel === 0) {
-        return err('Não há veículos disponíveis para esta categoria no período solicitado. Escolha outra categoria ou período.', 409)
+        return errJson(
+          'sem_disponibilidade',
+          'Não há veículos disponíveis para esta categoria no período solicitado. Escolha outra categoria ou período.',
+          409, CORS,
+        )
       }
     } catch (dispErr) {
       // Falha na verificação não bloqueia (sistema de solicitações com aprovação manual)
@@ -255,14 +254,10 @@ Deno.serve(async (req: Request) => {
 
     console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado }))
 
-    return new Response(JSON.stringify({ ok: true, id: sol.id, numero: sol.numero, valor_estimado }), {
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+    return okJson({ ok: true, id: sol.id, numero: sol.numero, valor_estimado }, CORS)
 
   } catch (e) {
     console.error('[criar-solicitacao]', String(e))
-    return new Response(JSON.stringify({ error: 'Erro interno. Tente novamente.' }), {
-      status: 500, headers: { ...CORS, 'Content-Type': 'application/json' },
-    })
+    return errJson('internal_error', 'Erro interno. Tente novamente.', 500, CORS)
   }
 })

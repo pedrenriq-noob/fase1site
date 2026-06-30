@@ -1215,7 +1215,7 @@ window.submitReservation = async function() {
     })
 
     const resultado = await res.json()
-    if (!res.ok) throw new Error(resultado.error ?? `Erro ${res.status}`)
+    if (!res.ok) throw new Error(resultado.error?.message ?? `Erro ${res.status}`)
 
     const total = resultado.valor_estimado
     const dias  = S.dias || 1
