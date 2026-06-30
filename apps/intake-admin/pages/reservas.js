@@ -478,13 +478,23 @@ async function excluirReserva(id, num) {
             const { data: antes } = await supabase
                 .from('solicitacoes').select('*').eq('id', id).single()
 
-            const { error } = await supabase
+            const { data: excluidas, error } = await supabase
                 .from('solicitacoes')
                 .delete()
                 .eq('id', id)
                 .eq('tenant_id', TENANT_ID)
+                .select('id')
 
             if (error) { toast(error.message, 'error'); return }
+
+            // RLS sem policy de DELETE correspondente não gera erro — só
+            // afeta 0 linhas. Sem essa checagem, a UI mostrava "excluída"
+            // mesmo quando nada foi de fato apagado no banco (a reserva
+            // "reaparecia" ao recarregar a página).
+            if (!excluidas?.length) {
+                toast('Não foi possível excluir: permissão negada ou reserva já removida.', 'error')
+                return
+            }
 
             await registrarAuditoria('excluir', 'reserva', id, `Reserva #${num} excluída`, antes, null)
             toast(`Reserva #${num} excluída.`, 'success')

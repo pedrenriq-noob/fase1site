@@ -449,8 +449,15 @@ export async function init(container, params) {
 
   async function deleteVeiculo(id, placa) {
     if (!confirm(`Remover ${placa} da frota? Esta ação não pode ser desfeita.`)) return;
-    const { error } = await supabase.from('frota_veiculos').delete().eq('id', id).eq('tenant_id', TENANT_ID);
+    const { data: removidos, error } = await supabase
+      .from('frota_veiculos').delete().eq('id', id).eq('tenant_id', TENANT_ID).select('id');
     if (error) { showToast('Erro ao remover. Verifique se o veículo tem movimentações.', 'error'); return; }
+    // RLS sem policy de DELETE correspondente não gera erro, só afeta 0
+    // linhas — sem essa checagem a tela mostrava sucesso mesmo sem apagar.
+    if (!removidos?.length) {
+      showToast('Não foi possível remover: permissão negada ou veículo já removido.', 'error');
+      return;
+    }
     showToast(`${placa} removido.`, 'success');
     loadTab('veiculos');
   }
