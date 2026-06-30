@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
 
     const [{ data: cat }, { data: prot }] = await Promise.all([
       sb.from('categorias')
-        .select('id, slug, preco_diaria, ativo')
+        .select('id, slug, preco_diaria, ativo, max_cadeirinhas')
         .eq('id', body.categoria_id)
         .eq('tenant_id', body.tenant_id)
         .single(),
@@ -144,6 +144,38 @@ Deno.serve(async (req: Request) => {
 
     if (!cat?.ativo) return errJson('invalid_categoria', 'Categoria inválida ou inativa.', 400, CORS)
     if (body.protecao_id && !prot?.ativo) return errJson('invalid_protecao', 'Proteção inválida ou inativa.', 400, CORS)
+
+    // ── Validação de local e janela de horário ─────────────────────────
+    const [{ data: localRet }, { data: localDev }] = await Promise.all([
+      sb.from('locais').select('*').eq('tenant_id', body.tenant_id).eq('nome', body.local_retirada).single(),
+      sb.from('locais').select('*').eq('tenant_id', body.tenant_id).eq('nome', body.local_devolucao).single(),
+    ])
+
+    if (!localRet?.ativo || !localRet.permite_retirada) {
+      return errJson('invalid_local_retirada', 'Local de retirada inválido ou indisponível para retirada.', 400, CORS)
+    }
+    if (!localDev?.ativo || !localDev.permite_devolucao) {
+      return errJson('invalid_local_devolucao', 'Local de devolução inválido ou indisponível para devolução.', 400, CORS)
+    }
+
+    const horaDentroJanela = (data: Date, inicio: string | null, fim: string | null): boolean => {
+      if (!inicio || !fim) return true
+      const hhmm = `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}:00`
+      return hhmm >= inicio && hhmm <= fim
+    }
+
+    if (!horaDentroJanela(retDate, localRet.hora_retirada_inicio, localRet.hora_retirada_fim)) {
+      return errJson('invalid_horario_retirada', 'Horário de retirada fora do funcionamento do local.', 400, CORS)
+    }
+    if (!horaDentroJanela(devDate, localDev.hora_devolucao_inicio, localDev.hora_devolucao_fim)) {
+      return errJson('invalid_horario_devolucao', 'Horário de devolução fora do funcionamento do local.', 400, CORS)
+    }
+    if (retDate.getDay() === 0 && !localRet.disponivel_domingo) {
+      return errJson('local_fechado_domingo', 'Local de retirada não funciona aos domingos.', 400, CORS)
+    }
+    if (devDate.getDay() === 0 && !localDev.disponivel_domingo) {
+      return errJson('local_fechado_domingo', 'Local de devolução não funciona aos domingos.', 400, CORS)
+    }
 
     // ── Verificação de disponibilidade em tempo real ──────────────────
     try {
@@ -187,11 +219,12 @@ Deno.serve(async (req: Request) => {
       : 0
 
     let totalAdd = 0
+    let qtdCadeirinhas = 0
     const itensInsert: any[] = []
     if (body.itens?.length) {
       const ids = body.itens.map((i: any) => i.adicional_id)
       const { data: adicionais } = await sb.from('adicionais')
-        .select('id, preco, tipo_preco, ativo')
+        .select('id, preco, tipo_preco, ativo, is_cadeirinha')
         .eq('tenant_id', body.tenant_id)
         .in('id', ids)
 
@@ -203,6 +236,7 @@ Deno.serve(async (req: Request) => {
           ? parseFloat(a.preco) * qty * dias
           : parseFloat(a.preco) * qty
         totalAdd += subtotal
+        if (a.is_cadeirinha) qtdCadeirinhas += qty
         itensInsert.push({
           adicional_id:   a.id,
           quantidade:     qty,
@@ -210,6 +244,14 @@ Deno.serve(async (req: Request) => {
           tipo_preco:     a.tipo_preco,
         })
       }
+    }
+
+    if (qtdCadeirinhas > (cat.max_cadeirinhas ?? 0)) {
+      return errJson(
+        'limite_cadeirinhas_excedido',
+        `Esta categoria comporta no máximo ${cat.max_cadeirinhas ?? 0} cadeirinha(s).`,
+        400, CORS,
+      )
     }
 
     const valor_estimado = Math.round((baseCat + baseProt + totalAdd) * 100) / 100
