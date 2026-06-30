@@ -336,19 +336,8 @@ function mostrarApp(user) {
     navegar('dashboard')
 }
 
-// Detecta retorno do link de redefinição de senha (token no hash da URL)
-async function verificarResetToken() {
-    const hash = window.location.hash
-    if (!hash.includes('type=recovery')) return false
-
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error || !session) return false
-
-    // Limpa o hash da URL sem recarregar
+function abrirModalResetSenha() {
     history.replaceState(null, '', window.location.pathname)
-
-    // Abre o modal de nova senha diretamente no app
-    mostrarApp(session.user)
     abrirModal('🔑 Redefinir Senha', `
         <p style="font-size:13px;color:#374151;margin-bottom:12px">Defina sua nova senha:</p>
         <div class="form-group">
@@ -371,11 +360,17 @@ async function verificarResetToken() {
         const { error } = await supabase.auth.updateUser({ password: nova })
         if (error) { errEl.textContent = error.message; return false }
     })
-
-    return true
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const handled = await verificarResetToken()
-    if (!handled) init()
+    // PKCE: o SDK troca o code da URL automaticamente e dispara PASSWORD_RECOVERY
+    // É a única forma confiável de detectar retorno do link de recuperação no v2
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY' && session) {
+            mostrarApp(session.user)
+            abrirModalResetSenha()
+        }
+    })
+
+    init()
 })
