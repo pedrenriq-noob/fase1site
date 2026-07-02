@@ -111,7 +111,7 @@ export async function init(container) {
   });
 
   function renderResult(resultado, cat, inicio, fim, el) {
-    const { disponivel, total, detalhes } = resultado;
+    const { disponivel, total, detalhes, overbooking, overbooking_qtd } = resultado;
     const available = disponivel > 0;
 
     el.innerHTML = `
@@ -125,6 +125,12 @@ export async function init(container) {
           ${formatDate(inicio)} → ${formatDate(fim)}
         </p>
       </div>
+
+      ${overbooking ? `
+      <div class="alert alert-error mt-md">
+        ⚠ Overbooking previsto na categoria ${escapeHtml(cat)}: ${overbooking_qtd}
+        reserva${overbooking_qtd > 1 ? 's' : ''} a mais do que veículos disponíveis no período.
+      </div>` : ''}
 
       ${detalhes.length > 0 ? `
       <div class="card mt-md" style="padding:0;">

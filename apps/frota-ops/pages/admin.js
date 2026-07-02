@@ -69,6 +69,11 @@ export async function init(container, params) {
 
         <div class="form-grid" style="margin-bottom:var(--space-md)">
           <div class="form-group">
+            <label class="form-label">Frota (CSV)</label>
+            <input type="file" id="imp-frota" accept=".csv" class="form-input" />
+            <span class="form-hint" id="imp-frota-info" style="color:var(--text-secondary);font-size:0.8rem;"></span>
+          </div>
+          <div class="form-group">
             <label class="form-label">Contratos Abertos (CSV)</label>
             <input type="file" id="imp-contratos" accept=".csv" class="form-input" />
             <span class="form-hint" id="imp-contratos-info" style="color:var(--text-secondary);font-size:0.8rem;"></span>
@@ -79,6 +84,12 @@ export async function init(container, params) {
             <span class="form-hint" id="imp-reservas-info" style="color:var(--text-secondary);font-size:0.8rem;"></span>
           </div>
         </div>
+
+        <p style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:var(--space-md)">
+          A disponibilidade é calculada exclusivamente pelo cruzamento destes três arquivos:
+          total de veículos por categoria (Frota) menos as reservas de Contratos Abertos e
+          Reservas Futuras que se sobrepõem ao período consultado.
+        </p>
 
         <button class="btn btn-secondary" id="imp-preview-btn" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px">
@@ -92,9 +103,11 @@ export async function init(container, params) {
     `;
 
     let parsedRows = [];
+    let parsedFrotaRows = [];
 
     const checkReady = () => {
       document.getElementById('imp-preview-btn').disabled =
+        !document.getElementById('imp-frota').files.length &&
         !document.getElementById('imp-contratos').files.length &&
         !document.getElementById('imp-reservas').files.length;
     };
@@ -106,6 +119,11 @@ export async function init(container, params) {
       reader.readAsText(file, 'windows-1252');
     });
 
+    panel.querySelector('#imp-frota').addEventListener('change', e => {
+      const f = e.target.files[0];
+      document.getElementById('imp-frota-info').textContent = f ? f.name : '';
+      checkReady();
+    });
     panel.querySelector('#imp-contratos').addEventListener('change', e => {
       const f = e.target.files[0];
       document.getElementById('imp-contratos-info').textContent = f ? f.name : '';
@@ -118,19 +136,31 @@ export async function init(container, params) {
     });
 
     panel.querySelector('#imp-preview-btn').addEventListener('click', async () => {
-      const contratosFile = document.getElementById('imp-contratos').files[0];
-      const reservasFile  = document.getElementById('imp-reservas').files[0];
-      if (!contratosFile && !reservasFile) return;
+      const frotaFile      = document.getElementById('imp-frota').files[0];
+      const contratosFile  = document.getElementById('imp-contratos').files[0];
+      const reservasFile   = document.getElementById('imp-reservas').files[0];
+      if (!frotaFile && !contratosFile && !reservasFile) return;
 
       parsedRows = [];
       if (contratosFile) parsedRows.push(...parseCSV(await readFile(contratosFile)));
       if (reservasFile)  parsedRows.push(...parseCSV(await readFile(reservasFile)));
 
-      await showPreview(parsedRows);
+      // U-UTILITARIO é categoria exclusiva de um cliente específico, nunca
+      // disponível para locação geral — ignorada do import por completo.
+      parsedRows = parsedRows.filter(r => !isCategoriaIgnorada(r['locacao-grupo'] || r['veiculo-grupo']));
+
+      parsedFrotaRows = frotaFile ? parseCSV(await readFile(frotaFile), 'PLACA') : [];
+      parsedFrotaRows = parsedFrotaRows.filter(r => !isCategoriaIgnorada(r['GRUPO']));
+
+      await showPreview(parsedRows, parsedFrotaRows, {
+        contratosFileEnviado: !!contratosFile,
+        reservasFileEnviado:  !!reservasFile,
+        frotaFileEnviado:     !!frotaFile,
+      });
     });
   }
 
-  function parseCSV(text) {
+  function parseCSV(text, requiredKey = 'locacao-numero') {
     const lines = text.split('\n').filter(l => l.trim());
     if (lines.length < 2) return [];
     const headers = lines[0].split(',').map(h => h.trim().replace(/^﻿/, ''));
@@ -155,19 +185,36 @@ export async function init(container, params) {
       if (cols.length >= headers.length - 1) {
         const obj = {};
         headers.forEach((h, idx) => { obj[h] = (cols[idx] ?? '').replace(/^"|"$/g, '').trim(); });
-        if (obj['locacao-numero']) rows.push(obj);
+        if (obj[requiredKey]) rows.push(obj);
       }
       i++;
     }
     return rows;
   }
 
+  function rowToVeiculo(row) {
+    return {
+      tenant_id:  TENANT_ID,
+      placa:      (row['PLACA'] || '').trim().toUpperCase(),
+      categoria:  normalizeCategoria(row['GRUPO']),
+      modelo:     row['MODELO'] || '—',
+      fabricante: row['FABRICANTE'] || null,
+    };
+  }
+
   function normalizeCategoria(cat) {
     if (!cat) return '';
     return cat.trim()
       .replace(/^J\s*-?\s*PREMIUM$/i, 'J')
-      .replace(/^U\s*-\s*UTILITARIO$/i, 'U-UTILITARIO')
+      .replace(/^U(\s*-\s*UTILITARIO)?$/i, 'U-UTILITARIO')
       .trim();
+  }
+
+  // Categoria exclusiva de um cliente específico — nunca disponível para
+  // locação geral, então é descartada do import antes de tocar frota_reservas
+  // ou frota_veiculos (mesmo se aparecer no CSV do sistema legado).
+  function isCategoriaIgnorada(cat) {
+    return normalizeCategoria(cat) === 'U-UTILITARIO';
   }
 
   function parseBRDate(str) {
@@ -179,7 +226,7 @@ export async function init(container, params) {
   }
 
   function rowToReserva(row) {
-    const placa = row['veiculo-placa'] || null;
+    const placa = row['veiculo-placa'] ? row['veiculo-placa'].trim().toUpperCase() : null;
     return {
       tenant_id:        TENANT_ID,
       locacao_numero:   row['locacao-numero'],
@@ -198,7 +245,7 @@ export async function init(container, params) {
     };
   }
 
-  async function showPreview(rows) {
+  async function showPreview(rows, frotaRows = [], { contratosFileEnviado = false, reservasFileEnviado = false, frotaFileEnviado = false } = {}) {
     const previewEl = document.getElementById('imp-preview');
     previewEl.style.display = '';
     previewEl.innerHTML = `<div class="loading-screen" style="min-height:10vh;"><div class="spinner"></div></div>`;
@@ -217,7 +264,23 @@ export async function init(container, params) {
 
     const novos       = rows.filter(r => !existingMap.has(r['locacao-numero']));
     const atualizados = rows.filter(r => existingMap.has(r['locacao-numero']));
-    const encerrar    = (existing || []).filter(r => r.locacao_numero && !importedNums.has(r.locacao_numero));
+
+    // "Encerrar" só é seguro de calcular quando o arquivo correspondente
+    // àquele status foi de fato re-enviado nesta sincronização. Contratos
+    // Abertos alimenta CONFIRMADO; Reservas Futuras alimenta PREVISTO. Sem
+    // isso, subir só a Frota (sem os outros 2 CSVs) marcaria TODAS as
+    // reservas/contratos ativos como encerrados, já que `rows` ficaria vazio.
+    const contratosEnviado = contratosFileEnviado;
+    const reservasEnviado  = reservasFileEnviado;
+    // U-UTILITARIO nunca entra em `rows` (filtrado no import), então nunca
+    // pode "sumir" do CSV — excluído daqui pra não ser encerrado à força.
+    const encerrar = (existing || []).filter(r => {
+      if (!r.locacao_numero || isCategoriaIgnorada(r.categoria)) return false;
+      if (importedNums.has(r.locacao_numero)) return false;
+      if (r.status === 'CONFIRMADO' && !contratosEnviado) return false;
+      if (r.status === 'PREVISTO' && !reservasEnviado) return false;
+      return true;
+    });
 
     // Dedupe by locacao_numero: if the same number appears in both CSVs
     // (or twice in the same file), keep only the last occurrence so the
@@ -226,9 +289,35 @@ export async function init(container, params) {
     rows.forEach(r => reservasMap.set(r['locacao-numero'], rowToReserva(r)));
     const reservas = Array.from(reservasMap.values());
 
+    // Frota: fonte de verdade da contagem de veículos por categoria.
+    // Upsert por placa; veículos que sumiram do CSV não são apagados
+    // automaticamente (remoção de inventário é ação manual na aba Veículos).
+    const { data: existingVeiculos, error: eVe } = await supabase
+      .from('frota_veiculos')
+      .select('placa')
+      .eq('tenant_id', TENANT_ID);
+    if (eVe) { previewEl.innerHTML = `<div class="alert alert-error">Erro ao buscar frota: ${escapeHtml(eVe.message)}</div>`; return; }
+
+    const veiculosMap = new Map();
+    frotaRows.forEach(r => {
+      const v = rowToVeiculo(r);
+      // Linha malformada (sem placa ou sem categoria) é descartada em vez
+      // de gravar um veículo com categoria vazia, que ficaria fora de
+      // qualquer contagem de disponibilidade sem gerar erro visível.
+      if (v.placa && v.categoria) veiculosMap.set(v.placa, v);
+    });
+    const veiculos = Array.from(veiculosMap.values());
+    const placasExistentes = new Set((existingVeiculos || []).map(v => v.placa));
+    const novosVeiculos       = veiculos.filter(v => !placasExistentes.has(v.placa));
+    const atualizadosVeiculos = veiculos.filter(v => placasExistentes.has(v.placa));
+
     previewEl.innerHTML = `
       <div class="card mb-md">
         <h3 style="margin-bottom:var(--space-md)">Resumo da Importação</h3>
+        ${!frotaFileEnviado ? `
+        <div class="alert alert-info" style="margin-bottom:var(--space-md)">
+          ℹ Frota não reenviada nesta sincronização — mantendo o último cadastro de veículos importado.
+        </div>` : ''}
         <div class="form-grid" style="gap:var(--space-sm);margin-bottom:var(--space-md)">
           <div class="stat-card" style="background:var(--success-bg,#d1fae5);border-radius:8px;padding:var(--space-sm) var(--space-md);">
             <div style="font-size:1.5rem;font-weight:700;color:#065f46;">${novos.length}</div>
@@ -241,6 +330,14 @@ export async function init(container, params) {
           <div class="stat-card" style="background:var(--warning-bg,#fef9c3);border-radius:8px;padding:var(--space-sm) var(--space-md);">
             <div style="font-size:1.5rem;font-weight:700;color:#854d0e;">${encerrar.length}</div>
             <div style="font-size:0.8rem;color:#854d0e;">A encerrar</div>
+          </div>
+          <div class="stat-card" style="background:var(--success-bg,#d1fae5);border-radius:8px;padding:var(--space-sm) var(--space-md);">
+            <div style="font-size:1.5rem;font-weight:700;color:#065f46;">${novosVeiculos.length}</div>
+            <div style="font-size:0.8rem;color:#065f46;">Veículos novos</div>
+          </div>
+          <div class="stat-card" style="background:var(--info-bg,#dbeafe);border-radius:8px;padding:var(--space-sm) var(--space-md);">
+            <div style="font-size:1.5rem;font-weight:700;color:#1e40af;">${atualizadosVeiculos.length}</div>
+            <div style="font-size:0.8rem;color:#1e40af;">Veículos atualizados</div>
           </div>
         </div>
 
@@ -272,19 +369,28 @@ export async function init(container, params) {
     const syncBtn = syncBtnOld.cloneNode(true);
     syncBtnOld.replaceWith(syncBtn);
     syncBtn.addEventListener('click', async () => {
-      await executarSync(reservas, encerrar);
+      await executarSync(reservas, encerrar, veiculos);
     });
   }
 
-  async function executarSync(reservas, encerrar) {
+  async function executarSync(reservas, encerrar, veiculos = []) {
     const btn = document.getElementById('imp-sync-btn');
     btn.disabled = true;
     btn.classList.add('btn-loading');
     btn.textContent = 'Sincronizando…';
 
     try {
-      // 1. Upsert todos os registros importados
+      // 0. Upsert da frota (fonte de verdade da contagem por categoria)
       const CHUNK = 50;
+      for (let i = 0; i < veiculos.length; i += CHUNK) {
+        const chunk = veiculos.slice(i, i + CHUNK);
+        const { error } = await supabase
+          .from('frota_veiculos')
+          .upsert(chunk, { onConflict: 'placa', ignoreDuplicates: false });
+        if (error) throw error;
+      }
+
+      // 1. Upsert todos os registros importados
       for (let i = 0; i < reservas.length; i += CHUNK) {
         const chunk = reservas.slice(i, i + CHUNK);
         const { error } = await supabase
@@ -294,17 +400,24 @@ export async function init(container, params) {
       }
 
       // 2. Encerrar contratos que sumiram + atualizar status do veículo
+      // (cada update encadeia .select('id') pra detectar 0 linhas afetadas —
+      // RLS/placa sem match não gera `error`, só não atualiza nada)
+      const falhas = [];
       for (const r of encerrar) {
-        await supabase.from('frota_reservas')
+        const { data: rsv, error: rsvErr } = await supabase.from('frota_reservas')
           .update({ status: 'CONCLUIDO', sincronizado_em: new Date().toISOString() })
-          .eq('id', r.id);
+          .eq('id', r.id)
+          .select('id');
+        if (rsvErr || !rsv?.length) falhas.push(`reserva ${r.locacao_numero} (encerrar)`);
 
         if (r.placa_atribuida && r.status === 'CONFIRMADO') {
-          await supabase.from('frota_veiculos')
+          const { data: vec, error: vecErr } = await supabase.from('frota_veiculos')
             .update({ status: 'DEVOLVIDO', limpo: false, prev_retorno: null, patio_atual: null })
             .eq('placa', r.placa_atribuida)
             .eq('tenant_id', TENANT_ID)
-            .eq('status', 'LOCADO');
+            .eq('status', 'LOCADO')
+            .select('id');
+          if (vecErr || !vec?.length) falhas.push(`veículo ${r.placa_atribuida} (devolver)`);
         }
       }
 
@@ -312,20 +425,32 @@ export async function init(container, params) {
       // Não sobrescreve MANUTENCAO: só atualiza veículos em status operacional
       const confirmados = reservas.filter(r => r.placa_atribuida && r.status === 'CONFIRMADO');
       for (const r of confirmados) {
-        await supabase.from('frota_veiculos')
+        const { data: vec, error: vecErr } = await supabase.from('frota_veiculos')
           .update({ status: 'LOCADO', prev_retorno: r.data_retorno_prev, patio_atual: null })
           .eq('placa', r.placa_atribuida)
           .eq('tenant_id', TENANT_ID)
-          .in('status', ['DISPONIVEL', 'LOCADO', 'DEVOLVIDO', 'NO_LAVADOR']);
+          .in('status', ['DISPONIVEL', 'LOCADO', 'DEVOLVIDO', 'NO_LAVADOR'])
+          .select('id');
+        if (vecErr || !vec?.length) falhas.push(`veículo ${r.placa_atribuida} (locar)`);
       }
 
       const total = reservas.length;
       const enc   = encerrar.length;
-      showToast(`Sync concluído: ${total} registros importados, ${enc} encerrados.`, 'success', 5000);
-      document.getElementById('imp-preview').innerHTML = `
-        <div class="alert alert-success">
-          ✓ Sincronização concluída — ${total} reservas/contratos importados, ${enc} encerrados.
-        </div>`;
+      if (falhas.length) {
+        showToast(`Sync concluído com ${falhas.length} falha(s) — placa sem match ou sem permissão.`, 'error', 7000);
+        document.getElementById('imp-preview').innerHTML = `
+          <div class="alert alert-error">
+            ⚠ Sincronização concluída com pendências — ${total} registros importados, ${enc} encerrados,
+            mas ${falhas.length} atualização(ões) de veículo/reserva não encontraram correspondência:
+            <ul>${falhas.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+          </div>`;
+      } else {
+        showToast(`Sync concluído: ${total} registros importados, ${enc} encerrados.`, 'success', 5000);
+        document.getElementById('imp-preview').innerHTML = `
+          <div class="alert alert-success">
+            ✓ Sincronização concluída — ${total} reservas/contratos importados, ${enc} encerrados.
+          </div>`;
+      }
     } catch (err) {
       logger.error('Sync error:', err);
       showToast('Erro durante sincronização: ' + escapeHtml(err.message), 'error');

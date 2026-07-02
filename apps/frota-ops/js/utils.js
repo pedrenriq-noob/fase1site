@@ -182,11 +182,16 @@ export function categoriaLabel(cat) {
 }
 
 /* ===== Disponibilidade Calculation =====
-   Returns { disponivel: number, total: number, detalhes: array }
+   Fonte de verdade única: cruzamento entre o total de veículos cadastrados
+   na categoria (Frota) e as reservas ativas em frota_reservas — Reservas
+   Futuras (PREVISTO) + Contratos Abertos (CONFIRMADO) — que se sobrepõem
+   ao período. Status físico do veículo (LOCADO/NO_LAVADOR/MANUTENCAO/limpo)
+   não entra mais no cálculo; continua exibido como informação operacional.
+   Returns { disponivel, total, detalhes, reservasNoPeriodo,
+             overbooking, overbooking_categoria, overbooking_qtd }
    detalhes items: { placa, modelo, status, disponivel: bool, motivo }
 */
 export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reservas) {
-  const agora = new Date();
   const inicioD = inicio instanceof Date ? inicio : new Date(inicio);
   const fimD = fim instanceof Date ? fim : new Date(fim);
 
@@ -196,91 +201,52 @@ export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reserv
            ['PREVISTO', 'CONFIRMADO'].includes(r.status)
   );
 
-  // Reservas que se sobrepõem ao período solicitado
+  // Reservas (futuras + contratos abertos) que se sobrepõem ao período solicitado
   const reservasNoPeriodo = reservasCat.filter((r) => {
     const rSaida = new Date(r.data_saida);
     const rRetorno = new Date(r.data_retorno_prev);
     return rSaida < fimD && rRetorno > inicioD;
   });
 
-  // Placas com reserva direta (veículo específico comprometido)
-  const placasReservadas = new Set(
-    reservasNoPeriodo.filter((r) => r.placa_atribuida).map((r) => r.placa_atribuida)
-  );
+  const total = veiculosCat.length;
+  const ocupados = reservasNoPeriodo.length;
+  const disponivel = Math.max(0, total - ocupados);
+  const overbookingQtd = Math.max(0, ocupados - total);
+  const overbooking = overbookingQtd > 0;
 
-  // Reservas sem veículo atribuído consomem vagas do pool genérico
-  let reservasSemAtribuicao = reservasNoPeriodo.filter((r) => !r.placa_atribuida).length;
+  // Detalhamento por veículo: cada reserva no período "consome" uma vaga,
+  // priorizando as com placa atribuída (contrato aberto) sobre a placa
+  // correspondente quando existir. Contratos cuja placa não está (ainda)
+  // na Frota importada não têm onde ser marcados individualmente — contam
+  // como vaga genérica, senão a lista por veículo mostraria mais "Disponível"
+  // do que o número agregado no card.
+  const placasConhecidas = new Set(veiculosCat.map((v) => v.placa));
+  const placasReservadas = new Set(
+    reservasNoPeriodo.filter((r) => r.placa_atribuida && placasConhecidas.has(r.placa_atribuida)).map((r) => r.placa_atribuida)
+  );
+  let vagasGenericasConsumidas = reservasNoPeriodo.filter(
+    (r) => !r.placa_atribuida || !placasConhecidas.has(r.placa_atribuida)
+  ).length;
 
   const detalhes = [];
-  const poolDisponivel = []; // fisicamente livres e sem reserva direta
-
   for (const v of veiculosCat) {
-    // Reserva direta para este veículo no período
     if (placasReservadas.has(v.placa)) {
-      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Atribuído a reserva no período' });
+      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Contrato aberto no período' });
       continue;
     }
-
-    // Locado — retorno previsto posterior ao início
-    if (v.status === 'LOCADO') {
-      const prevRetorno = v.prev_retorno ? new Date(v.prev_retorno) : null;
-      if (!prevRetorno) {
-        detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Locado — sem data de retorno previsto' });
-        continue;
-      }
-      if (prevRetorno > inicioD) {
-        detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Locado — retorno previsto após início' });
-        continue;
-      }
-      const dispApos = calcularDisponivel(prevRetorno);
-      if (dispApos && dispApos > inicioD) {
-        detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: `Em preparo — disponível ${formatDate(dispApos)}` });
-        continue;
-      }
-      poolDisponivel.push(v);
+    if (vagasGenericasConsumidas > 0) {
+      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: `Reservado — ${vagasGenericasConsumidas} reserva(s) futura(s) sem veículo atribuído` });
+      vagasGenericasConsumidas--;
       continue;
     }
-
-    // Devolvido sujo
-    if (v.status === 'DEVOLVIDO' && !v.limpo) {
-      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Devolvido — aguardando limpeza' });
-      continue;
-    }
-
-    // No lavador
-    if (v.status === 'NO_LAVADOR') {
-      const saidaLavador = calcularSaidaLavador(v.hora_entrada_lavador);
-      if (saidaLavador && saidaLavador > inicioD) {
-        detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: `No lavador — sai ${formatTime(saidaLavador)}` });
-        continue;
-      }
-      poolDisponivel.push(v);
-      continue;
-    }
-
-    // Manutenção
-    if (v.status === 'MANUTENCAO') {
-      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: 'Em manutenção' });
-      continue;
-    }
-
-    // DISPONIVEL / DEVOLVIDO+limpo — fisicamente livre
-    poolDisponivel.push(v);
+    detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: true, motivo: 'Disponível' });
   }
 
-  // Subtrair reservas sem atribuição do pool (cada uma consome uma vaga genérica)
-  for (const v of poolDisponivel) {
-    if (reservasSemAtribuicao > 0) {
-      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: false, motivo: `Reservado — categoria comprometida (${reservasSemAtribuicao} sem veículo atribuído)` });
-      reservasSemAtribuicao--;
-    } else {
-      detalhes.push({ placa: v.placa, modelo: v.modelo, status: v.status, disponivel: true, motivo: 'Disponível' });
-    }
-  }
-
-  const disponivel = detalhes.filter((d) => d.disponivel).length;
-
-  return { disponivel, total: veiculosCat.length, detalhes, reservasNoPeriodo: reservasNoPeriodo.length };
+  return {
+    disponivel, total, detalhes,
+    reservasNoPeriodo: reservasNoPeriodo.length,
+    overbooking, overbooking_categoria: overbooking ? categoria : null, overbooking_qtd: overbookingQtd,
+  };
 }
 
 /* ===== Toast Notifications ===== */

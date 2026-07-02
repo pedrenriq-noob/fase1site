@@ -19,6 +19,9 @@ export interface DisponibilidadeResult {
   total: number
   reservas_periodo: number
   fonte: 'frota' | 'sem_dados'
+  overbooking: boolean
+  overbooking_categoria: string | null
+  overbooking_qtd: number
 }
 
 /**
@@ -69,6 +72,16 @@ export function calcularSaidaLavador(horaEntrada: string | null, dataReferencia?
   return new Date(entrada.getTime() + 3 * 60 * 60 * 1000)
 }
 
+/**
+ * Fonte de verdade única: cruzamento entre o cadastro de Frota (total de
+ * veículos por categoria) e as reservas ativas em frota_reservas —
+ * "Reservas Futuras" (status PREVISTO, sem placa atribuída) e "Contratos
+ * Abertos" (status CONFIRMADO, com placa) — que se sobrepõem ao período
+ * consultado. Não considera mais status físico do veículo (LOCADO/
+ * NO_LAVADOR/MANUTENCAO/limpo) nem buffers de horário: esses sinais
+ * continuam existindo em frota_veiculos para operação do pátio, mas não
+ * entram no cálculo de disponibilidade.
+ */
 export async function checkDisponibilidade(
   sb: ReturnType<typeof createClient>,
   tenantId: string,
@@ -79,23 +92,20 @@ export async function checkDisponibilidade(
   const categoria = SLUG_MAP[categoriaSlug]
   if (!categoria) throw new Error('Categoria inválida')
 
-  const [{ data: veiculos, error: eV }, { data: reservas }] = await Promise.all([
+  const [{ data: veiculos, error: eV }, { data: reservas, error: eR }] = await Promise.all([
     sb.from('frota_veiculos')
-      .select('placa, status, limpo, prev_retorno, hora_entrada_lavador')
+      .select('placa')
       .eq('tenant_id', tenantId)
       .eq('categoria', categoria),
     sb.from('frota_reservas')
-      .select('placa_atribuida, status, data_saida, data_retorno_prev')
+      .select('status, data_saida, data_retorno_prev')
       .eq('tenant_id', tenantId)
       .eq('categoria', categoria)
       .in('status', ['PREVISTO', 'CONFIRMADO']),
   ])
 
   if (eV) throw eV
-
-  if (!veiculos || veiculos.length === 0) {
-    return { disponivel: null, total: 0, reservas_periodo: 0, fonte: 'sem_dados' }
-  }
+  if (eR) throw eR
 
   const reservasNoPeriodo = (reservas ?? []).filter(r => {
     const rS = new Date(r.data_saida)
@@ -103,44 +113,32 @@ export async function checkDisponibilidade(
     return rS < dataRetorno && rR > dataSaida
   })
 
-  const placasReservadas = new Set(
-    reservasNoPeriodo.filter(r => r.placa_atribuida).map(r => r.placa_atribuida)
-  )
-  let reservasSemAtribuicao = reservasNoPeriodo.filter(r => !r.placa_atribuida).length
-
-  const poolDisponivel: string[] = []
-
-  for (const v of veiculos) {
-    if (placasReservadas.has(v.placa)) continue
-
-    if (v.status === 'LOCADO') {
-      const prevRetorno = v.prev_retorno ? new Date(v.prev_retorno) : null
-      if (!prevRetorno || prevRetorno > dataSaida) continue
-      if (calcularDisponivel(prevRetorno) > dataSaida) continue
-      poolDisponivel.push(v.placa)
-      continue
+  if (!veiculos || veiculos.length === 0) {
+    // Sem Frota importada para a categoria ainda é possível prever
+    // overbooking: se já existem contratos/reservas ativos, todos eles
+    // excedem uma frota de tamanho zero.
+    const ocupadosSemFrota = reservasNoPeriodo.length
+    return {
+      disponivel: null, total: 0, reservas_periodo: ocupadosSemFrota, fonte: 'sem_dados',
+      overbooking: ocupadosSemFrota > 0,
+      overbooking_categoria: ocupadosSemFrota > 0 ? categoria : null,
+      overbooking_qtd: ocupadosSemFrota,
     }
-
-    if (v.status === 'DEVOLVIDO' && !v.limpo) continue
-
-    if (v.status === 'NO_LAVADOR') {
-      const saida = calcularSaidaLavador(v.hora_entrada_lavador, new Date())
-      if (saida && saida > dataSaida) continue
-      poolDisponivel.push(v.placa)
-      continue
-    }
-
-    if (v.status === 'MANUTENCAO') continue
-
-    poolDisponivel.push(v.placa)
   }
 
-  const disponivel = Math.max(0, poolDisponivel.length - reservasSemAtribuicao)
+  const total = veiculos.length
+  const ocupados = reservasNoPeriodo.length
+  const disponivel = Math.max(0, total - ocupados)
+  const overbookingQtd = Math.max(0, ocupados - total)
+  const overbooking = overbookingQtd > 0
 
   return {
     disponivel,
-    total: veiculos.length,
-    reservas_periodo: reservasNoPeriodo.length,
+    total,
+    reservas_periodo: ocupados,
     fonte: 'frota',
+    overbooking,
+    overbooking_categoria: overbooking ? categoria : null,
+    overbooking_qtd: overbookingQtd,
   }
 }
