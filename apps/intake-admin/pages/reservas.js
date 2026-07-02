@@ -1,6 +1,7 @@
 // pages/reservas.js
 import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable } from '../admin.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
+import { calcDias as calcDiasCanonico, calcSubtotal } from '../shared/pricing.js'
 
 const STATUS_LABELS = {
     solicitada: 'Solicitada',
@@ -281,7 +282,7 @@ export async function verReserva(id) {
       // Proteção
       if (r.protecoes) {
         const precoProt  = parseFloat(r.protecoes.preco || 0)
-        const totalProt  = r.protecoes.tipo_preco === 'per_day' ? precoProt * dias : precoProt
+        const totalProt  = calcSubtotal(r.protecoes.tipo_preco, precoProt, 1, dias)
         const sufixoProt = r.protecoes.tipo_preco === 'per_day' ? '/dia' : ''
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${r.protecoes.nome}</td>
@@ -293,7 +294,7 @@ export async function verReserva(id) {
       ;(itens ?? []).forEach(i => {
         const unitario = parseFloat(i.preco_unitario || 0)
         const qty      = i.quantidade || 1
-        const total    = i.tipo_preco === 'per_day' ? unitario * qty * dias : unitario * qty
+        const total    = calcSubtotal(i.tipo_preco, unitario, qty, dias)
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${i.adicionais?.nome ?? '—'}${qty > 1 ? ` (${qty}×)` : ''}</td>
           <td style="${tdR}">${fmt(unitario)}${i.tipo_preco === 'per_day' ? '/dia' : ''}</td>
@@ -555,15 +556,10 @@ function fmtDataSimples(str) {
     return new Date(str).toLocaleDateString('pt-BR')
 }
 
-// ⚠ CÓPIA de supabase/functions/_shared/pricing.js (fonte canônica, testada
-// em tests/pricing.test.js). Mudou regra de preço? Altere LÁ primeiro.
-// Nota: aqui o mínimo é 1 (exibição), na canônica período inválido retorna 0.
+// Diárias vêm do módulo canônico ../shared/pricing.js (cópia byte-idêntica
+// da fonte em supabase/functions/_shared/pricing.js, garantida por
+// tests/pricing-parity.test.js). Wrapper: para exibição, período inválido
+// mostra 1 diária em vez de 0.
 function calcDias(ret, dev) {
-    const diffH = (new Date(dev) - new Date(ret)) / 3600000
-    if (diffH <= 0) return 1
-    const full  = Math.floor(diffH / 24)
-    const resto = diffH % 24
-    if (resto <= 1)     return Math.max(1, full)
-    if (resto > 4)      return full + 1
-    return full + Math.floor(resto * 2) / 8
+    return calcDiasCanonico(ret, dev) || 1
 }

@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs'
 const CANONICO = 'supabase/functions/_shared/pricing.js'
 const COPIAS = [
   'apps/site/shared/pricing.js',
+  'apps/intake-admin/shared/pricing.js',
 ]
 
 const fonte = readFileSync(CANONICO, 'utf8')
