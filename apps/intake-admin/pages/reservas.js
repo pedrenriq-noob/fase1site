@@ -555,7 +555,9 @@ function fmtDataSimples(str) {
     return new Date(str).toLocaleDateString('pt-BR')
 }
 
-// Mesma fórmula do site/script.js para consistência de preços
+// ⚠ CÓPIA de supabase/functions/_shared/pricing.js (fonte canônica, testada
+// em tests/pricing.test.js). Mudou regra de preço? Altere LÁ primeiro.
+// Nota: aqui o mínimo é 1 (exibição), na canônica período inválido retorna 0.
 function calcDias(ret, dev) {
     const diffH = (new Date(dev) - new Date(ret)) / 3600000
     if (diffH <= 0) return 1

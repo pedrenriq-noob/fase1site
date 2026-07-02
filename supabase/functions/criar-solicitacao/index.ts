@@ -2,6 +2,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
 import { errJson, okJson } from '../_shared/http.ts'
+// @ts-ignore — módulo JS canônico compartilhado (ver _shared/pricing.js)
+import { calcDias, precoDiariaComSazonalidade, calcSubtotal } from '../_shared/pricing.js'
 
 const ALLOWED_ORIGINS_RAW = Deno.env.get('ALLOWED_ORIGINS')
 const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW ? ALLOWED_ORIGINS_RAW.split(',').map(s => s.trim()) : null
@@ -23,16 +25,6 @@ function getCors(origin: string | null) {
 
 const RATE_LIMIT = 10
 const RATE_WINDOW = 60
-
-function calcDias(ret: string, dev: string): number {
-  const diffH = (new Date(dev).getTime() - new Date(ret).getTime()) / 3600000
-  if (diffH <= 0) return 0
-  const full  = Math.floor(diffH / 24)
-  const resto = diffH % 24
-  if (resto <= 1) return Math.max(1, full)
-  if (resto > 4)  return full + 1
-  return full + Math.floor(resto * 2) / 8
-}
 
 function validarEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
@@ -200,23 +192,17 @@ Deno.serve(async (req: Request) => {
 
     const dataRet = body.data_retirada.slice(0, 10)
     const { data: sazon } = await sb.from('sazonalidade')
-      .select('precos')
+      .select('precos, data_inicio, data_fim')
       .eq('tenant_id', body.tenant_id)
       .eq('ativo', true)
       .lte('data_inicio', dataRet)
       .gte('data_fim', dataRet)
       .limit(1)
 
-    let precoCat = parseFloat(cat.preco_diaria)
-    if (sazon?.length) {
-      const pr = (sazon[0].precos ?? {})[cat.slug]
-      if (pr != null) precoCat = Number(pr)
-    }
+    const precoCat = precoDiariaComSazonalidade(cat, dataRet, sazon ?? [])
 
     const baseCat  = precoCat * dias
-    const baseProt = prot
-      ? (prot.tipo_preco === 'per_day' ? parseFloat(prot.preco) * dias : parseFloat(prot.preco))
-      : 0
+    const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, dias) : 0
 
     let totalAdd = 0
     let qtdCadeirinhas = 0
@@ -232,9 +218,7 @@ Deno.serve(async (req: Request) => {
         const a = adicionais?.find((x: any) => x.id === item.adicional_id)
         if (!a?.ativo) continue
         const qty      = Math.max(1, parseInt(item.quantidade) || 1)
-        const subtotal = a.tipo_preco === 'per_day'
-          ? parseFloat(a.preco) * qty * dias
-          : parseFloat(a.preco) * qty
+        const subtotal = calcSubtotal(a.tipo_preco, a.preco, qty, dias)
         totalAdd += subtotal
         if (a.is_cadeirinha) qtdCadeirinhas += qty
         itensInsert.push({

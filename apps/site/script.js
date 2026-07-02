@@ -1345,6 +1345,9 @@ function localIsAero(nomeLocal) {
 }
 
 // ── PRICE HELPERS ──────────────────────────────────────────
+// ⚠ CÓPIA de supabase/functions/_shared/pricing.js (fonte canônica, testada
+// em tests/pricing.test.js). Mudou regra de preço? Altere LÁ primeiro e
+// replique aqui até este app migrar para o módulo compartilhado.
 function getPreco(cat) {
   const data = S.retData
   if (data) {
