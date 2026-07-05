@@ -4,6 +4,46 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ve
 
 ---
 
+## SortableHeader (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
+
+### Componente implementado
+
+`apps/frota-ops/js/ui/sortable-header.js`, conforme `docs/ui/SortableHeader.md`. Ainda não adotado por nenhuma tela (Camada 4).
+
+### Avaliação estática-vs-dinâmica (lição da entrega do FilterBar, aplicada proativamente desta vez)
+
+`label`/`sortKey` são estáticos por instância; `active`/`direction` são dinâmicos (mudam sempre que o critério de ordenação ativo da tela muda — inclusive quando **outro** `SortableHeader` da mesma tela passa a ser o ativo). O próprio contrato já previa `update(novoConfig)` desde a Fase 0 — nenhuma lacuna encontrada desta vez, ao contrário do `FilterBar`. A pergunta "estática ou dinâmica?" feita antes de codar (e não reativamente) confirmou que o contrato já estava correto.
+
+### Validação em ambiente real
+
+Testado via `preview_eval`:
+- Ciclo de clique confirmado exatamente como especificado: header inativo → primeiro clique emite `('sortKey', 'asc')`; após a página chamar `update({active:true, direction:'asc'})`, próximo clique emite `'desc'`; após `update({direction:'desc'})`, próximo clique volta a emitir `'asc'` — nunca remove a ordenação.
+- `aria-sort` reflete corretamente `none`/`ascending`/`descending`; indicador visual (▲/▼) aparece só quando `active`.
+- **Independência entre instâncias confirmada**: ativar um `SortableHeader` via `update()` não afeta outra instância na mesma página sem chamada explícita — a coordenação ("só um ativo por vez") é responsabilidade da página, como o contrato já documentava.
+- `destroy()` remove o elemento do DOM sem afetar outras instâncias.
+
+### Problemas encontrados
+
+Nenhum.
+
+### Ajustes realizados
+
+Nenhum no contrato. **CSS novo criado** (`.sortable-header` em `components.css`) — necessidade comprovada: não existia nenhum estilo para cabeçalho clicável/ordenável no projeto (`.admin-table th` é só apresentacional, sem interação). Minimalista: reaproveita `var(--muted)`/`var(--orange)` já existentes, sem introduzir cor nova.
+
+### Lições aprendidas
+
+Confirma a lição da entrega anterior: perguntar "estática ou dinâmica?" antes de codar evita retrabalho — desta vez o contrato já estava certo, então a pergunta serviu para confirmar (não corrigir), o que também tem valor.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Dependências
+
+Nenhuma — `SortableHeader` não importa nenhum outro módulo de `js/ui/`.
+
+---
+
 ## SearchBox (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
 
 ### Componente implementado

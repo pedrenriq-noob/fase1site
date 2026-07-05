@@ -931,6 +931,29 @@
 
 .admin-table tr.row-inactive td { opacity: 0.5; }
 
+/* ===== SortableHeader (Design System) ===== */
+.sortable-header {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sortable-header:hover {
+  color: var(--orange);
+}
+
+.sortable-header.active {
+  color: var(--orange);
+}
+
 .table-actions {
   display: flex;
   gap: 6px;
