@@ -107,6 +107,16 @@
       background: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.1);
       max-height: 220px; overflow-y: auto;
     }
+    .disp-badge {
+      margin-top: 6px; padding: 6px 10px; border-radius: var(--radius);
+      font-size: 11.5px; font-weight: 600; line-height: 1.4;
+    }
+    .disp-loading { background: #f1f5f9; color: var(--muted); }
+    .disp-green   { background: #f0fdf4; color: var(--green); }
+    .disp-yellow  { background: #fff3ea; color: #b45309; }
+    .disp-red     { background: #fef2f2; color: var(--red); }
+    .disp-warn    { background: #f1f5f9; color: var(--muted); }
+    .disp-error   { background: #fef2f2; color: var(--red); }
     .col-panel.open { display: block; }
 
     /* Radio options (cat / prot) */
@@ -250,6 +260,7 @@
     <button class="copy-btn" id="copyBtn">📋 Copiar cotação</button>
   </div>
 
+  <script src="shared/pricing.js"></script>
   <script src="sidebar.js"></script>
 </body>
 </html>

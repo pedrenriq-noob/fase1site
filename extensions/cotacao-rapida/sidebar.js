@@ -2,9 +2,10 @@
 
 // ── CONFIG ── (DT-01: extensão não suporta ES modules; centralizar quando houver build step)
 // Para trocar de tenant, edite apenas os 3 valores abaixo.
-const SUPABASE_URL  = 'https://lxfnqzuzohudqwibgdic.supabase.co'
-const SUPABASE_ANON = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
-const TENANT_ID     = 'a1b2c3d4-0000-0000-0000-000000000001'
+const SUPABASE_URL   = 'https://lxfnqzuzohudqwibgdic.supabase.co'
+const SUPABASE_ANON  = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
+const TENANT_ID      = 'a1b2c3d4-0000-0000-0000-000000000001'
+const CHECK_DISP_URL = `${SUPABASE_URL}/functions/v1/check-disponibilidade`
 // ─────────────────────────────────────────────────────────────
 
 const NOME_WHATSAPP = {
@@ -48,6 +49,12 @@ let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras:
 let openPanel = null
 let openHora  = null
 
+// ── Disponibilidade inline ────────────────────────────────
+// dispStatus: 'idle' | 'loading' | 'ok' | 'error'
+let disp = { status: 'idle', data: null, errorMsg: null }
+let dispTimer = null
+let dispSeq   = 0 // descarta respostas de consultas obsoletas (corrida entre fetches)
+
 // Mensagem padrão editável pelo atendente
 const MSG_DEFAULT = `Reserve agora e *pague só na retirada* do carro. Se precisar cancelar, *não tem taxa*.
 O pagamento pode ser feito em:
@@ -67,6 +74,91 @@ async function sbFetch(table, select, extra = '') {
   })
   if (!r.ok) throw new Error(`${table} HTTP ${r.status}: ${await r.text().catch(() => '')}`)
   return r.json()
+}
+
+async function checkCategoriaDisp(slug, retData, retHora, devData, devHora) {
+  const res = await fetch(CHECK_DISP_URL, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON,
+      Authorization: `Bearer ${SUPABASE_ANON}`
+    },
+    body: JSON.stringify({
+      tenant_id:         TENANT_ID,
+      categoria_slug:    slug,
+      data_saida:        `${retData}T${retHora}:00`,
+      data_retorno_prev: `${devData}T${devHora}:00`
+    })
+  })
+  return res.json()
+}
+
+// Os 5 campos obrigatórios para a checagem de disponibilidade estão preenchidos?
+function camposDispCompletos() {
+  return !!(S.retData && S.retHora && S.devData && S.devHora && S.catId)
+}
+
+function dispBadgeHTML() {
+  if (disp.status === 'idle')    return ''
+  if (disp.status === 'loading') return `<div class="disp-badge disp-loading">⏳ Consultando disponibilidade…</div>`
+  if (disp.status === 'error')   return `<div class="disp-badge disp-error">⚠️ Erro ao consultar disponibilidade${disp.errorMsg ? `: ${esc(disp.errorMsg)}` : ''}</div>`
+
+  const { disponivel = null, total = 0, reservas_periodo = 0, fonte = 'sem_dados' } = disp.data || {}
+  if (fonte === 'sem_dados' || total === 0) {
+    return `<div class="disp-badge disp-warn">⚠️ Frota não cadastrada nesta categoria.</div>`
+  }
+  const livres = Math.max(0, disponivel ?? 0)
+  if (livres === 0) {
+    return `<div class="disp-badge disp-red">❌ Indisponível no período (${reservas_periodo} reserva${reservas_periodo !== 1 ? 's' : ''} no período, ${total} no total).</div>`
+  }
+  const cls = livres <= 1 ? 'disp-yellow' : 'disp-green'
+  return `<div class="disp-badge ${cls}">✅ ${livres} de ${total} disponível${livres !== 1 ? 'is' : ''} no período.</div>`
+}
+
+function renderDispBadge() {
+  const el = document.getElementById('dispBadge')
+  if (el) el.innerHTML = dispBadgeHTML()
+}
+
+// Reavalia disponibilidade conforme estado atual do formulário.
+// Chamada após qualquer mudança em categoria/data/hora (via calc()).
+function updateDisponibilidade() {
+  if (dispTimer) clearTimeout(dispTimer)
+
+  if (!camposDispCompletos()) {
+    // Campo obrigatório ausente/inválido: limpa qualquer resultado anterior
+    if (disp.status !== 'idle') {
+      disp = { status: 'idle', data: null, errorMsg: null }
+      renderDispBadge()
+    }
+    return
+  }
+
+  const cat = DATA.cats.find(c => c.id === S.catId)
+  if (!cat?.slug) return
+
+  const { retData, retHora, devData, devHora } = S
+  const seq = ++dispSeq
+  disp = { status: 'loading', data: null, errorMsg: null }
+  renderDispBadge()
+
+  dispTimer = setTimeout(async () => {
+    try {
+      const json = await checkCategoriaDisp(cat.slug, retData, retHora, devData, devHora)
+      if (seq !== dispSeq) return // resposta obsoleta, ignora
+      if (json?.error) {
+        disp = { status: 'error', data: null, errorMsg: json.error.message || json.error.code }
+      } else {
+        disp = { status: 'ok', data: json, errorMsg: null }
+      }
+    } catch (e) {
+      if (seq !== dispSeq) return
+      disp = { status: 'error', data: null, errorMsg: e.message }
+    }
+    renderDispBadge()
+  }, 400)
 }
 
 async function loadData() {
@@ -237,6 +329,7 @@ function renderForm() {
     <section>
       <div class="sec-label">🚘 Categoria</div>
       ${colSelHTML('cat', catLabel(), catOptionsHTML())}
+      <div id="dispBadge"></div>
     </section>
 
     <hr class="divider">
@@ -598,10 +691,12 @@ function getHoraText(id) {
 
 function getRetData() { return S.retData || document.getElementById('retData')?.value || '' }
 
-// Mesma lógica de hora extra do site:
-// ≤1h resto → sem cobrança extra
-// 1h–4h     → fração proporcional (incrementos 1/8)
-// >4h       → diária completa extra
+// ⚠ DIVERGÊNCIA CONHECIDA em relação à fonte canônica shared/pricing.js
+// (calcDias): quando o resto é ≤1h E a diária inteira (`full`) é 0 — ou
+// seja, locação de até 1h — esta função retorna 0, enquanto a canônica
+// (usada em site/admin/edge function) aplica mínimo de 1 diária. Não
+// alterado aqui para preservar o comportamento externo já em produção
+// desta extensão; avaliar unificação em decisão explícita separada.
 function getDias() {
   const rd = getRetData()
   const dd = document.getElementById('devData')?.value
@@ -617,39 +712,32 @@ function getDias() {
   return full + Math.floor(resto * 2) / 8
 }
 
-// Aplica sazonalidade se a data de retirada cair no período
+// Preço com sazonalidade vem do módulo canônico shared/pricing.js (variante
+// classic-script de supabase/functions/_shared/pricing.js, verificada por
+// tests/pricing-parity.test.js — carregado antes de sidebar.js no HTML).
 function getPreco(cat) {
-  const rd = getRetData()
-  if (rd) {
-    for (const p of DATA.sazon) {
-      if (rd >= p.data_inicio && rd <= p.data_fim) {
-        const pr = (p.precos ?? {})[cat.slug]
-        if (pr != null) return Number(pr)
-      }
-    }
-  }
-  return cat.preco_diaria
+  return precoDiariaComSazonalidade(cat, getRetData(), DATA.sazon)
 }
 
 function calc() {
+  updateDisponibilidade()
+
   const dias    = getDias()
   const diasFmt = Number.isInteger(dias) ? dias : dias.toFixed(1).replace('.', ',')
 
   const cat     = DATA.cats.find(c => c.id === S.catId)
   const precoD  = cat ? getPreco(cat) : 0
-  const baseCat = precoD * (dias || 1)
+  const baseCat = calcSubtotal('per_day', precoD, 1, dias || 1)
 
   const prot     = DATA.prots.find(p => p.id === S.protId)
-  const baseProt = prot
-    ? (prot.tipo_preco === 'per_day' ? prot.preco * (dias || 1) : prot.preco)
-    : 0
+  const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, dias || 1) : 0
 
   let baseAdds = 0
   Object.entries(S.addSel).forEach(([id, qty]) => {
     if (!qty) return
     const a = DATA.adds.find(x => x.id === id)
     if (!a) return
-    baseAdds += a.tipo_preco === 'per_day' ? a.preco * qty * (dias || 1) : a.preco * qty
+    baseAdds += calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
   })
 
   const baseExtras = S.extras.reduce((s, e) => s + (e.preco || 0), 0)
@@ -693,7 +781,7 @@ function calc() {
       if (!qty) return
       const a = DATA.adds.find(x => x.id === id)
       if (!a) return
-      const sub = a.tipo_preco === 'per_day' ? a.preco * qty * (dias || 1) : a.preco * qty
+      const sub = calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
       linhas.push(`<div class="resumo-item">
         <div class="resumo-nome">+ ${esc(a.nome)}${qty > 1 ? ` (${qty}×)` : ''}</div>
         <span class="resumo-preco">R$ ${fmtN(sub)}</span>
@@ -725,7 +813,7 @@ function calc() {
     if (priceEl) priceEl.textContent = `R$ ${fmtN(preco)}/dia${sazon ? ' 🔶' : ''}`
   })
   // Atualiza label do botão da categoria se uma estiver selecionada
-  const catLabelEl = document.querySelector('[data-panel="categoria"] .col-btn-label')
+  const catLabelEl = document.querySelector('[data-panel="cat"] .col-btn-label')
   if (catLabelEl && S.catId) {
     const selCat = DATA.cats.find(x => x.id === S.catId)
     if (selCat) catLabelEl.textContent = `${selCat.nome} — R$ ${fmtN(getPreco(selCat))}/dia`
@@ -750,7 +838,7 @@ function copyCotacao() {
     if (!qty) return
     const a = DATA.adds.find(x => x.id === id)
     if (!a) return
-    const sub = a.tipo_preco === 'per_day' ? a.preco * qty * (dias || 1) : a.preco * qty
+    const sub = calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
     const nomeWpp = NOME_WHATSAPP[a.nome] ?? a.nome
     linhasAdds += `  ➕ ${nomeWpp}${qty > 1 ? ` (${qty}×)` : ''}: R$ ${fmtN(sub)}\n`
   })
@@ -800,6 +888,9 @@ function resetForm() {
                 retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false }
   openPanel = null
   openHora  = null
+  if (dispTimer) clearTimeout(dispTimer)
+  dispSeq++
+  disp      = { status: 'idle', data: null, errorMsg: null }
   renderForm()
 }
 
