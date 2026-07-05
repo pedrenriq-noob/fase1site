@@ -2,6 +2,7 @@
 import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable } from '../admin.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 import { calcDias as calcDiasCanonico, calcSubtotal } from '../shared/pricing.js'
+import { transicoesPossiveis } from '../shared/locacao-status.js'
 
 const STATUS_LABELS = {
     solicitada: 'Solicitada',
@@ -529,17 +530,6 @@ async function trocarStatus(id, status, statusAnterior, motivo = null) {
 
     toast(`Status atualizado: ${STATUS_LABELS[status]}`, 'success')
     return true
-}
-
-function transicoesPossiveis(status) {
-    const mapa = {
-        solicitada: ['solicitada', 'em_analise', 'confirmada', 'cancelada'],
-        em_analise: ['em_analise', 'confirmada', 'cancelada'],
-        confirmada: ['confirmada', 'concluida',  'cancelada'],
-        concluida:  ['concluida'],
-        cancelada:  ['cancelada'],
-    }
-    return mapa[status] ?? [status]
 }
 
 function fmtMoney(v) {
