@@ -41,6 +41,21 @@ Correção aplicada nesta validação: `FilterBar.onChange` → `FilterBar.onFil
 
 **Merge raso (shallow merge) com o estado/config anterior, nunca substituição total.** `update({ items: novaLista })` não apaga `renderItem`, `emptyState`, etc. já configurados — só substitui as chaves informadas. Dentro de uma chave, o valor novo substitui o antigo por inteiro (arrays e objetos não são mesclados profundamente — `update({ items: [...] })` troca o array inteiro, não faz merge item a item). Isso é consistente em todos os componentes do Design System; qualquer exceção deve ser documentada explicitamente no contrato do componente.
 
+### Quando um componente precisa de `update()` (regra permanente, adicionada na revisão de contrato do FilterBar, 2026-07-05)
+
+Nem todo componente precisa de `update()` — depende da natureza da sua config:
+
+- **Config estática** (não muda depois que o componente é criado, ex: `placeholder`/`debounceMs` do `SearchBox`, `minHeight` do `LoadingState`): **não precisa** de `update()`. Documentar explicitamente essa ausência no contrato do componente, com o motivo (para não parecer omissão acidental).
+- **Config dinâmica** (representa um estado derivado de dados que evoluem durante o uso — contagens, listas, rótulos que mudam com busca/realtime/importação, ex: `groups`/`options` do `FilterBar`, `items` do `ListView`): **precisa** de `update()`, e esse `update()` deve preservar o máximo possível do contexto do usuário — nunca destruir e recriar o componente como estratégia de atualização.
+
+Quando um `update()` é necessário, ele garante, no mínimo:
+1. Atualiza só os dados que mudaram — nunca reconstrói o componente inteiro internamente.
+2. Preserva o estado de interação do usuário que ainda for válido (seleção ativa, filtro aplicado, texto digitado) — só descarta o que genuinamente deixou de existir nos novos dados.
+3. Preserva o foco do usuário quando o elemento focado continuar existindo após o `update()`.
+4. Não recria listeners de elementos que não mudaram — só o DOM efetivamente alterado é tocado.
+
+Esta regra existe porque destruir/recriar um componente para refletir um dado novo é, na prática, o mesmo erro que a correção do `ListView` (Architecture Validation) e a decisão de estabilidade de foco do `Modal` (Migração Piloto) já resolveram em outros contextos: perder o contexto do operador no meio do uso viola um princípio permanente do i-Frotas (ver `project_principios_ux_produto_ifrotas`, item de continuidade operacional).
+
 ### Garantias mínimas de `destroy()`
 
 Todo `destroy()` garante, no mínimo:
@@ -63,7 +78,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 | [ErrorState](ErrorState.md) | Estado de erro padronizado (sem retry embutido) | nenhum |
 | [StatusBadge](StatusBadge.md) | Exibição de status (veículo/reserva) | `utils.js` (labels/cores existentes) |
 | [SearchBox](SearchBox.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Busca em tempo real | nenhum |
-| [FilterBar](FilterBar.md) | Filtros simples e combináveis | nenhum |
+| [FilterBar](FilterBar.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Filtros simples e combináveis | nenhum |
 | [SortableHeader](SortableHeader.md) | Ordenação por critério, asc/desc | nenhum |
 | [SelectionController](SelectionController.md) | Seleção múltipla de itens de uma lista | nenhum |
 | [BulkActionBar](BulkActionBar.md) | Barra de ações em lote sobre a seleção ativa | nenhum (usado em conjunto com SelectionController pela página, sem import direto) |

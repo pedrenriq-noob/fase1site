@@ -13,7 +13,17 @@ Padronizar filtros simples e combináveis. Substitui dois padrões divergentes h
 
 ## Saída
 
-`{ el, reset(), getState(), destroy() }`.
+`{ el, update(novoConfig), reset(), getState(), destroy() }`.
+
+### Garantias de `update({ groups })` (adicionado na revisão de contrato de 2026-07-05, antes de qualquer implementação existir)
+
+`FilterBar` tem natureza diferente de componentes com config estática (ex: `SearchBox`): `groups`/`options` representam um estado derivado de dados que evoluem continuamente durante o uso (contagens mudam a cada busca, evento realtime, importação). Por isso `update()` é obrigatório aqui, com estas garantias explícitas:
+
+1. **Atualiza apenas os dados dinâmicos** (rótulos e contagens de `options`) — nunca reconstrói o componente inteiro internamente como estratégia de atualização.
+2. **Preserva integralmente a seleção ativa** de cada grupo — reaplicar `update()` não limpa o que o operador já tinha marcado.
+3. **Remove uma seleção automaticamente apenas se a opção correspondente deixar de existir** em `groups` no novo `update()` — nesse caso, ela realmente deixou de ser válida, e `onFilterChange` é chamado refletindo a remoção.
+4. **Preserva o foco do usuário quando possível** — se o operador estiver com foco em um botão de opção no momento do `update()`, e essa opção continuar existindo, o foco permanece nela (não pula para o início do componente).
+5. **Não recria listeners desnecessariamente** — apenas os botões de opção que mudaram de rótulo/contagem/presença têm seu DOM tocado; botões inalterados mantêm o mesmo nó e o mesmo listener.
 
 ## Eventos
 

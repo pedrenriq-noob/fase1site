@@ -41,6 +41,47 @@ Nenhuma — confirmado que `SearchBox` não importa nenhum outro módulo de `js/
 
 ---
 
+## FilterBar (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
+
+### Componente implementado
+
+`apps/frota-ops/js/ui/filter-bar.js`, conforme `docs/ui/FilterBar.md`. Ainda não adotado por nenhuma tela (Camada 4).
+
+### Revisão de contrato antes da implementação
+
+Antes de codar, revisão crítica encontrou uma lacuna real no contrato original: `Saída` não incluía `update()`, apesar de `groups`/`options` representarem um estado dinâmico (contagens mudam com busca/realtime/importação). Sem `update()`, a única forma de refletir contagens novas seria destruir e recriar o componente, descartando a seleção ativa do operador — violação direta do princípio de continuidade operacional. Corrigido **antes** de qualquer código: `docs/ui/FilterBar.md` ganhou `update({ groups })` com garantias explícitas (preserva seleção, preserva foco quando possível, não recria listeners, remove seleção automaticamente só quando a opção correspondente deixa de existir). A mesma revisão gerou uma regra permanente do Design System, registrada em `docs/ui/README.md`: todo componente com config dinâmica precisa de `update()` com essas garantias; componentes com config estática documentam explicitamente por que não precisam (aplicado retroativamente ao `SearchBox.md`).
+
+### Validação em ambiente real
+
+Testado via `preview_eval`:
+- Combinação de filtros: grupos combinam com E lógico, grupo `multi:true` combina opções internas com OU lógico — confirmado com 2 grupos e múltiplas seleções simultâneas.
+- `update()` com contagem alterada mas opção ainda existente: **o mesmo nó do botão é reaproveitado** (não recriado), o **foco do usuário é preservado**, a **seleção ativa é preservada**, e o texto/contagem exibidos são atualizados.
+- `update()` removendo uma opção previamente selecionada: seleção é limpa automaticamente e `onFilterChange` é chamado refletindo a remoção — únicas condições em que uma seleção desaparece sem ação do operador.
+- `reset()`: limpa todas as seleções de todos os grupos e emite o evento.
+- `destroy()`: remove o elemento do DOM.
+
+### Problemas encontrados
+
+Nenhum na implementação em si — o único problema foi a lacuna de contrato (`update()` ausente), encontrada e corrigida **antes** de escrever qualquer código, exatamente como o processo pede.
+
+### Ajustes realizados
+
+Nenhum CSS novo — reaproveita `.filter-bar`, `.filter-chip`, `.chip-count` já existentes (mesmas classes usadas hoje em `veiculos.js`).
+
+### Lições aprendidas
+
+A pergunta "este componente tem config estática ou dinâmica?" deveria ter sido feita para **todo** componente já na Fase 0, não descoberta reativamente aqui — vale revisar `StatusBadge`, `SortableHeader` e `SelectionController` (ainda não implementados) sob essa mesma lente antes de codar, para não repetir o mesmo ciclo de "implementar → descobrir lacuna → corrigir contrato".
+
+### Mudanças na API
+
+Sim — `docs/ui/FilterBar.md` ganhou `update({ groups })` antes da implementação (não é uma mudança retroativa quebrando um consumidor existente, já que nenhuma tela ainda usa `FilterBar`).
+
+### Dependências
+
+Nenhuma — `FilterBar` não importa nenhum outro módulo de `js/ui/`.
+
+---
+
 ## reservas.js — 2026-07-05 (Ação #5 da Technical Audit)
 
 ### Componentes adotados

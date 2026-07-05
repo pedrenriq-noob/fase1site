@@ -16,6 +16,8 @@ Padronizar a busca em tempo real — hoje existe apenas em `veiculos.js` (busca 
 
 `{ el, clear(), destroy() }`. `clear()` limpa o campo e dispara `onSearch('')`. `destroy()` cancela o timer de debounce pendente, se houver, além das garantias mínimas gerais (ver `docs/ui/README.md`) — é o componente do Design System com maior risco de vazar um timer se essa garantia não for respeitada.
 
+**Sem `update()`, deliberadamente** (ver regra "Quando um componente precisa de `update()`" em `docs/ui/README.md`): toda a config (`placeholder`, `debounceMs`, `onSearch`) é estática — nenhuma delas representa um dado que evolui durante o uso. Não há nada para um `update()` refletir.
+
 ## Eventos
 
 - `onSearch(termo)`.
