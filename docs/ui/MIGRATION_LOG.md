@@ -4,6 +4,52 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ve
 
 ---
 
+## SelectionController (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela) — **Camada 1 concluída**
+
+### Componente implementado
+
+`apps/frota-ops/js/ui/selection-controller.js`, conforme `docs/ui/SelectionController.md`. Ainda não adotado por nenhuma tela (Camada 4).
+
+### Revisão de contrato antes da implementação
+
+Antes de codar, revisão crítica encontrou uma prop obrigatória (`getItemId`) que nenhum método da Saída invocava — recebida na config, mas nunca usada internamente, já que toda a API (`toggle`, `selectAll`, `isSelected`, `getSelected`) opera diretamente sobre `string` ids, nunca sobre objetos de item. Removida do contrato antes de qualquer código, para não carregar uma abstração prematura (um método de conveniência que a consumisse, tipo `toggleItem(item)`, não existe ainda — se a necessidade aparecer na Camada 4, volta junto do método que a use). Também precisado explicitamente que `toggle()`/`selectAll()`/`clear()` só disparam `onSelectionChange` quando efetivamente mudam o conteúdo da seleção.
+
+Avaliação estática-vs-dinâmica: config (`onSelectionChange`) é puramente estática — **sem `update()`**, documentado explicitamente no contrato, consistente com a regra geral do Design System.
+
+### Validação em ambiente real
+
+Testado via `preview_eval`:
+- `toggle()` liga/desliga corretamente, `selectAll()` adiciona só os ids ainda não presentes.
+- `clear()` chamado duas vezes seguidas só dispara `onSelectionChange` na primeira vez (seleção já vazia na segunda não gera evento) — confirma a garantia de precisão adicionada ao contrato.
+- `getSelected()` retorna uma **cópia** do estado interno, não a referência — mutar o `Set` retornado não afeta o estado real do componente (testado explicitamente: adicionar um id no snapshot e confirmar que o componente não o reflete).
+- `destroy()` limpa o estado interno.
+
+### Problemas encontrados
+
+Nenhum na implementação — o único achado foi a lacuna de contrato (`getItemId` não utilizado), encontrada e corrigida antes de qualquer código, como no `FilterBar`.
+
+### Ajustes realizados
+
+Nenhum CSS (este componente não renderiza nada, por contrato).
+
+### Lições aprendidas
+
+Duas rodadas seguidas (`FilterBar`, `SelectionController`) encontraram lacunas de contrato reais só perguntando "isso é usado de verdade?" antes de codar — reforça que a Camada 1 valeu o tempo gasto em revisão prévia, mesmo em componentes aparentemente simples.
+
+### Mudanças na API
+
+Sim — `getItemId` removido da config antes de qualquer implementação existir (não quebra nenhum consumidor, pois nenhuma tela usa este componente ainda).
+
+### Dependências
+
+Nenhuma — `SelectionController` não importa nenhum outro módulo de `js/ui/`.
+
+### Camada 1 — encerramento
+
+Com este componente, a **Camada 1 (Componentes Fundamentais)** do plano de implementação da Fase 1B está concluída: `SearchBox`, `FilterBar`, `SortableHeader`, `SelectionController` — todos implementados, validados em ambiente real, sem dependência entre si, sem CSS desnecessário, sem conhecimento de domínio. Próxima etapa: Camada 2 (`BulkActionBar`, que depende de `SelectionController`).
+
+---
+
 ## SortableHeader (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
 
 ### Componente implementado

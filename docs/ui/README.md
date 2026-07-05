@@ -80,7 +80,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 | [SearchBox](SearchBox.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Busca em tempo real | nenhum |
 | [FilterBar](FilterBar.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Filtros simples e combináveis | nenhum |
 | [SortableHeader](SortableHeader.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Ordenação por critério, asc/desc | nenhum |
-| [SelectionController](SelectionController.md) | Seleção múltipla de itens de uma lista | nenhum |
+| [SelectionController](SelectionController.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1 — Camada 1 concluída) | Seleção múltipla de itens de uma lista | nenhum |
 | [BulkActionBar](BulkActionBar.md) | Barra de ações em lote sobre a seleção ativa | nenhum (usado em conjunto com SelectionController pela página, sem import direto) |
 | [ListView](ListView.md) | Orquestra os componentes acima em uma listagem | nenhum em tempo de execução — recebe apenas estado primitivo de SearchBox/FilterBar/SortableHeader, nunca a instância (corrigido nesta validação, ver ListView.md) |
 

@@ -8,12 +8,17 @@ Padronizar a seleção múltipla de itens de uma lista (item 9 dos 18 Princípio
 
 | Propriedade | Tipo | Obrigatório | Descrição |
 |---|---|---|---|
-| `getItemId` | `(item) => string` | sim | Extrai o identificador único de um item (ex: `v => v.placa`) |
 | `onSelectionChange` | `(selecionados: Set<string>) => void` | sim | Chamado a cada mudança na seleção |
+
+Config puramente estática (`onSelectionChange` não muda depois de criado) — **sem `update()`**, deliberadamente (ver regra "Quando um componente precisa de `update()`" em `docs/ui/README.md`).
+
+**Revisão de contrato de 2026-07-05 (antes de qualquer implementação):** a versão anterior deste contrato incluía `getItemId: (item) => string` como propriedade obrigatória, mas nenhum método da Saída jamais a invoca — toda a API opera diretamente sobre `string` ids, nunca sobre objetos de item. Era uma prop recebida e nunca usada internamente. Removida agora, para não introduzir uma abstração prematura (um método de conveniência tipo `toggleItem(item)` que a consumisse não existe ainda). Se a necessidade real aparecer quando este componente for adotado por uma tela (Camada 4), `getItemId` volta junto com o método que efetivamente a use.
 
 ## Saída
 
 `{ toggle(id), selectAll(ids), clear(), isSelected(id), getSelected(), destroy() }` — **não** retorna `el`: este componente não renderiza nada sozinho (nenhum checkbox próprio); ele é o estado/lógica de seleção que outros componentes (item da lista, `BulkActionBar`) consultam via `isSelected()`/`toggle()`.
+
+`toggle()`, `selectAll()` e `clear()` **sempre** disparam `onSelectionChange(selecionados)` quando efetivamente mudam o conteúdo da seleção (chamar `clear()` com a seleção já vazia não dispara o evento novamente).
 
 ## Eventos
 
@@ -35,10 +40,14 @@ Este componente não renderiza nada (ver Saída), então a responsabilidade de a
 import { criarSelectionController } from '../ui/selection-controller.js';
 
 const selection = criarSelectionController({
-  getItemId: (v) => v.placa,
   onSelectionChange: (ids) => bulkBar.update({ selectedCount: ids.size })
 });
 
+// a página extrai o id do item (ex: v.placa) antes de consultar/alterar a seleção —
+// SelectionController nunca vê o objeto `v`, só a string.
 // no template de cada card:
 `<input type="checkbox" ${selection.isSelected(v.placa) ? 'checked' : ''} data-placa="${v.placa}" />`
+
+// no handler de clique do checkbox:
+checkbox.addEventListener('change', () => selection.toggle(v.placa));
 ```
