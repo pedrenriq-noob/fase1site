@@ -35,6 +35,14 @@
 - [ ] Componentes interativos têm atributos ARIA (RF-06)
 - [ ] HTML semântico utilizado corretamente (RF-01)
 
+### PWA / Realtime (frota-ops, se aplicável)
+- [ ] `unsubscribeAll()` chamado ao sair da página (evita leak de Realtime)
+- [ ] Service Worker atualizado se novos assets foram adicionados (RP-04)
+
+### Autenticação / Admin (se aplicável)
+- [ ] Verificação de role no servidor (não apenas na UI) (EC-07)
+- [ ] `clearUserCache()` chamado em mudanças de navegação que verificam role
+
 ### Documentação
 - [ ] CHANGELOG.md atualizado
 - [ ] ADR criado se houver decisão arquitetural significativa (RD-03)
