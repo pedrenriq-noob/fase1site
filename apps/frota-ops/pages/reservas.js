@@ -1,6 +1,8 @@
 import { supabase, TENANT_ID } from '../js/supabase.js';
 import { subscribeReservas } from '../js/realtime.js';
 import { getUser } from '../js/auth.js';
+import { criarModal } from '../js/ui/modal.js';
+import { criarConfirmationDialog } from '../js/ui/confirmation-dialog.js';
 import {
   reservaStatusLabel, reservaStatusColor, formatDate, escapeHtml,
   showToast, logger, CATEGORIAS, PONTOS
@@ -167,7 +169,9 @@ export async function init(container) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const defaultRetorno = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}T10:00`;
 
-    const modal = createModal('Nova Reserva', `
+    criarModal({
+      title: 'Nova Reserva',
+      bodyHtml: `
       <div class="form-group">
         <label class="form-label" for="nr-locacao">Nº Locação <span class="required">*</span></label>
         <input class="form-input" type="text" id="nr-locacao" placeholder="LOC-2024-001" required />
@@ -211,156 +215,124 @@ export async function init(container) {
         <label class="form-label" for="nr-obs">Observações</label>
         <textarea class="form-textarea" id="nr-obs" placeholder="Observações adicionais"></textarea>
       </div>
-    `, async () => {
-      const locacao = document.getElementById('nr-locacao').value.trim();
-      const cliente = document.getElementById('nr-cliente').value.trim();
-      const cat = document.getElementById('nr-cat').value;
-      const saida = document.getElementById('nr-saida').value;
-      const retorno = document.getElementById('nr-retorno').value;
-      const pontoRet = document.getElementById('nr-ponto-ret').value;
-      const pontoDev = document.getElementById('nr-ponto-dev').value;
-      const obs = document.getElementById('nr-obs').value.trim();
+      `,
+      onConfirm: async () => {
+        const locacao = document.getElementById('nr-locacao').value.trim();
+        const cliente = document.getElementById('nr-cliente').value.trim();
+        const cat = document.getElementById('nr-cat').value;
+        const saida = document.getElementById('nr-saida').value;
+        const retorno = document.getElementById('nr-retorno').value;
+        const pontoRet = document.getElementById('nr-ponto-ret').value;
+        const pontoDev = document.getElementById('nr-ponto-dev').value;
+        const obs = document.getElementById('nr-obs').value.trim();
 
-      if (!locacao || !cliente || !cat || !saida || !retorno) {
-        showToast('Preencha todos os campos obrigatórios.', 'warning');
-        return false;
+        if (!locacao || !cliente || !cat || !saida || !retorno) {
+          showToast('Preencha todos os campos obrigatórios.', 'warning');
+          return false;
+        }
+
+        if (new Date(retorno) <= new Date(saida)) {
+          showToast('A data de retorno deve ser após a saída.', 'warning');
+          return false;
+        }
+
+        const { error } = await supabase.from('frota_reservas').insert({
+          tenant_id: TENANT_ID,
+          locacao_numero: locacao,
+          cliente,
+          categoria: cat,
+          data_saida: new Date(saida).toISOString(),
+          data_retorno_prev: new Date(retorno).toISOString(),
+          ponto_retirada: pontoRet,
+          ponto_retorno: pontoDev,
+          obs: obs || null,
+          status: 'PREVISTO',
+          created_at: new Date().toISOString()
+        });
+
+        if (error) { logger.error('Nova reserva:', error); throw error; }
+        showToast('Reserva criada!', 'success');
+        await loadData();
+        return true;
       }
-
-      if (new Date(retorno) <= new Date(saida)) {
-        showToast('A data de retorno deve ser após a saída.', 'warning');
-        return false;
-      }
-
-      const { error } = await supabase.from('frota_reservas').insert({
-        tenant_id: TENANT_ID,
-        locacao_numero: locacao,
-        cliente,
-        categoria: cat,
-        data_saida: new Date(saida).toISOString(),
-        data_retorno_prev: new Date(retorno).toISOString(),
-        ponto_retirada: pontoRet,
-        ponto_retorno: pontoDev,
-        obs: obs || null,
-        status: 'PREVISTO',
-        created_at: new Date().toISOString()
-      });
-
-      if (error) { logger.error('Nova reserva:', error); throw error; }
-      showToast('Reserva criada!', 'success');
-      return true;
     });
   }
 
   function showConfirmarSaidaModal(r) {
-    createModal('Confirmar Saída', `
-      <p class="text-sm">Locação: <strong>${escapeHtml(r.locacao_numero)}</strong></p>
-      <p class="text-sm">Cliente: <strong>${escapeHtml(r.cliente)}</strong></p>
-      <div class="form-group mt-md">
-        <label class="form-label" for="cs-placa">Placa Atribuída <span class="required">*</span></label>
-        <input class="form-input" type="text" id="cs-placa" value="${escapeHtml(r.placa_atribuida ?? '')}" placeholder="ABC-1234" required />
-        <span class="form-hint">Digite a placa do veículo que será entregue</span>
-      </div>
-    `, async () => {
-      const placa = document.getElementById('cs-placa').value.trim().toUpperCase();
-      if (!placa) { showToast('Informe a placa do veículo.', 'warning'); return false; }
-
-      // fn_confirmar_saida_reserva faz as duas escritas (reserva + veículo)
-      // em uma única transação no banco — evita estado inconsistente se a
-      // segunda escrita falhar isoladamente (ver Technical Audit, Ação #3).
-      const { error } = await supabase.rpc('fn_confirmar_saida_reserva', {
-        p_reserva_id: r.id,
-        p_placa: placa
-      });
-
-      if (error) { logger.error('Confirmar saida:', error); throw error; }
-
-      showToast('Saída confirmada!', 'success');
-      return true;
-    });
-  }
-
-  async function confirmarRetorno(r) {
-    if (!confirm(`Confirmar retorno da locação ${r.locacao_numero}?`)) return;
-
-    try {
-      const { error } = await supabase.rpc('fn_confirmar_retorno_reserva', {
-        p_reserva_id: r.id
-      });
-
-      if (error) throw error;
-
-      showToast('Retorno confirmado!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Confirmar retorno:', err);
-      showToast('Erro ao confirmar retorno.', 'error');
-    }
-  }
-
-  async function cancelarReserva(r) {
-    if (!confirm(`Cancelar a locação ${r.locacao_numero}?`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('frota_reservas')
-        .update({ status: 'CANCELADO' })
-        .eq('id', r.id)
-        .eq('tenant_id', TENANT_ID);
-
-      if (error) throw error;
-      showToast('Reserva cancelada.', 'info');
-      await loadData();
-    } catch (err) {
-      logger.error('Cancelar reserva:', err);
-      showToast('Erro ao cancelar.', 'error');
-    }
-  }
-
-  function createModal(title, bodyHtml, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal-content" role="dialog" aria-modal="true">
-        <div class="modal-header">
-          <h2 class="modal-title">${escapeHtml(title)}</h2>
-          <button class="modal-close" aria-label="Fechar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+    criarModal({
+      title: 'Confirmar Saída',
+      bodyHtml: `
+        <p class="text-sm">Locação: <strong>${escapeHtml(r.locacao_numero)}</strong></p>
+        <p class="text-sm">Cliente: <strong>${escapeHtml(r.cliente)}</strong></p>
+        <div class="form-group mt-md">
+          <label class="form-label" for="cs-placa">Placa Atribuída <span class="required">*</span></label>
+          <input class="form-input" type="text" id="cs-placa" value="${escapeHtml(r.placa_atribuida ?? '')}" placeholder="ABC-1234" required />
+          <span class="form-hint">Digite a placa do veículo que será entregue</span>
         </div>
-        <div class="modal-body">${bodyHtml}</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary modal-cancel">Cancelar</button>
-          <button class="btn btn-primary modal-confirm">Confirmar</button>
-        </div>
-      </div>
-    `;
+      `,
+      onConfirm: async () => {
+        const placa = document.getElementById('cs-placa').value.trim().toUpperCase();
+        if (!placa) { showToast('Informe a placa do veículo.', 'warning'); return false; }
 
-    document.body.appendChild(overlay);
-    const close = () => { overlay.remove(); loadData(); };
+        // fn_confirmar_saida_reserva faz as duas escritas (reserva + veículo)
+        // em uma única transação no banco — evita estado inconsistente se a
+        // segunda escrita falhar isoladamente (ver Technical Audit, Ação #3).
+        const { error } = await supabase.rpc('fn_confirmar_saida_reserva', {
+          p_reserva_id: r.id,
+          p_placa: placa
+        });
 
-    overlay.querySelector('.modal-close').addEventListener('click', overlay.remove.bind(overlay));
-    overlay.querySelector('.modal-cancel').addEventListener('click', overlay.remove.bind(overlay));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        if (error) { logger.error('Confirmar saida:', error); throw error; }
 
-    const confirmBtn = overlay.querySelector('.modal-confirm');
-    confirmBtn.addEventListener('click', async () => {
-      confirmBtn.disabled = true;
-      confirmBtn.classList.add('btn-loading');
-      try {
-        const ok = await onConfirm();
-        if (ok !== false) { overlay.remove(); await loadData(); }
-      } catch (err) {
-        logger.error('Modal confirm:', err);
-        showToast('Erro ao salvar.', 'error');
-      } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.classList.remove('btn-loading');
+        showToast('Saída confirmada!', 'success');
+        await loadData();
+        return true;
       }
     });
+  }
 
-    return overlay;
+  function confirmarRetorno(r) {
+    criarConfirmationDialog({
+      message: `Confirmar retorno da locação ${r.locacao_numero}?`,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('fn_confirmar_retorno_reserva', {
+            p_reserva_id: r.id
+          });
+
+          if (error) throw error;
+
+          showToast('Retorno confirmado!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Confirmar retorno:', err);
+          showToast('Erro ao confirmar retorno.', 'error');
+        }
+      }
+    });
+  }
+
+  function cancelarReserva(r) {
+    criarConfirmationDialog({
+      message: `Cancelar a locação ${r.locacao_numero}?`,
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase
+            .from('frota_reservas')
+            .update({ status: 'CANCELADO' })
+            .eq('id', r.id)
+            .eq('tenant_id', TENANT_ID);
+
+          if (error) throw error;
+          showToast('Reserva cancelada.', 'info');
+          await loadData();
+        } catch (err) {
+          logger.error('Cancelar reserva:', err);
+          showToast('Erro ao cancelar.', 'error');
+        }
+      }
+    });
   }
 
   document.getElementById('btn-nova-reserva')?.addEventListener('click', showNovaReservaModal);

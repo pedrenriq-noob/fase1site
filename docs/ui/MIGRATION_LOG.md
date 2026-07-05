@@ -4,6 +4,37 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ve
 
 ---
 
+## reservas.js — 2026-07-05 (Ação #5 da Technical Audit)
+
+### Componentes adotados
+
+- `Modal` — substitui o `createModal` local (nova reserva, confirmar saída).
+- `ConfirmationDialog` — substitui `confirm()` nativo (confirmar retorno, cancelar reserva; `tone: 'danger'` no cancelamento).
+
+### Problemas encontrados
+
+Nenhum problema novo — as duas divergências de contrato do `Modal` (ordem de `appendChild`/`render()`, escopo do autofoco) já tinham sido corrigidas na migração piloto de `veiculo-detalhe.js`. Esta segunda migração serviu para confirmar que a correção realmente generaliza para um segundo consumidor, sem necessidade de nenhum ajuste adicional.
+
+### Ajustes realizados
+
+- Mesmo padrão da migração piloto: cada `onConfirm` de `Modal` passou a chamar `await loadData()` explicitamente (o `createModal` local antigo fazia isso automaticamente); as duas ações que usavam `confirm()` nativo mantêm seu próprio `try/catch` dentro do `onConfirm` do `ConfirmationDialog`, preservando mensagens de erro específicas.
+- Função `createModal` local removida do arquivo (não usada por nenhum outro código restante em `reservas.js`).
+
+### Lições aprendidas
+
+- **Segundo consumidor sem atrito é o resultado esperado quando a Migração Piloto já fez seu trabalho** — nenhum bug novo apareceu, nenhuma mudança de API foi necessária. Isso é evidência a favor de promover `Modal`/`ConfirmationDialog` a Stable assim que uma terceira tela adotar.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção (rastreamento de Stable)
+
+- `Modal`: 2 telas (`veiculo-detalhe.js`, `reservas.js`). Falta 1 para Stable.
+- `ConfirmationDialog`: 2 telas (`veiculo-detalhe.js`, `reservas.js`). Falta 1 para Stable.
+
+---
+
 ## veiculo-detalhe.js — 2026-07-05 (Migração Piloto)
 
 ### Componentes adotados
