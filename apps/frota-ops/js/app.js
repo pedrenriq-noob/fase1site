@@ -9,6 +9,7 @@ const ROUTES = {
   '/veiculos':       () => import('../pages/veiculos.js'),
   '/veiculo/:placa': () => import('../pages/veiculo-detalhe.js'),
   '/disponibilidade':() => import('../pages/disponibilidade.js'),
+  '/ociosidade':     () => import('../pages/ociosidade.js'),
   '/reservas':       () => import('../pages/reservas.js'),
   '/patio':          () => import('../pages/patio.js'),
   '/admin':          () => import('../pages/admin.js'),
