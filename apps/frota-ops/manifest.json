@@ -2,7 +2,7 @@
   "name": "I-Frotas",
   "short_name": "I-Frotas",
   "description": "Gestão operacional da frota Igufoz",
-  "start_url": "/frota-ops/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0f2b4f",
   "theme_color": "#0f2b4f",
