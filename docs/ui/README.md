@@ -74,12 +74,24 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 | Tela | Modal | ConfirmationDialog | SearchBox | FilterBar | SortableHeader | SelectionController | BulkActionBar | StatusBadge | ErrorState |
 |---|---|---|---|---|---|---|---|---|---|
 | veiculos.js | — | — | próprio (a migrar) | chips próprios (a migrar) | — | — | — | — | — |
-| veiculo-detalhe.js | próprio (a migrar) | `confirm()` nativo (a migrar) | — | — | — | — | — | próprio (a migrar) | — |
+| veiculo-detalhe.js | **migrado** (2026-07-05, piloto) | **migrado** (2026-07-05, piloto) | — | — | — | — | — | próprio (a migrar) | — |
 | reservas.js | próprio (a migrar) | `confirm()` nativo (a migrar) | — | tabs próprias (a migrar) | — | — | — | próprio (a migrar) | — |
 | admin.js | próprio (a migrar) | `confirm()`/`prompt()` nativo (a migrar) | — | — | — | — | — | — | — |
 | dashboard.js, patio.js, disponibilidade.js, ociosidade.js | — | — | — | — | — | — | — | (candidatos quando ganharem ação de status) | inline (a migrar) |
 
 Esta tabela é o rastreamento explícito mencionado na ADR-006 — atualizar a cada componente adotado por uma tela, para a duplicação temporária durante a transição não virar dívida esquecida.
+
+Ver `docs/ui/MIGRATION_LOG.md` para o relato detalhado de cada migração (problemas encontrados, ajustes, lições aprendidas).
+
+## Critério de Stable
+
+Quando um componente for usado por **pelo menos 3 telas sem necessidade de alteração na sua API pública**, ele passa a ser considerado **Stable**. A partir desse momento, mudanças na API pública desse componente são tratadas como mudanças arquiteturais relevantes (exigem o mesmo rigor de uma ADR), não como ajuste incremental.
+
+| Componente | Telas adotantes | Status |
+|---|---|---|
+| Modal | veiculo-detalhe.js (1/3) | Em validação |
+| ConfirmationDialog | veiculo-detalhe.js (1/3) | Em validação |
+| EmptyState, LoadingState, ErrorState, StatusBadge, SearchBox, FilterBar, SortableHeader, SelectionController, BulkActionBar, ListView | nenhuma ainda | Não iniciado |
 
 ## Acessibilidade (RF-06, obrigatória em todo componente interativo)
 

@@ -90,15 +90,18 @@ export function criarModal(config) {
 
     // Autofoco só ao abrir — um update() posterior (ex: revalidação de
     // formulário) não deve roubar o foco de um campo em que o usuário já
-    // esteja digitando.
+    // esteja digitando. Foco vai para o primeiro elemento focável do CORPO
+    // (não do modal inteiro) — senão o botão "Fechar" do cabeçalho, que
+    // aparece antes no DOM, roubaria o foco do primeiro campo do formulário.
     if (!aberto) {
-      overlay.querySelector(FOCUSABLE)?.focus();
+      const bodyEl = overlay.querySelector('.modal-body');
+      (bodyEl?.querySelector(FOCUSABLE) ?? overlay.querySelector(FOCUSABLE))?.focus();
       aberto = true;
     }
   }
 
-  render();
   document.body.appendChild(overlay);
+  render();
   document.addEventListener('keydown', onKeydown);
   overlay.addEventListener('click', onOverlayClick);
 

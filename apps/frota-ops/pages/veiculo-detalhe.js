@@ -1,6 +1,8 @@
 import { supabase, TENANT_ID } from '../js/supabase.js';
 import { subscribeVeiculos } from '../js/realtime.js';
 import { getUser } from '../js/auth.js';
+import { criarModal } from '../js/ui/modal.js';
+import { criarConfirmationDialog } from '../js/ui/confirmation-dialog.js';
 import {
   statusLabel, statusColor, categoriaLabel, formatDate, formatTime,
   calcularSaidaLavador, isOverdue, showToast, escapeHtml, logger, PONTOS
@@ -211,87 +213,110 @@ export async function init(container, params) {
   }
 
   function showRetornoModal(v) {
-    const now = new Date();
-    const nowLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    criarModal({
+      title: 'Registrar Retorno',
+      bodyHtml: `
+        <div class="form-group">
+          <label class="form-label" for="ret-dt">Data/Hora do Retorno <span class="required">*</span></label>
+          <input class="form-input" type="datetime-local" id="ret-dt" value="${nowLocal()}" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ret-ponto">Ponto de Retorno</label>
+          <select class="form-select" id="ret-ponto">
+            ${PONTOS.map((p) => `<option value="${p}" ${v.ponto_retorno === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ret-obs">Observações</label>
+          <textarea class="form-textarea" id="ret-obs" placeholder="Estado do veículo, danos, etc."></textarea>
+        </div>
+      `,
+      onConfirm: async () => {
+        const dt = document.getElementById('ret-dt').value;
+        const ponto = document.getElementById('ret-ponto').value;
 
-    const modal = createModal('Registrar Retorno', `
-      <div class="form-group">
-        <label class="form-label" for="ret-dt">Data/Hora do Retorno <span class="required">*</span></label>
-        <input class="form-input" type="datetime-local" id="ret-dt" value="${nowLocal}" required />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="ret-ponto">Ponto de Retorno</label>
-        <select class="form-select" id="ret-ponto">
-          ${PONTOS.map((p) => `<option value="${p}" ${v.ponto_retorno === p ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="ret-obs">Observações</label>
-        <textarea class="form-textarea" id="ret-obs" placeholder="Estado do veículo, danos, etc."></textarea>
-      </div>
-    `, async () => {
-      const dt = document.getElementById('ret-dt').value;
-      const ponto = document.getElementById('ret-ponto').value;
-      const obs = document.getElementById('ret-obs').value.trim();
+        if (!dt) { showToast('Informe a data/hora do retorno.', 'warning'); return false; }
 
-      if (!dt) { showToast('Informe a data/hora do retorno.', 'warning'); return false; }
-
-      await updateVeiculo({ status: 'DEVOLVIDO', limpo: false, patio_atual: ponto, ponto_retorno: ponto });
-      showToast('Retorno registrado!', 'success');
-      return true;
+        await updateVeiculo({ status: 'DEVOLVIDO', limpo: false, patio_atual: ponto, ponto_retorno: ponto });
+        showToast('Retorno registrado!', 'success');
+        await loadData();
+        return true;
+      }
     });
   }
 
-  async function enviarLavador(v) {
-    if (!confirm(`Enviar ${v.placa} para o lavador?`)) return;
-    try {
-      const agora = new Date().toISOString();
-      await updateVeiculo({ status: 'NO_LAVADOR', hora_entrada_lavador: agora, patio_atual: 'Lavador' });
-      showToast('Veículo enviado ao lavador!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Enviar lavador:', err);
-      showToast('Erro ao enviar para o lavador.', 'error');
-    }
+  function nowLocal() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   }
 
-  async function marcarLimpo(v) {
-    if (!confirm(`Marcar ${v.placa} como limpo e disponível?`)) return;
-    try {
-      await updateVeiculo({ status: 'DISPONIVEL', limpo: true });
-      showToast('Veículo marcado como limpo!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Marcar limpo:', err);
-      showToast('Erro ao marcar como limpo.', 'error');
-    }
+  function enviarLavador(v) {
+    criarConfirmationDialog({
+      message: `Enviar ${v.placa} para o lavador?`,
+      onConfirm: async () => {
+        try {
+          const agora = new Date().toISOString();
+          await updateVeiculo({ status: 'NO_LAVADOR', hora_entrada_lavador: agora, patio_atual: 'Lavador' });
+          showToast('Veículo enviado ao lavador!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Enviar lavador:', err);
+          showToast('Erro ao enviar para o lavador.', 'error');
+        }
+      }
+    });
   }
 
-  async function marcarDisponivel(v) {
-    if (!confirm(`Marcar ${v.placa} como disponível?`)) return;
-    try {
-      await updateVeiculo({ status: 'DISPONIVEL' });
-      showToast('Veículo disponível!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Marcar disponivel:', err);
-      showToast('Erro.', 'error');
-    }
+  function marcarLimpo(v) {
+    criarConfirmationDialog({
+      message: `Marcar ${v.placa} como limpo e disponível?`,
+      onConfirm: async () => {
+        try {
+          await updateVeiculo({ status: 'DISPONIVEL', limpo: true });
+          showToast('Veículo marcado como limpo!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Marcar limpo:', err);
+          showToast('Erro ao marcar como limpo.', 'error');
+        }
+      }
+    });
   }
 
-  async function saiuLavador(v) {
-    if (!confirm(`Confirmar saída do lavador e marcar ${v.placa} como limpo?`)) return;
-    try {
-      await updateVeiculo({ status: 'DISPONIVEL', limpo: true, patio_atual: v.patio_atual === 'Lavador' ? 'Garagem' : v.patio_atual });
-      showToast('Veículo saiu do lavador!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Saiu lavador:', err);
-      showToast('Erro.', 'error');
-    }
+  function marcarDisponivel(v) {
+    criarConfirmationDialog({
+      message: `Marcar ${v.placa} como disponível?`,
+      onConfirm: async () => {
+        try {
+          await updateVeiculo({ status: 'DISPONIVEL' });
+          showToast('Veículo disponível!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Marcar disponivel:', err);
+          showToast('Erro.', 'error');
+        }
+      }
+    });
+  }
+
+  function saiuLavador(v) {
+    criarConfirmationDialog({
+      message: `Confirmar saída do lavador e marcar ${v.placa} como limpo?`,
+      onConfirm: async () => {
+        try {
+          await updateVeiculo({ status: 'DISPONIVEL', limpo: true, patio_atual: v.patio_atual === 'Lavador' ? 'Garagem' : v.patio_atual });
+          showToast('Veículo saiu do lavador!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Saiu lavador:', err);
+          showToast('Erro.', 'error');
+        }
+      }
+    });
   }
 
   async function colocarManutencao(v) {
+    // Fora do escopo da migração piloto (usa prompt(), não confirm()) — mantido como estava.
     const obs = prompt('Motivo da manutenção (opcional):') ?? '';
     try {
       await updateVeiculo({ status: 'MANUTENCAO' });
@@ -303,119 +328,82 @@ export async function init(container, params) {
     }
   }
 
-  async function sairManutencao(v) {
-    if (!confirm(`Retirar ${v.placa} da manutenção?`)) return;
-    try {
-      await updateVeiculo({ status: 'DISPONIVEL', limpo: true });
-      showToast('Veículo disponível!', 'success');
-      await loadData();
-    } catch (err) {
-      logger.error('Sair manutencao:', err);
-      showToast('Erro.', 'error');
-    }
+  function sairManutencao(v) {
+    criarConfirmationDialog({
+      message: `Retirar ${v.placa} da manutenção?`,
+      onConfirm: async () => {
+        try {
+          await updateVeiculo({ status: 'DISPONIVEL', limpo: true });
+          showToast('Veículo disponível!', 'success');
+          await loadData();
+        } catch (err) {
+          logger.error('Sair manutencao:', err);
+          showToast('Erro.', 'error');
+        }
+      }
+    });
   }
 
   function showMoverPatioModal(v) {
-    createModal('Mover Pátio', `
-      <div class="form-group">
-        <label class="form-label" for="patio-select">Pátio de destino</label>
-        <select class="form-select" id="patio-select">
-          ${PONTOS.map((p) => `<option value="${p}" ${v.patio_atual === p ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
-      </div>
-    `, async () => {
-      const patio = document.getElementById('patio-select').value;
-      await updateVeiculo({ patio_atual: patio });
-      showToast(`Veículo movido para ${patio}!`, 'success');
-      return true;
+    criarModal({
+      title: 'Mover Pátio',
+      bodyHtml: `
+        <div class="form-group">
+          <label class="form-label" for="patio-select">Pátio de destino</label>
+          <select class="form-select" id="patio-select">
+            ${PONTOS.map((p) => `<option value="${p}" ${v.patio_atual === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+        </div>
+      `,
+      onConfirm: async () => {
+        const patio = document.getElementById('patio-select').value;
+        await updateVeiculo({ patio_atual: patio });
+        showToast(`Veículo movido para ${patio}!`, 'success');
+        await loadData();
+        return true;
+      }
     });
   }
 
   function showSaidaModal(v) {
-    createModal('Registrar Saída', `
-      <div class="form-group">
-        <label class="form-label" for="saida-ponto">Ponto de Retirada</label>
-        <select class="form-select" id="saida-ponto">
-          ${PONTOS.map((p) => `<option value="${p}" ${v.ponto_retirada === p ? 'selected' : ''}>${p}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="saida-retorno">Ponto de Retorno Previsto</label>
-        <select class="form-select" id="saida-retorno">
-          ${PONTOS.map((p) => `<option value="${p}">${p}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="saida-prev">Retorno Previsto</label>
-        <input class="form-input" type="datetime-local" id="saida-prev" />
-      </div>
-    `, async () => {
-      const ponto = document.getElementById('saida-ponto').value;
-      const retorno = document.getElementById('saida-retorno').value;
-      const prev = document.getElementById('saida-prev').value;
-
-      await updateVeiculo({
-        status: 'LOCADO',
-        limpo: true,
-        patio_atual: null,
-        ponto_retirada: ponto,
-        ponto_retorno: retorno,
-        prev_retorno: prev ? new Date(prev).toISOString() : null
-      });
-      showToast('Saída registrada!', 'success');
-      return true;
-    });
-  }
-
-  function createModal(title, bodyHtml, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal-content" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="modal-header">
-          <h2 class="modal-title">${escapeHtml(title)}</h2>
-          <button class="modal-close" aria-label="Fechar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+    criarModal({
+      title: 'Registrar Saída',
+      bodyHtml: `
+        <div class="form-group">
+          <label class="form-label" for="saida-ponto">Ponto de Retirada</label>
+          <select class="form-select" id="saida-ponto">
+            ${PONTOS.map((p) => `<option value="${p}" ${v.ponto_retirada === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
         </div>
-        <div class="modal-body">${bodyHtml}</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary modal-cancel">Cancelar</button>
-          <button class="btn btn-primary modal-confirm">Confirmar</button>
+        <div class="form-group">
+          <label class="form-label" for="saida-retorno">Ponto de Retorno Previsto</label>
+          <select class="form-select" id="saida-retorno">
+            ${PONTOS.map((p) => `<option value="${p}">${p}</option>`).join('')}
+          </select>
         </div>
-      </div>
-    `;
+        <div class="form-group">
+          <label class="form-label" for="saida-prev">Retorno Previsto</label>
+          <input class="form-input" type="datetime-local" id="saida-prev" />
+        </div>
+      `,
+      onConfirm: async () => {
+        const ponto = document.getElementById('saida-ponto').value;
+        const retorno = document.getElementById('saida-retorno').value;
+        const prev = document.getElementById('saida-prev').value;
 
-    document.body.appendChild(overlay);
-
-    const close = () => overlay.remove();
-
-    overlay.querySelector('.modal-close').addEventListener('click', close);
-    overlay.querySelector('.modal-cancel').addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-    const confirmBtn = overlay.querySelector('.modal-confirm');
-    confirmBtn.addEventListener('click', async () => {
-      confirmBtn.disabled = true;
-      confirmBtn.classList.add('btn-loading');
-      try {
-        const ok = await onConfirm();
-        if (ok !== false) {
-          close();
-          await loadData();
-        }
-      } catch (err) {
-        logger.error('Modal confirm error:', err);
-        showToast('Erro ao salvar. Tente novamente.', 'error');
-      } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.classList.remove('btn-loading');
+        await updateVeiculo({
+          status: 'LOCADO',
+          limpo: true,
+          patio_atual: null,
+          ponto_retirada: ponto,
+          ponto_retorno: retorno,
+          prev_retorno: prev ? new Date(prev).toISOString() : null
+        });
+        showToast('Saída registrada!', 'success');
+        await loadData();
+        return true;
       }
     });
-
-    return overlay;
   }
 
   await loadData();
