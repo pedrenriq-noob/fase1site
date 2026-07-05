@@ -9,6 +9,7 @@ export function criarModal(config) {
   let { title, bodyHtml, onConfirm, onClose, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar' } = config;
   let destroyed = false;
   let confirming = false;
+  let aberto = false;
   const previouslyFocused = document.activeElement;
 
   const overlay = document.createElement('div');
@@ -43,6 +44,7 @@ export function criarModal(config) {
   function close() {
     if (destroyed) return;
     document.removeEventListener('keydown', onKeydown);
+    overlay.removeEventListener('click', onOverlayClick);
     overlay.remove();
     destroyed = true;
     if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
@@ -50,8 +52,7 @@ export function criarModal(config) {
   }
 
   function onKeydown(e) {
-    if (confirming) return;
-    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'Escape') { if (!confirming) { e.preventDefault(); close(); } return; }
     if (e.key === 'Tab') {
       const focusables = Array.from(overlay.querySelectorAll(FOCUSABLE)).filter((el) => !el.disabled);
       if (focusables.length === 0) return;
@@ -62,10 +63,13 @@ export function criarModal(config) {
     }
   }
 
+  function onOverlayClick(e) {
+    if (e.target === overlay) close();
+  }
+
   function bind() {
     overlay.querySelector('.modal-close').addEventListener('click', close);
     overlay.querySelector('.modal-cancel').addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
     const confirmBtn = overlay.querySelector('.modal-confirm');
     confirmBtn.addEventListener('click', async () => {
@@ -84,13 +88,19 @@ export function criarModal(config) {
       }
     });
 
-    const firstFocusable = overlay.querySelector(FOCUSABLE);
-    firstFocusable?.focus();
+    // Autofoco só ao abrir — um update() posterior (ex: revalidação de
+    // formulário) não deve roubar o foco de um campo em que o usuário já
+    // esteja digitando.
+    if (!aberto) {
+      overlay.querySelector(FOCUSABLE)?.focus();
+      aberto = true;
+    }
   }
 
   render();
   document.body.appendChild(overlay);
   document.addEventListener('keydown', onKeydown);
+  overlay.addEventListener('click', onOverlayClick);
 
   return {
     el: overlay,
