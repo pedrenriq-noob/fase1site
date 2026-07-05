@@ -1,5 +1,5 @@
 // auditoria.js — helper para registrar trilha de auditoria
-import { supabase, TENANT_ID } from '../admin.js'
+import { supabase, TENANT_ID, logger } from '../admin.js'
 
 /**
  * Registra uma ação administrativa no audit_log.
@@ -24,7 +24,7 @@ export async function registrarAuditoria(acao, entidade, id, descricao, antes = 
             dados_depois: depois ? JSON.parse(JSON.stringify(depois)) : null,
         })
     } catch (err) {
-        console.warn('[auditoria] falha ao registrar:', err.message)
+        logger.warn('[auditoria] falha ao registrar:', err.message)
     }
 }
 

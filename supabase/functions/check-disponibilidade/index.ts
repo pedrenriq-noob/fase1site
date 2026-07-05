@@ -2,6 +2,9 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
 import { errJson, okJson } from '../_shared/http.ts'
+import { criarLogger } from '../_shared/logger.ts'
+
+const logger = criarLogger('check-disponibilidade')
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -44,7 +47,7 @@ Deno.serve(async (req: Request) => {
     return okJson(result, CORS)
 
   } catch (e) {
-    console.error('[check-disponibilidade]', String(e))
+    logger.error(String(e))
     return errJson('internal_error', 'Erro interno. Tente novamente.', 500, CORS)
   }
 })

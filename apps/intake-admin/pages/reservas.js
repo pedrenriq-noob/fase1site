@@ -1,5 +1,5 @@
 // pages/reservas.js
-import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable } from '../admin.js'
+import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable, logger } from '../admin.js'
 import { SUPABASE_URL, SUPABASE_ANON } from '../supabase.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 import { calcDias as calcDiasCanonico, calcSubtotal } from '../shared/pricing.js'
@@ -313,7 +313,7 @@ export async function verReserva(id) {
     ])
 
     if (rErr || !r) { toast('Reserva não encontrada.', 'error'); return }
-    if (itErr) console.warn('[verReserva] erro ao buscar itens:', itErr.message)
+    if (itErr) logger.warn('[verReserva] erro ao buscar itens:', itErr.message)
 
     const fmt = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
     const fmtDt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'

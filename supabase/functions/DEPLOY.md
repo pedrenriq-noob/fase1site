@@ -12,10 +12,10 @@ o importam, na mesma sessão.**
 
 | Function | Importa de `_shared/` |
 |---|---|
-| `check-disponibilidade` | `disponibilidade.ts`, `http.ts` |
-| `criar-solicitacao` | `disponibilidade.ts`, `http.ts`, `pricing.js` |
+| `check-disponibilidade` | `disponibilidade.ts`, `http.ts`, `logger.ts` |
+| `criar-solicitacao` | `disponibilidade.ts`, `http.ts`, `pricing.js`, `logger.ts` |
 | `admin-user-manager` | `http.ts` |
-| `notificar-reserva` | — (desativada, provedor pendente) |
+| `notificar-reserva` | `http.ts`, `logger.ts` (função ativa — provedor de e-mail pendente, mas o handler roda e responde normalmente) |
 
 ## Checklist por deploy
 

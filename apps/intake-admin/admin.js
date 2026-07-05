@@ -60,7 +60,7 @@ async function navegar(pagina) {
             default:             el.innerHTML = '<p>Página não encontrada.</p>'
         }
     } catch (err) {
-        console.error('Erro ao carregar página:', err)
+        logger.error('Erro ao carregar página:', err)
         el.innerHTML = `<div class="alert alert-info">Erro ao carregar: ${esc(err.message)}</div>`
     }
 
@@ -99,6 +99,15 @@ export { TENANT_ID, supabase }
 
 export function esc(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+// ============================================================
+// LOGGER ESTRUTURADO (mesmo padrão de apps/frota-ops/js/utils.js — RO-05)
+// ============================================================
+
+export const logger = {
+    warn:  (...a) => console.warn('[Igufoz-Admin]', ...a),
+    error: (...a) => console.error('[Igufoz-Admin]', ...a)
 }
 
 // ============================================================

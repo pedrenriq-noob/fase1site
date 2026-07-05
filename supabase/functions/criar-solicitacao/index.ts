@@ -2,8 +2,11 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
 import { errJson, okJson } from '../_shared/http.ts'
+import { criarLogger } from '../_shared/logger.ts'
 // @ts-ignore — módulo JS canônico compartilhado (ver _shared/pricing.js)
 import { calcDias, precoDiariaComSazonalidade, calcSubtotal } from '../_shared/pricing.js'
+
+const logger = criarLogger('criar-solicitacao')
 
 const ALLOWED_ORIGINS_RAW = Deno.env.get('ALLOWED_ORIGINS')
 const ALLOWED_ORIGINS = ALLOWED_ORIGINS_RAW ? ALLOWED_ORIGINS_RAW.split(',').map(s => s.trim()) : null
@@ -61,7 +64,7 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   if (!supabaseUrl || !serviceKey) {
-    console.error('[criar-solicitacao] env vars não configuradas')
+    logger.error('env vars não configuradas')
     return errJson('server_misconfigured', 'Erro de configuração do servidor. Contate o suporte.', 500, CORS)
   }
   const sb = createClient(supabaseUrl, serviceKey)
@@ -73,7 +76,7 @@ Deno.serve(async (req: Request) => {
     p_janela_segundos: RATE_WINDOW,
   })
   if (rlErr) {
-    console.error('[criar-solicitacao] rate limit check falhou:', rlErr.message)
+    logger.error('rate limit check falhou:', rlErr.message)
     // Falha no rate limiter não bloqueia a requisição legítima.
   } else if (permitido === false) {
     return errJson('rate_limited', 'Muitas requisições. Tente novamente em 1 minuto.', 429, CORS)
@@ -201,7 +204,7 @@ Deno.serve(async (req: Request) => {
       }
     } catch (dispErr) {
       // Falha na verificação não bloqueia (sistema de solicitações com aprovação manual)
-      console.warn('[criar-solicitacao] check-disp falhou:', String(dispErr))
+      logger.warn('check-disp falhou:', String(dispErr))
     }
 
     const dataRet = body.data_retirada.slice(0, 10)
@@ -292,12 +295,12 @@ Deno.serve(async (req: Request) => {
 
     const sol = result as { id: string; numero: number }
 
-    console.log(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado }))
+    logger.info(JSON.stringify({ event: 'criar-solicitacao', id: sol.id, numero: sol.numero, valor_estimado }))
 
     return okJson({ ok: true, id: sol.id, numero: sol.numero, valor_estimado }, CORS)
 
   } catch (e) {
-    console.error('[criar-solicitacao]', String(e))
+    logger.error(String(e))
     return errJson('internal_error', 'Erro interno. Tente novamente.', 500, CORS)
   }
 })
