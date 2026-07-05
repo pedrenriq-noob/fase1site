@@ -4,6 +4,43 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ve
 
 ---
 
+## SearchBox (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
+
+### Componente implementado
+
+`apps/frota-ops/js/ui/search-box.js`, conforme `docs/ui/SearchBox.md`. Ainda não adotado por nenhuma tela — a migração de `veiculos.js`/`patio.js`/`reservas.js`/`admin.js` é a Camada 4 do plano de implementação da Fase 1B, deliberadamente posterior.
+
+### Validação em ambiente real
+
+Testado isoladamente via `preview_eval` (o app exige login, não preenchido por regra de segurança):
+- `type="search"`, `aria-label` e `placeholder` corretos.
+- Debounce (default 150ms, testado com 30-40ms): múltiplas teclas digitadas rapidamente colapsam em **uma única** chamada de `onSearch`, com o termo final já em minúsculas e `trim()`-ado.
+- `clear()`: limpa o campo e dispara `onSearch('')` imediatamente, sem esperar o debounce.
+- Tecla `Esc`: equivalente a `clear()` — confirmado.
+- `destroy()`: cancela o timer de debounce pendente (nenhuma chamada de `onSearch` ocorre após `destroy()`, mesmo com uma digitação em andamento) e remove o elemento do DOM.
+
+### Problemas encontrados
+
+Nenhum. Contrato implementado sem divergência na primeira tentativa — provavelmente porque o contrato já era detalhado o suficiente (debounce, trim, minúsculas, `Esc`, garantia de `destroy()` já explícitas em `docs/ui/SearchBox.md` desde a Fase 0).
+
+### Ajustes realizados
+
+Nenhum ajuste de contrato. Reaproveita exatamente as classes CSS já existentes (`.search-wrapper`, `.search-icon`, `.form-input.search-input`) de `veiculos.js` — nenhum CSS novo criado.
+
+### Lições aprendidas
+
+Um contrato bem escrito na Fase 0 (com regras de comportamento e acessibilidade explícitas, não só a assinatura) reduz a zero o atrito de implementação — contraste com o `Modal`, cujo contrato não especificava a ordem de inicialização e teve um bug real encontrado na Migração Piloto.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Dependências
+
+Nenhuma — confirmado que `SearchBox` não importa nenhum outro módulo de `js/ui/`, consistente com a regra da Camada 1 ("nenhum deles deverá depender de outro componente").
+
+---
+
 ## reservas.js — 2026-07-05 (Ação #5 da Technical Audit)
 
 ### Componentes adotados

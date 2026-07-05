@@ -62,7 +62,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 | [LoadingState](LoadingState.md) | Estado de carregamento padronizado | nenhum |
 | [ErrorState](ErrorState.md) | Estado de erro padronizado (sem retry embutido) | nenhum |
 | [StatusBadge](StatusBadge.md) | Exibição de status (veículo/reserva) | `utils.js` (labels/cores existentes) |
-| [SearchBox](SearchBox.md) | Busca em tempo real | nenhum |
+| [SearchBox](SearchBox.md) ✅ implementado (2026-07-05, Fase 1B/Camada 1) | Busca em tempo real | nenhum |
 | [FilterBar](FilterBar.md) | Filtros simples e combináveis | nenhum |
 | [SortableHeader](SortableHeader.md) | Ordenação por critério, asc/desc | nenhum |
 | [SelectionController](SelectionController.md) | Seleção múltipla de itens de uma lista | nenhum |
