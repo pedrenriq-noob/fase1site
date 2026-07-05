@@ -1,0 +1,19 @@
+# Secrets / local config
+.env
+.env.*
+*.local
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+dist/
+build/
+
+.vercel
