@@ -1,6 +1,6 @@
 # Design System Operacional do i-Frotas
 
-Ver [ADR-006](../adr/ADR-006-design-system-operacional-ifrotas.md) para a decisão e motivação.
+Ver [ADR-006](../adr/ADR-006-design-system-operacional-ifrotas.md) para a decisão e motivação, e [ADR-007](../adr/ADR-007-processo-evolucao-design-system.md) para o ciclo de vida obrigatório de todo componente (Contrato → Implementação → Code Review Arquitetural → Migração Piloto → Validação em ambiente real → Lições aprendidas → Stable). O checklist operacional desse ciclo está em [COMPONENT_CHECKLIST.md](COMPONENT_CHECKLIST.md).
 
 ## Princípios (permanentes, ver ADR-006)
 
