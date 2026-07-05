@@ -1,7 +1,7 @@
 import { supabase, TENANT_ID } from '../js/supabase.js';
 import {
   calcularDisponibilidade, statusLabel, escapeHtml, showToast, logger,
-  CATEGORIAS, PONTOS, formatDate
+  CATEGORIAS, PONTOS, formatDate, reservaStatusLabel
 } from '../js/utils.js';
 
 export async function init(container) {
@@ -111,7 +111,7 @@ export async function init(container) {
   });
 
   function renderResult(resultado, cat, inicio, fim, el) {
-    const { disponivel, total, detalhes, overbooking, overbooking_qtd } = resultado;
+    const { disponivel, total, detalhes, overbooking, overbooking_qtd, alerta, reservas_conflito } = resultado;
     const available = disponivel > 0;
 
     el.innerHTML = `
@@ -126,10 +126,33 @@ export async function init(container) {
         </p>
       </div>
 
+      ${!overbooking && alerta === 'ultimo_veiculo' ? `
+      <div class="alert alert-warning mt-md">
+        ⚠ Atenção: resta apenas 1 veículo disponível na categoria ${escapeHtml(cat)} neste período.
+      </div>` : ''}
+
       ${overbooking ? `
       <div class="alert alert-error mt-md">
         ⚠ Overbooking previsto na categoria ${escapeHtml(cat)}: ${overbooking_qtd}
         reserva${overbooking_qtd > 1 ? 's' : ''} a mais do que veículos disponíveis no período.
+      </div>
+      <div class="card mt-md" style="padding:0;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border);">
+          <p class="card-title text-sm">Reservas envolvidas no conflito</p>
+        </div>
+        ${reservas_conflito.map((r) => `
+          <div class="info-row" style="padding: 10px 16px;">
+            <div>
+              <span class="font-semibold">${escapeHtml(r.cliente ?? 'Cliente não informado')}</span>
+              ${r.locacao_numero ? `<span class="text-sm text-muted ml-sm">#${escapeHtml(r.locacao_numero)}</span>` : ''}
+              <div class="text-xs text-muted">${formatDate(new Date(r.data_saida))} → ${formatDate(new Date(r.data_retorno_prev))}</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="text-sm">${escapeHtml(reservaStatusLabel(r.status))}</span>
+              <div class="text-xs text-muted">${r.placa_atribuida ? escapeHtml(r.placa_atribuida) : 'sem veículo atribuído'}</div>
+            </div>
+          </div>
+        `).join('')}
       </div>` : ''}
 
       ${detalhes.length > 0 ? `

@@ -188,8 +188,11 @@ export function categoriaLabel(cat) {
    ao período. Status físico do veículo (LOCADO/NO_LAVADOR/MANUTENCAO/limpo)
    não entra mais no cálculo; continua exibido como informação operacional.
    Returns { disponivel, total, detalhes, reservasNoPeriodo,
-             overbooking, overbooking_categoria, overbooking_qtd }
+             overbooking, overbooking_categoria, overbooking_qtd, alerta,
+             reservas_conflito }
    detalhes items: { placa, modelo, status, disponivel: bool, motivo }
+   alerta: 'sem_veiculos' | 'ultimo_veiculo' | null
+   reservas_conflito: reservas do período, populado só quando overbooking=true
 */
 export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reservas) {
   const inicioD = inicio instanceof Date ? inicio : new Date(inicio);
@@ -213,6 +216,21 @@ export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reserv
   const disponivel = Math.max(0, total - ocupados);
   const overbookingQtd = Math.max(0, ocupados - total);
   const overbooking = overbookingQtd > 0;
+  // Sem frota cadastrada na categoria (total=0) não é o mesmo alerta que
+  // "frota esgotada" — replica o comportamento da fonte canônica
+  // (supabase/functions/_shared/disponibilidade.ts), que força alerta=null
+  // quando fonte='sem_dados'.
+  const alerta = total === 0 ? null : disponivel === 0 ? 'sem_veiculos' : disponivel === 1 ? 'ultimo_veiculo' : null;
+  const reservas_conflito = overbooking
+    ? reservasNoPeriodo.map((r) => ({
+        locacao_numero: r.locacao_numero ?? null,
+        cliente: r.cliente ?? null,
+        status: r.status,
+        data_saida: r.data_saida,
+        data_retorno_prev: r.data_retorno_prev,
+        placa_atribuida: r.placa_atribuida ?? null,
+      }))
+    : [];
 
   // Detalhamento por veículo: cada reserva no período "consome" uma vaga,
   // priorizando as com placa atribuída (contrato aberto) sobre a placa
@@ -246,6 +264,7 @@ export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reserv
     disponivel, total, detalhes,
     reservasNoPeriodo: reservasNoPeriodo.length,
     overbooking, overbooking_categoria: overbooking ? categoria : null, overbooking_qtd: overbookingQtd,
+    alerta, reservas_conflito,
   };
 }
 

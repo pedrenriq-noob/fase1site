@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node --test tests/pricing.test.js tests/pricing-parity.test.js tests/locacao-status.test.js"
+    "test": "node --test tests/pricing.test.js tests/pricing-parity.test.js tests/locacao-status.test.js tests/disponibilidade.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2"

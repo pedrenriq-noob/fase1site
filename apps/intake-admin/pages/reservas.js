@@ -1,8 +1,62 @@
 // pages/reservas.js
 import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable } from '../admin.js'
+import { SUPABASE_URL, SUPABASE_ANON } from '../supabase.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
 import { calcDias as calcDiasCanonico, calcSubtotal } from '../shared/pricing.js'
 import { transicoesPossiveis } from '../shared/locacao-status.js'
+
+// Simulação operacional (Especificação Motor de Disponibilidade, item 9):
+// antes de confirmar uma solicitação, consulta o mesmo motor central de
+// disponibilidade (check-disponibilidade) usado pelo site e pelo frota-ops
+// — item 7 da especificação exige que toda consulta use o critério único.
+async function simularDisponibilidade(categoriaSlug, dataRetirada, dataDevolucao) {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/check-disponibilidade`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
+            body: JSON.stringify({
+                tenant_id: TENANT_ID,
+                categoria_slug: categoriaSlug,
+                data_saida: dataRetirada,
+                data_retorno_prev: dataDevolucao,
+            }),
+        })
+        if (!res.ok) return null
+        return await res.json()
+    } catch {
+        return null // Falha na simulação não bloqueia — apenas deixa de avisar (mesma filosofia do criar-solicitacao)
+    }
+}
+
+// Antes de mudar o status para 'confirmada', simula o impacto na
+// disponibilidade e pede confirmação explícita do operador se detectar
+// overbooking ou esgotamento da categoria. Retorna false se o operador
+// cancelar a ação.
+async function confirmarSimulacao(novoStatus, selEl) {
+    if (novoStatus !== 'confirmada') return true
+
+    const catSlug    = selEl.dataset.catSlug
+    const retirada   = selEl.dataset.retirada
+    const devolucao  = selEl.dataset.devolucao
+    if (!catSlug || !retirada || !devolucao) return true // dados insuficientes para simular — não bloqueia
+
+    const sim = await simularDisponibilidade(catSlug, retirada, devolucao)
+    if (!sim || sim.fonte !== 'frota') return true // sem dado confiável — não bloqueia (aprovação manual prevalece)
+
+    if (sim.overbooking) {
+        return confirm(
+            `⚠ Confirmar esta reserva vai gerar OVERBOOKING na categoria: ${sim.overbooking_qtd} ` +
+            `reserva(s) a mais do que veículos disponíveis no período.\n\nConfirmar mesmo assim?`
+        )
+    }
+    if (sim.disponivel === 0) {
+        return confirm(
+            `⚠ Não há veículos disponíveis nesta categoria para o período (frota já comprometida). ` +
+            `Confirmar mesmo assim pode gerar overbooking.\n\nConfirmar mesmo assim?`
+        )
+    }
+    return true
+}
 
 const STATUS_LABELS = {
     solicitada: 'Solicitada',
@@ -31,7 +85,7 @@ export async function renderReservas() {
         .select(`
             id, numero, status, cliente_nome, cliente_whatsapp, cliente_email,
             data_retirada, data_devolucao, valor_estimado, criado_em,
-            categorias ( nome )
+            categorias ( nome, slug )
         `, { count: 'exact' })
         .eq('tenant_id', TENANT_ID)
         .order('criado_em', { ascending: false })
@@ -63,7 +117,9 @@ export async function renderReservas() {
                 ${isFinal
                     ? `<span class="status-badge status-${status}">${STATUS_LABELS[status]}</span>`
                     : `<select class="status-select" style="border-color:${cor};color:${cor}"
-                              data-id="${r.id}" data-status="${status}">
+                              data-id="${r.id}" data-status="${status}"
+                              data-cat-slug="${r.categorias?.slug ?? ''}"
+                              data-retirada="${r.data_retirada ?? ''}" data-devolucao="${r.data_devolucao ?? ''}">
                            ${optsTransicao}
                        </select>`
                 }
@@ -120,7 +176,7 @@ export function bindReservas() {
         const { data, error } = await supabase
             .from('solicitacoes')
             .select(`id, numero, status, cliente_nome, cliente_whatsapp, cliente_email,
-                data_retirada, data_devolucao, valor_estimado, criado_em, categorias(nome)`)
+                data_retirada, data_devolucao, valor_estimado, criado_em, categorias(nome, slug)`)
             .eq('tenant_id', TENANT_ID)
             .order('criado_em', { ascending: false })
             .range(from, to)
@@ -145,7 +201,7 @@ export function bindReservas() {
                 <td data-sort-val="${esc(r.data_retirada ?? '')}" style="font-size:12px;white-space:nowrap">${fmtDataSimples(r.data_retirada)}</td>
                 <td>${isFinal
                     ? `<span class="status-badge status-${esc(status)}">${esc(STATUS_LABELS[status])}</span>`
-                    : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${esc(r.id)}" data-status="${esc(status)}">${opts}</select>`
+                    : `<select class="status-select" style="border-color:${cor};color:${cor}" data-id="${esc(r.id)}" data-status="${esc(status)}" data-cat-slug="${esc(r.categorias?.slug ?? '')}" data-retirada="${esc(r.data_retirada ?? '')}" data-devolucao="${esc(r.data_devolucao ?? '')}">${opts}</select>`
                 }</td>
                 <td style="display:flex;gap:6px;align-items:center">
                     <button class="btn-icon" data-action="detalhe" data-id="${esc(r.id)}">👁 Ver</button>
@@ -158,6 +214,7 @@ export function bindReservas() {
             tr.querySelector('.status-select')?.addEventListener('change', async (e) => {
                 const novoStatus = e.target.value
                 if (novoStatus === status) return
+                if (!(await confirmarSimulacao(novoStatus, e.target))) { e.target.value = status; return }
                 await trocarStatus(r.id, novoStatus, status, '')
                 e.target.dataset.status = novoStatus
             })
@@ -203,6 +260,7 @@ export function bindReservas() {
                     () => executarTroca(motivo.trim())
                 )
             } else {
+                if (!(await confirmarSimulacao(novoStatus, sel))) { sel.value = statusAtual; return }
                 await executarTroca()
             }
         })

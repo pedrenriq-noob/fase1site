@@ -14,6 +14,15 @@ export const SLUG_MAP: Record<string, string> = {
   grupo_u:         'U - UTILITARIO',
 }
 
+export interface ReservaConflito {
+  locacao_numero: string | null
+  cliente: string | null
+  status: string
+  data_saida: string
+  data_retorno_prev: string
+  placa_atribuida: string | null
+}
+
 export interface DisponibilidadeResult {
   disponivel: number | null
   total: number
@@ -22,6 +31,10 @@ export interface DisponibilidadeResult {
   overbooking: boolean
   overbooking_categoria: string | null
   overbooking_qtd: number
+  /** 'sem_veiculos' quando disponivel=0, 'ultimo_veiculo' quando disponivel=1. null caso contrário. */
+  alerta: 'sem_veiculos' | 'ultimo_veiculo' | null
+  /** Reservas que se sobrepõem ao período — populado apenas quando overbooking=true (Especificação Motor de Disponibilidade, item 2). */
+  reservas_conflito: ReservaConflito[]
 }
 
 /**
@@ -98,7 +111,7 @@ export async function checkDisponibilidade(
       .eq('tenant_id', tenantId)
       .eq('categoria', categoria),
     sb.from('frota_reservas')
-      .select('status, data_saida, data_retorno_prev')
+      .select('locacao_numero, cliente, status, data_saida, data_retorno_prev, placa_atribuida')
       .eq('tenant_id', tenantId)
       .eq('categoria', categoria)
       .in('status', ['PREVISTO', 'CONFIRMADO']),
@@ -118,11 +131,14 @@ export async function checkDisponibilidade(
     // overbooking: se já existem contratos/reservas ativos, todos eles
     // excedem uma frota de tamanho zero.
     const ocupadosSemFrota = reservasNoPeriodo.length
+    const overbookingSemFrota = ocupadosSemFrota > 0
     return {
       disponivel: null, total: 0, reservas_periodo: ocupadosSemFrota, fonte: 'sem_dados',
-      overbooking: ocupadosSemFrota > 0,
-      overbooking_categoria: ocupadosSemFrota > 0 ? categoria : null,
+      overbooking: overbookingSemFrota,
+      overbooking_categoria: overbookingSemFrota ? categoria : null,
       overbooking_qtd: ocupadosSemFrota,
+      alerta: null,
+      reservas_conflito: overbookingSemFrota ? reservasNoPeriodo.map(mapReservaConflito) : [],
     }
   }
 
@@ -131,6 +147,7 @@ export async function checkDisponibilidade(
   const disponivel = Math.max(0, total - ocupados)
   const overbookingQtd = Math.max(0, ocupados - total)
   const overbooking = overbookingQtd > 0
+  const alerta = disponivel === 0 ? 'sem_veiculos' : disponivel === 1 ? 'ultimo_veiculo' : null
 
   return {
     disponivel,
@@ -140,5 +157,25 @@ export async function checkDisponibilidade(
     overbooking,
     overbooking_categoria: overbooking ? categoria : null,
     overbooking_qtd: overbookingQtd,
+    alerta,
+    reservas_conflito: overbooking ? reservasNoPeriodo.map(mapReservaConflito) : [],
+  }
+}
+
+function mapReservaConflito(r: {
+  locacao_numero: string | null
+  cliente: string | null
+  status: string
+  data_saida: string
+  data_retorno_prev: string
+  placa_atribuida: string | null
+}): ReservaConflito {
+  return {
+    locacao_numero: r.locacao_numero,
+    cliente: r.cliente,
+    status: r.status,
+    data_saida: r.data_saida,
+    data_retorno_prev: r.data_retorno_prev,
+    placa_atribuida: r.placa_atribuida,
   }
 }
