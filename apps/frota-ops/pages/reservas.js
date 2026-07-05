@@ -264,22 +264,15 @@ export async function init(container) {
       const placa = document.getElementById('cs-placa').value.trim().toUpperCase();
       if (!placa) { showToast('Informe a placa do veículo.', 'warning'); return false; }
 
-      const { error } = await supabase
-        .from('frota_reservas')
-        .update({ status: 'CONFIRMADO', placa_atribuida: placa })
-        .eq('id', r.id)
-        .eq('tenant_id', TENANT_ID);
+      // fn_confirmar_saida_reserva faz as duas escritas (reserva + veículo)
+      // em uma única transação no banco — evita estado inconsistente se a
+      // segunda escrita falhar isoladamente (ver Technical Audit, Ação #3).
+      const { error } = await supabase.rpc('fn_confirmar_saida_reserva', {
+        p_reserva_id: r.id,
+        p_placa: placa
+      });
 
       if (error) { logger.error('Confirmar saida:', error); throw error; }
-
-      // Marcar veículo como locado
-      await supabase.from('frota_veiculos').update({
-        status: 'LOCADO',
-        ponto_retirada: r.ponto_retirada,
-        ponto_retorno: r.ponto_retorno,
-        prev_retorno: r.data_retorno_prev,
-        updated_at: new Date().toISOString()
-      }).eq('placa', placa).eq('tenant_id', TENANT_ID);
 
       showToast('Saída confirmada!', 'success');
       return true;
@@ -290,21 +283,11 @@ export async function init(container) {
     if (!confirm(`Confirmar retorno da locação ${r.locacao_numero}?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('frota_reservas')
-        .update({ status: 'CONCLUIDO' })
-        .eq('id', r.id)
-        .eq('tenant_id', TENANT_ID);
+      const { error } = await supabase.rpc('fn_confirmar_retorno_reserva', {
+        p_reserva_id: r.id
+      });
 
       if (error) throw error;
-
-      if (r.placa_atribuida) {
-        await supabase.from('frota_veiculos').update({
-          status: 'DEVOLVIDO',
-          limpo: false,
-          updated_at: new Date().toISOString()
-        }).eq('placa', r.placa_atribuida).eq('tenant_id', TENANT_ID);
-      }
 
       showToast('Retorno confirmado!', 'success');
       await loadData();
