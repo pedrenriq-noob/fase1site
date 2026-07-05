@@ -691,25 +691,18 @@ function getHoraText(id) {
 
 function getRetData() { return S.retData || document.getElementById('retData')?.value || '' }
 
-// ⚠ DIVERGÊNCIA CONHECIDA em relação à fonte canônica shared/pricing.js
-// (calcDias): quando o resto é ≤1h E a diária inteira (`full`) é 0 — ou
-// seja, locação de até 1h — esta função retorna 0, enquanto a canônica
-// (usada em site/admin/edge function) aplica mínimo de 1 diária. Não
-// alterado aqui para preservar o comportamento externo já em produção
-// desta extensão; avaliar unificação em decisão explícita separada.
+// Diárias vêm do módulo canônico shared/pricing.js (unificado em 2026-07-02:
+// a versão anterior não aplicava o mínimo de 1 diária para locações ≤1h,
+// enquanto site/admin/edge function já aplicavam — na prática o preço
+// cobrado já usava esse mínimo via `dias || 1` em cada ponto de cálculo,
+// então a mudança só corrige o número exibido no badge, sem alterar valor).
 function getDias() {
   const rd = getRetData()
   const dd = document.getElementById('devData')?.value
   if (!rd || !dd) return 0
   const rHora = getHoraText('retHora')
   const dHora = getHoraText('devHora')
-  const diffH = (new Date(`${dd}T${dHora}`) - new Date(`${rd}T${rHora}`)) / 3600000
-  if (diffH <= 0) return 0
-  const full  = Math.floor(diffH / 24)
-  const resto = diffH % 24
-  if (resto <= 1)     return full
-  if (resto > 4)      return full + 1
-  return full + Math.floor(resto * 2) / 8
+  return calcDias(`${rd}T${rHora}`, `${dd}T${dHora}`)
 }
 
 // Preço com sazonalidade vem do módulo canônico shared/pricing.js (variante
