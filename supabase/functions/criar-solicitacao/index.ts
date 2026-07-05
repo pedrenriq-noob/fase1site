@@ -91,6 +91,20 @@ Deno.serve(async (req: Request) => {
       if (!body[f]) return errJson('missing_field', `Campo obrigatório ausente: ${f}`, 400, CORS)
     }
 
+    // Limite de tamanho nos campos de texto livre — mitiga payloads
+    // desproporcionais e reduz a superfície de conteúdo malicioso que
+    // acaba renderizado sem escape em telas administrativas (defesa em
+    // profundidade; a correção primária é escapar no ponto de renderização).
+    const maxLengths: Record<string, number> = {
+      cliente_nome: 120, observacoes: 1000, companhia_aerea: 80,
+      numero_voo: 20, horario_pouso: 20, local_retirada: 120, local_devolucao: 120,
+    }
+    for (const [campo, max] of Object.entries(maxLengths)) {
+      if (typeof body[campo] === 'string' && body[campo].length > max) {
+        return errJson('field_too_long', `Campo ${campo} excede o tamanho máximo de ${max} caracteres.`, 400, CORS)
+      }
+    }
+
     if (!uuidRe.test(body.tenant_id))    return errJson('invalid_tenant_id', 'tenant_id inválido.', 400, CORS)
     if (!uuidRe.test(body.categoria_id)) return errJson('invalid_categoria_id', 'categoria_id inválido.', 400, CORS)
 

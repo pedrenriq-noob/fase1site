@@ -1,5 +1,5 @@
 // pages/translados.js
-import { supabase, TENANT_ID, toast } from '../admin.js'
+import { supabase, TENANT_ID, toast, esc } from '../admin.js'
 import { verReserva } from './reservas.js'
 
 export async function renderTranslados() {
@@ -23,13 +23,13 @@ export async function renderTranslados() {
     const cardTranslado = (r) => `
     <div class="translado-card pendente" data-id="${r.id}">
         <div class="translado-info">
-            <strong>✈️ ${r.companhia_aerea ? r.companhia_aerea + ' · ' : ''}Voo ${r.numero_voo}</strong>
-            <span>🛬 Pouso: ${r.horario_pouso ?? '—'} · Retirada: ${fmtDt(r.data_retirada)}</span>
-            <span>👤 ${r.cliente_nome ?? '—'} · ${r.cliente_whatsapp ?? '—'}</span>
-            <span>🚗 ${r.categorias?.nome ?? '—'}</span>
+            <strong>✈️ ${r.companhia_aerea ? esc(r.companhia_aerea) + ' · ' : ''}Voo ${esc(r.numero_voo)}</strong>
+            <span>🛬 Pouso: ${esc(r.horario_pouso ?? '—')} · Retirada: ${fmtDt(r.data_retirada)}</span>
+            <span>👤 ${esc(r.cliente_nome ?? '—')} · ${esc(r.cliente_whatsapp ?? '—')}</span>
+            <span>🚗 ${esc(r.categorias?.nome ?? '—')}</span>
             <span>👥 ${r.pessoas ?? 1} pessoa${(r.pessoas ?? 1) !== 1 ? 's' : ''}</span>
-            <span>📍 ${r.local_retirada ?? '—'}</span>
-            ${r.observacoes ? `<span style="font-size:12px;color:#64748b">📝 ${r.observacoes}</span>` : ''}
+            <span>📍 ${esc(r.local_retirada ?? '—')}</span>
+            ${r.observacoes ? `<span style="font-size:12px;color:#64748b">📝 ${esc(r.observacoes)}</span>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
             <span class="status-badge status-solicitada">⏳ Pendente</span>

@@ -394,11 +394,11 @@ export async function verReserva(id) {
             <span style="font-size:13px;color:var(--muted)">Enviado em ${fmtDt(r.criado_em)}</span>
             <strong style="font-size:18px">${fmt(r.valor_estimado)}</strong>
         </div>
-        ${r.motivo_cancelamento ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px;font-size:13px"><strong>Motivo cancelamento:</strong> ${r.motivo_cancelamento}</div>` : ''}
+        ${r.motivo_cancelamento ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:10px;font-size:13px"><strong>Motivo cancelamento:</strong> ${esc(r.motivo_cancelamento)}</div>` : ''}
     </div>`
 
     const numFmt = r.numero ? String(r.numero).padStart(4, '0') : '—'
-    abrirModal(`📋 #${numFmt} — ${r.cliente_nome}`, corpo, null)
+    abrirModal(`📋 #${numFmt} — ${esc(r.cliente_nome)}`, corpo, null)
     document.getElementById('modal-save-btn').style.display = 'none'
     document.getElementById('modal-cancel-btn').textContent = 'Fechar'
 
@@ -445,7 +445,7 @@ function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Reserva #${numFmt} — Igufoz</title>
+<title>Reserva #${esc(numFmt)} — Igufoz</title>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family: Arial, sans-serif; font-size:13px; color:#0b1b32; padding:32px; }
@@ -484,10 +484,10 @@ function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
 <section>
   <h2>Dados do Cliente</h2>
   <div class="grid">
-    <div class="field"><strong>Nome</strong><span>${r.cliente_nome}</span></div>
-    <div class="field"><strong>CPF</strong><span>${r.cliente_cpf ?? '—'}</span></div>
-    <div class="field"><strong>WhatsApp</strong><span>${r.cliente_whatsapp}</span></div>
-    <div class="field"><strong>E-mail</strong><span>${r.cliente_email ?? '—'}</span></div>
+    <div class="field"><strong>Nome</strong><span>${esc(r.cliente_nome)}</span></div>
+    <div class="field"><strong>CPF</strong><span>${esc(r.cliente_cpf ?? '—')}</span></div>
+    <div class="field"><strong>WhatsApp</strong><span>${esc(r.cliente_whatsapp)}</span></div>
+    <div class="field"><strong>E-mail</strong><span>${esc(r.cliente_email ?? '—')}</span></div>
   </div>
 </section>
 
@@ -496,11 +496,11 @@ function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
   <div class="grid">
     <div class="field"><strong>Retirada</strong><span>${fmtDt(r.data_retirada)}</span></div>
     <div class="field"><strong>Devolução</strong><span>${fmtDt(r.data_devolucao)}</span></div>
-    <div class="field"><strong>Local Retirada</strong><span>${r.local_retirada ?? '—'}</span></div>
-    <div class="field"><strong>Local Devolução</strong><span>${r.local_devolucao ?? '—'}</span></div>
-    ${r.numero_voo ? `<div class="field"><strong>Voo</strong><span>${r.numero_voo}</span></div>` : ''}
-    ${r.horario_pouso ? `<div class="field"><strong>Pouso</strong><span>${r.horario_pouso}</span></div>` : ''}
-    ${r.companhia_aerea ? `<div class="field"><strong>Companhia</strong><span>${r.companhia_aerea}</span></div>` : ''}
+    <div class="field"><strong>Local Retirada</strong><span>${esc(r.local_retirada ?? '—')}</span></div>
+    <div class="field"><strong>Local Devolução</strong><span>${esc(r.local_devolucao ?? '—')}</span></div>
+    ${r.numero_voo ? `<div class="field"><strong>Voo</strong><span>${esc(r.numero_voo)}</span></div>` : ''}
+    ${r.horario_pouso ? `<div class="field"><strong>Pouso</strong><span>${esc(r.horario_pouso)}</span></div>` : ''}
+    ${r.companhia_aerea ? `<div class="field"><strong>Companhia</strong><span>${esc(r.companhia_aerea)}</span></div>` : ''}
     <div class="field"><strong>Pessoas</strong><span>${r.pessoas ?? 1}</span></div>
   </div>
 </section>
@@ -514,8 +514,8 @@ function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
   </table>
 </section>
 
-${r.observacoes ? `<section><h2>Observações</h2><p style="font-size:13px;line-height:1.6">${r.observacoes}</p></section>` : ''}
-${r.motivo_cancelamento ? `<section><h2>Motivo Cancelamento</h2><p style="font-size:13px;color:#b91c1c">${r.motivo_cancelamento}</p></section>` : ''}
+${r.observacoes ? `<section><h2>Observações</h2><p style="font-size:13px;line-height:1.6">${esc(r.observacoes)}</p></section>` : ''}
+${r.motivo_cancelamento ? `<section><h2>Motivo Cancelamento</h2><p style="font-size:13px;color:#b91c1c">${esc(r.motivo_cancelamento)}</p></section>` : ''}
 
 <div class="footer">
   <span>Igufoz Locadora · (45) 9 8818-2995 · Foz do Iguaçu – PR</span>
