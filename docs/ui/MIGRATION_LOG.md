@@ -4,37 +4,38 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
-## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — seleção múltipla + ações em lote + status em lote)
+## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — seleção múltipla + ações em lote + status em lote, escopo final)
 
 ### Componentes adotados nesta etapa
 
 - `SelectionController` — checkbox por card (`.vehicle-select`), usando `v.placa` como id (mesmo padrão do exemplo do contrato).
-- `BulkActionBar` — 2 ações: `manutencao` ("Enviar p/ Manutenção") e `liberar-manutencao` ("Liberar de Manutenção").
-- `VehicleStatusService.descreverTransicao` — decide, por veículo selecionado, se a transição é válida antes de gravar.
+- `BulkActionBar` — 7 ações: 5 de status (`Definir: Disponível/Locado/Devolvido/Lavador/Manutenção`) + 2 de limpeza (`Marcar Limpo`/`Marcar Sujo`).
 
-### Decisão de domínio (Product Owner, 2026-07-06)
+### Histórico desta entrega (revisado no mesmo dia)
 
-Das 7 transições do `VehicleStatusService`, só 2 não exigem contexto por veículo (`ponto_retirada`/`ponto_retorno`/`hora_entrada_lavador`/`patio_atual`): qualquer status operacional → `MANUTENCAO`, e `MANUTENCAO` → `DISPONIVEL`. As demais (locar, devolver, lavar, liberar do lavador) exigiriam um formulário por veículo, o que descaracterizaria "ação em lote" — não foram incluídas.
+A primeira versão desta entrega restringia a ação em lote às 2 transições do `VehicleStatusService` sem contexto obrigatório (`*→MANUTENCAO`, `MANUTENCAO→DISPONIVEL`), usando `descreverTransicao` para validar cada veículo antes de gravar (ver entrada de decisão correspondente, marcada como superada em `docs/DECISION_LOG.md`).
 
-Justificativa registrada explicitamente pelo Product Owner: a tela hoje supre um sistema oficial que não gera esses eventos automaticamente meio-a-meio; "status em lote" faz sentido *agora* para marcar disponibilidade rapidamente. Quando o SaaS definitivo registrar cada evento individualmente (devolução, retirada, lavagem), essa ação deixa de fazer sentido — decisão que não deve ser generalizada para novas ações em lote sem essa mesma checagem de contexto.
+O Product Owner pediu explicitamente a reversão desse escopo: **todos** os status devem poder ser definidos em lote, para qualquer veículo, sem seguir a sequência/validação do serviço — incluindo marcar `limpo`/`sujo` diretamente (campo que antes só mudava como efeito colateral de uma transição). Justificativa: o sistema opera hoje como quebra-galho de um sistema oficial que ainda não gera eventos de devolução/retirada/lavagem individualmente.
 
-### Comportamento em seleções heterogêneas
+Isso foi formalizado como **ADR-011** (não como mero ajuste de escopo) porque introduz um caminho paralelo de escrita de `status`/`limpo` que conscientemente ignora a autoridade normativa que `VehicleStatusService` representa para o fluxo item a item — o próprio `docs/domain/VehicleStatus.md` já previa essa necessidade como algo que deveria vir "por outro mecanismo, nunca como comportamento padrão do serviço"; esta é exatamente essa via, documentada e com gatilho de reversão explícito.
 
-`runBulkAction` aplica `descreverTransicao(v.status, statusDestino)` **por veículo selecionado**, não em bloco único — um veículo cujo status atual já não permite a transição (ex: já está em `MANUTENCAO` e o operador clica "Enviar p/ Manutenção") é reportado como falha individual (`motivo` do próprio serviço), sem impedir os demais veículos válidos de serem atualizados. Confirmado em `preview_eval`: `descreverTransicao('MANUTENCAO','MANUTENCAO')` retorna `valido:false`.
+### Implementação final
+
+`runBulkAction` não usa mais `descreverTransicao` — grava `{ [campo]: valor }` diretamente via Supabase para cada veículo selecionado (`campo` é `'status'` ou `'limpo'`, conforme a ação clicada). Sem validação de domínio: um veículo `LOCADO` pode ser definido como `DISPONIVEL` em lote sem ter passado por devolução real — responsabilidade do dado correto passa a ser do operador que aciona a ação.
 
 Checkbox de seleção usa `e.stopPropagation()` no `click` para não disparar a navegação do card (`vehicle-card` já tem handler de clique para abrir o detalhe do veículo).
 
 ### Validação em ambiente real
 
-`preview_eval`: `BulkActionBar` renderiza os 2 botões corretos e começa oculta (`selectedCount:0`); reimplementação isolada do wiring checkbox→`SelectionController`→`BulkActionBar.update()` confirma que marcar/desmarcar exibe/oculta a barra e atualiza a contagem; `descreverTransicao` testado para os 5 pares relevantes (válidos e inválidos, incluindo mesmo-status). `node --check` e `npm test` (50/50) sem regressão. Fluxo completo (clique real no botão de ação → grava no Supabase) não pôde ser testado autenticado — login segue proibido; a lógica de `runBulkAction` foi validada por inspeção + testes unitários do `VehicleStatusService` (já cobrindo os payloads exatos usados aqui).
+`preview_eval`: os 7 botões da `BulkActionBar` renderizam com os labels corretos; reimplementação isolada do wiring checkbox→`SelectionController`→`BulkActionBar.update()` (já validada na versão anterior desta entrega) confirma exibição/ocultação e contagem corretas; payload de cada ação (`{status: X}` ou `{limpo: Y}`) confirmado por inspeção direta. `node --check` e `npm test` (50/50) sem regressão. Fluxo completo autenticado (clique real → grava no Supabase) não pôde ser testado — login segue proibido.
 
 ### Problemas encontrados
 
-Nenhum — contratos de `SelectionController`/`BulkActionBar` já prontos para este uso sem ajuste.
+Nenhum de implementação — a mudança de escopo é uma decisão de produto (ADR-011), não uma inconsistência técnica.
 
 ### Ajustes realizados
 
-Nenhuma mudança de contrato.
+Nenhuma mudança nos contratos de `SelectionController`/`BulkActionBar` (ambos já suportavam esse uso sem alteração). `VehicleStatusService` não teve seu contrato alterado — o bypass vive inteiramente em `veiculos.js`, fora do serviço.
 
 ### Mudanças na API
 

@@ -5,9 +5,16 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 ---
 
 **Data:** 2026-07-06
-**Decisão:** "Mudança de status em lote" (Camada 5) só cobre as 2 transições do `VehicleStatusService` que não exigem contexto por veículo (`*→MANUTENCAO`, `MANUTENCAO→DISPONIVEL`). As demais (locar, devolver, lavar, liberar do lavador) ficam de fora do lote — exigiriam formulário por item.
+**Decisão:** ~~"Mudança de status em lote" (Camada 5) só cobre as 2 transições do `VehicleStatusService` que não exigem contexto por veículo (`*→MANUTENCAO`, `MANUTENCAO→DISPONIVEL`).~~ **Superada no mesmo dia** — ver entrada seguinte (mais recente) e ADR-011.
 **Justificativa:** Decisão explícita do Product Owner — a tela hoje supre um sistema oficial que ainda não gera esses eventos automaticamente; faz sentido operar em lote enquanto isso. Quando o SaaS definitivo registrar cada evento individualmente (devolução, retirada, lavagem, uma por uma), essa ação deixa de fazer sentido. Não deve ser generalizada como precedente para outras ações em lote sem repetir essa checagem de contexto por transição.
-**Impacto:** `veiculos.js` ganhou só 2 ações de `BulkActionBar` (`manutencao`, `liberar-manutencao`); seleção heterogênea reporta falhas por veículo via `descreverTransicao`, sem bloquear os demais.
+**Impacto:** Válido só pela primeira entrega do dia — substituído horas depois pela decisão abaixo, a pedido do próprio Product Owner.
+
+---
+
+**Data:** 2026-07-06
+**Decisão:** Ação em lote de `veiculos.js` passa a permitir **qualquer** status (`DISPONIVEL`/`LOCADO`/`DEVOLVIDO`/`NO_LAVADOR`/`MANUTENCAO`) e também `limpo`/`sujo`, gravando direto no Supabase — sem passar por `VehicleStatusService.descreverTransicao`, sem checar transição válida. Substitui a decisão anterior (mesmo dia, restrita a 2 transições).
+**Justificativa:** Pedido explícito do Product Owner: o sistema opera hoje como quebra-galho de um sistema oficial que não gera eventos individuais de devolução/retirada/lavagem; o operador precisa poder corrigir/definir o status real dos veículos livremente, em lote, sem seguir sequência. Documentado formalmente em `ADR-011` (inclui gatilho explícito de reversão: quando o SaaS definitivo passar a registrar cada evento individualmente).
+**Impacto:** `veiculos.js` ganhou 7 ações de `BulkActionBar` (5 de status + 2 de limpeza); `VehicleStatusService` deixa de ser usado nesta tela para a ação em lote (continua sendo a única autoridade para o fluxo item a item em `veiculo-detalhe.js`/`reservas.js`). Sem validação de domínio nesta via — responsabilidade do dado correto passa a ser do operador.
 
 ---
 

@@ -34,6 +34,8 @@ Hoje esta regra está implícita e espalhada dentro de `apps/frota-ops/pages/vei
 
 Isso ajusta a leitura do princípio #11 dos 18 Princípios de UX ("o sistema não deve impor uma sequência obrigatória de transições") especificamente para este serviço: o princípio continua valendo para a **interface** (nenhuma tela deve esconder uma ação de status atrás de múltiplos cliques ou telas por causa de uma suposta ordem) — mas o **serviço de domínio** é a fonte de verdade de quais transições existem de fato na operação. Se uma necessidade operacional real exigir contornar o fluxo oficial (ex: correção administrativa de um estado inconsistente), isso deve ocorrer por um mecanismo explícito e separado (ex: uma ação administrativa dedicada), nunca como comportamento padrão deste serviço.
 
+**Mecanismo de bypass efetivamente adotado (2026-07-06, ver ADR-011):** as ações em lote de `veiculos.js` (Camada 5 do Fase 1B) gravam `status`/`limpo` diretamente no Supabase, sem passar por `descreverTransicao` — é exatamente o "mecanismo explícito e separado" previsto no parágrafo acima, não uma reversão desta decisão de domínio. O fluxo item a item (`veiculo-detalhe.js`, `reservas.js`) continua exclusivamente sob a autoridade deste serviço; só a ação em lote administrativa tem esse atalho, e é declaradamente temporária (ver ADR-011 para o gatilho de reversão).
+
 Ver `docs/domain/CicloVidaVeiculo.md` para a referência funcional do fluxo oficial.
 
 ## Casos de uso

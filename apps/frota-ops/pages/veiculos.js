@@ -5,21 +5,27 @@ import { criarFilterBar } from '../js/ui/filter-bar.js';
 import { criarSortableHeader } from '../js/ui/sortable-header.js';
 import { criarSelectionController } from '../js/ui/selection-controller.js';
 import { criarBulkActionBar } from '../js/ui/bulk-action-bar.js';
-import { descreverTransicao } from '../js/services/vehicle-status.js';
 import {
   statusLabel, statusColor, categoriaLabel, escapeHtml, logger, showToast, CATEGORIAS
 } from '../js/utils.js';
 
-// Ações em lote restritas às 2 transições do VehicleStatusService que não
-// exigem contexto por veículo (ponto/horário/pátio) — as demais transições
-// (locar, devolver, lavar) precisariam de um formulário por item, o que
-// descaracterizaria a ideia de ação em lote. Decisão do Product Owner
-// (2026-07-06): faz sentido hoje porque a tela ainda supre um sistema
-// oficial que não gera esses eventos automaticamente; deixará de fazer
-// sentido quando o SaaS definitivo registrar cada evento individualmente.
+// Override manual de status/limpeza em lote — grava direto no Supabase,
+// SEM passar por VehicleStatusService.descreverTransicao (ver ADR-011).
+// Decisão explícita do Product Owner (2026-07-06): o fluxo guiado do
+// VehicleStatusService (deny-by-default, só 7 transições documentadas)
+// continua sendo a autoridade para mudanças item a item, mas a ação em
+// lote precisa poder definir qualquer status/limpeza livremente, porque
+// hoje o sistema opera como quebra-galho de um sistema oficial que ainda
+// não gera esses eventos individualmente. Reverter quando o SaaS
+// definitivo registrar cada evento (devolução/retirada/lavagem) um a um.
 const BULK_ACTIONS = [
-  { id: 'manutencao',          label: 'Enviar p/ Manutenção', statusDestino: 'MANUTENCAO' },
-  { id: 'liberar-manutencao',  label: 'Liberar de Manutenção', statusDestino: 'DISPONIVEL' }
+  { id: 'status-disponivel', label: 'Definir: Disponível', campo: 'status', valor: 'DISPONIVEL' },
+  { id: 'status-locado',     label: 'Definir: Locado',     campo: 'status', valor: 'LOCADO' },
+  { id: 'status-devolvido',  label: 'Definir: Devolvido',  campo: 'status', valor: 'DEVOLVIDO' },
+  { id: 'status-lavador',    label: 'Definir: Lavador',    campo: 'status', valor: 'NO_LAVADOR' },
+  { id: 'status-manutencao', label: 'Definir: Manutenção', campo: 'status', valor: 'MANUTENCAO' },
+  { id: 'limpo-sim',         label: 'Marcar Limpo',        campo: 'limpo',  valor: true },
+  { id: 'limpo-nao',         label: 'Marcar Sujo',         campo: 'limpo',  valor: false }
 ];
 
 const STATUS_OPTIONS = [
@@ -118,10 +124,8 @@ export async function init(container) {
     let sucesso = 0;
     const falhas = [];
     for (const v of selecionados) {
-      const resultado = descreverTransicao(v.status, acao.statusDestino);
-      if (!resultado.valido) { falhas.push(`${v.placa}: ${resultado.motivo}`); continue; }
       const { error } = await supabase.from('frota_veiculos')
-        .update(resultado.payload).eq('id', v.id).eq('tenant_id', TENANT_ID);
+        .update({ [acao.campo]: acao.valor }).eq('id', v.id).eq('tenant_id', TENANT_ID);
       if (error) { falhas.push(`${v.placa}: erro ao salvar`); continue; }
       sucesso++;
     }
