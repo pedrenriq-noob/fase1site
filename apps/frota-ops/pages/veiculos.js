@@ -1,11 +1,12 @@
 import { supabase, TENANT_ID } from '../js/supabase.js';
 import { subscribeVeiculos } from '../js/realtime.js';
+import { criarSearchBox } from '../js/ui/search-box.js';
+import { criarFilterBar } from '../js/ui/filter-bar.js';
 import {
   statusLabel, statusColor, categoriaLabel, escapeHtml, logger, CATEGORIAS
 } from '../js/utils.js';
 
-const STATUS_FILTERS = [
-  { value: 'ALL',        label: 'Todos' },
+const STATUS_OPTIONS = [
   { value: 'DISPONIVEL', label: 'Disponível' },
   { value: 'LOCADO',     label: 'Locado' },
   { value: 'DEVOLVIDO',  label: 'Devolvido' },
@@ -15,8 +16,6 @@ const STATUS_FILTERS = [
 
 export async function init(container) {
   let _veiculos = [];
-  let _statusFilter = 'ALL';
-  let _catFilter = 'ALL';
   let _search = '';
   let _channel = null;
 
@@ -26,26 +25,8 @@ export async function init(container) {
         <h1 class="page-title">Veículos</h1>
       </div>
 
-      <!-- Search -->
-      <div class="search-wrapper mb-md">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          class="form-input search-input"
-          type="search"
-          id="search-placa"
-          placeholder="Buscar placa..."
-          autocomplete="off"
-          maxlength="10"
-        />
-      </div>
-
-      <!-- Status Filter -->
-      <div class="filter-bar mb-md" id="status-filters" role="group" aria-label="Filtro por status"></div>
-
-      <!-- Category Filter -->
-      <div class="filter-bar mb-md" id="cat-filters" role="group" aria-label="Filtro por categoria"></div>
+      <div id="search-container" class="mb-md"></div>
+      <div id="filter-container" class="mb-md"></div>
 
       <!-- Results Count -->
       <p class="text-sm text-muted mb-md" id="result-count"></p>
@@ -55,66 +36,48 @@ export async function init(container) {
     </div>
   `;
 
-  function renderStatusFilters() {
-    const bar = document.getElementById('status-filters');
-    if (!bar) return;
-    bar.innerHTML = STATUS_FILTERS.map((f) => {
-      const count = f.value === 'ALL'
-        ? _veiculos.length
-        : _veiculos.filter((v) => v.status === f.value).length;
-      return `
-        <button class="filter-chip ${_statusFilter === f.value ? 'active' : ''}"
-                data-status="${f.value}" type="button">
-          ${escapeHtml(f.label)}
-          <span class="chip-count">${count}</span>
-        </button>
-      `;
-    }).join('');
+  const search = criarSearchBox({
+    placeholder: 'Buscar placa...',
+    onSearch: (termo) => { _search = termo; renderGrid(); }
+  });
+  document.getElementById('search-container').appendChild(search.el);
 
-    bar.querySelectorAll('.filter-chip').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        _statusFilter = btn.dataset.status;
-        renderStatusFilters();
-        renderGrid();
-      });
-    });
-  }
+  const filterBar = criarFilterBar({
+    groups: buildFilterGroups(_veiculos),
+    onFilterChange: () => renderGrid()
+  });
+  document.getElementById('filter-container').appendChild(filterBar.el);
 
-  function renderCatFilters() {
-    const bar = document.getElementById('cat-filters');
-    if (!bar) return;
-    const cats = ['ALL', ...new Set(_veiculos.map((v) => v.categoria).filter(Boolean))].sort((a, b) => {
-      if (a === 'ALL') return -1;
-      if (b === 'ALL') return 1;
-      return a.localeCompare(b);
-    });
-    bar.innerHTML = cats.map((cat) => {
-      const count = cat === 'ALL'
-        ? _veiculos.length
-        : _veiculos.filter((v) => v.categoria === cat).length;
-      return `
-        <button class="filter-chip ${_catFilter === cat ? 'active' : ''}"
-                data-cat="${cat}" type="button">
-          ${cat === 'ALL' ? 'Todas' : escapeHtml(cat)}
-          <span class="chip-count">${count}</span>
-        </button>
-      `;
-    }).join('');
-
-    bar.querySelectorAll('.filter-chip').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        _catFilter = btn.dataset.cat;
-        renderCatFilters();
-        renderGrid();
-      });
-    });
+  function buildFilterGroups(veiculos) {
+    const categorias = [...new Set(veiculos.map((v) => v.categoria).filter(Boolean))].sort();
+    return [
+      {
+        key: 'status',
+        label: 'Status',
+        options: STATUS_OPTIONS.map((f) => ({
+          value: f.value,
+          label: f.label,
+          count: veiculos.filter((v) => v.status === f.value).length
+        }))
+      },
+      {
+        key: 'categoria',
+        label: 'Categoria',
+        options: categorias.map((cat) => ({
+          value: cat,
+          label: cat,
+          count: veiculos.filter((v) => v.categoria === cat).length
+        }))
+      }
+    ];
   }
 
   function getFiltered() {
+    const estado = filterBar.getState();
     return _veiculos.filter((v) => {
-      if (_statusFilter !== 'ALL' && v.status !== _statusFilter) return false;
-      if (_catFilter !== 'ALL' && v.categoria !== _catFilter) return false;
-      if (_search && !v.placa?.toLowerCase().includes(_search.toLowerCase())) return false;
+      if (estado.status?.length && !estado.status.includes(v.status)) return false;
+      if (estado.categoria?.length && !estado.categoria.includes(v.categoria)) return false;
+      if (_search && !v.placa?.toLowerCase().includes(_search)) return false;
       return true;
     });
   }
@@ -184,15 +147,11 @@ export async function init(container) {
     }
 
     _veiculos = data ?? [];
-    renderStatusFilters();
-    renderCatFilters();
+    // update() do FilterBar preserva a seleção ativa do operador mesmo
+    // quando os dados (e portanto as contagens) mudam — ver docs/ui/FilterBar.md.
+    filterBar.update({ groups: buildFilterGroups(_veiculos) });
     renderGrid();
   }
-
-  document.getElementById('search-placa')?.addEventListener('input', (e) => {
-    _search = e.target.value;
-    renderGrid();
-  });
 
   await loadData();
 

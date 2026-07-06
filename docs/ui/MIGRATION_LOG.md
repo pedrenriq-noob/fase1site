@@ -4,6 +4,44 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
+## veiculos.js — 2026-07-05 (Camada 4 da Fase 1B — primeira tela migrada)
+
+### Componentes adotados
+
+- `SearchBox` — substitui o `<input type="search">` inline por busca de placa.
+- `FilterBar` — substitui os dois grupos de "filter chips" manuais (status, categoria) por uma única instância com dois grupos.
+
+### Decisão de migração: remoção da opção "ALL"/"Todas"
+
+O padrão antigo tinha uma opção explícita `ALL`/`Todas` em cada grupo de chips, sempre ativa por padrão. `FilterBar` não precisa dessa opção especial: nenhuma seleção num grupo já significa "sem restrição" (mesmo comportamento, sem um valor mágico `'ALL'` no meio dos dados) — é o próprio padrão documentado no exemplo de `docs/ui/FilterBar.md`. Resultado equivalente ao usuário (grupo sem seleção = mostra tudo), mas sem o caso especial no código.
+
+### Validação em ambiente real
+
+Testado via `preview_eval` (chamando `init()` diretamente com um container isolado, já que o app exige login): módulo carrega sem exceções, `SearchBox` e `FilterBar` renderizam corretamente dentro da tela real (não isolados como nos testes de componente), digitação na busca e clique num filtro não geram erro, contagem de resultados atualiza. Não foi possível validar com dados reais (consulta ao Supabase sem sessão autenticada retorna vazio/RLS), mas a integração dos componentes na tela foi confirmada sem exceções.
+
+### Problemas encontrados
+
+Nenhum.
+
+### Ajustes realizados
+
+Nenhuma mudança de contrato — só a decisão de migração acima (remoção do valor `'ALL'`, não uma mudança em `FilterBar` em si).
+
+### Lições aprendidas
+
+A primeira migração de tela real confirma que os componentes puros validados isoladamente (Camadas 1-2) se integram sem atrito a uma página real — nenhuma surpresa, nenhuma mudança de API necessária.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção
+
+- `SearchBox`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
+- `FilterBar`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
+
+---
+
 ## VehicleStatusService (Camada 3) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
 
 ### Serviço implementado

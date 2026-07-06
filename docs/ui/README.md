@@ -88,7 +88,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 
 | Tela | Modal | ConfirmationDialog | SearchBox | FilterBar | SortableHeader | SelectionController | BulkActionBar | StatusBadge | ErrorState |
 |---|---|---|---|---|---|---|---|---|---|
-| veiculos.js | — | — | próprio (a migrar) | chips próprios (a migrar) | — | — | — | — | — |
+| veiculos.js | — | — | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | — | — | — | próprio (a migrar) | — |
 | veiculo-detalhe.js | **migrado** (2026-07-05, piloto) | **migrado** (2026-07-05, piloto) | — | — | — | — | — | próprio (a migrar) | — |
 | reservas.js | **migrado** (2026-07-05, Ação #5 da Technical Audit) | **migrado** (2026-07-05) | — | tabs próprias (a migrar) | — | — | — | próprio (a migrar) | — |
 | admin.js | próprio (a migrar) | `confirm()`/`prompt()` nativo (a migrar) | — | — | — | — | — | — | — |
@@ -106,7 +106,9 @@ Quando um componente for usado por **pelo menos 3 telas sem necessidade de alter
 |---|---|---|
 | Modal | veiculo-detalhe.js, reservas.js (2/3) | Em validação |
 | ConfirmationDialog | veiculo-detalhe.js, reservas.js (2/3) | Em validação |
-| EmptyState, LoadingState, ErrorState, StatusBadge, SearchBox, FilterBar, SortableHeader, SelectionController, BulkActionBar, ListView | nenhuma ainda | Não iniciado |
+| SearchBox | veiculos.js (1/3) | Em validação |
+| FilterBar | veiculos.js (1/3) | Em validação |
+| EmptyState, LoadingState, ErrorState, StatusBadge, SortableHeader, SelectionController, BulkActionBar, ListView | nenhuma ainda | Não iniciado |
 
 ## Acessibilidade (RF-06, obrigatória em todo componente interativo)
 
