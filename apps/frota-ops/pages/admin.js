@@ -1,6 +1,8 @@
 import { supabase, TENANT_ID, SUPABASE_URL } from '../js/supabase.js';
 import { getUser } from '../js/auth.js';
 import { showToast, logger, escapeHtml } from '../js/utils.js';
+import { criarModal } from '../js/ui/modal.js';
+import { criarConfirmationDialog } from '../js/ui/confirmation-dialog.js';
 
 const ROLES = { admin: 'Admin', operador: 'Operador', balcao: 'Balcão' };
 const TABS = ['veiculos', 'usuarios', 'patios', 'importacao'];
@@ -518,7 +520,10 @@ export async function init(container, params) {
 
   function showVeiculoModal(v = null) {
     const isEdit = !!v;
-    const modal = createModal(isEdit ? `Editar ${v.placa}` : 'Novo Veículo', `
+    criarModal({
+      title: isEdit ? `Editar ${v.placa}` : 'Novo Veículo',
+      confirmLabel: 'Salvar',
+      bodyHtml: `
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">Placa <span class="required">*</span></label>
@@ -545,46 +550,54 @@ export async function init(container, params) {
           <input class="form-input" id="v-cor" value="${escapeHtml(v?.cor ?? '')}" placeholder="Branco" />
         </div>
       </div>
-    `, async () => {
-      const placa     = document.getElementById('v-placa').value.trim().toUpperCase();
-      const categoria = document.getElementById('v-cat').value;
-      const modelo    = document.getElementById('v-modelo').value.trim();
-      const fabricante= document.getElementById('v-fabricante').value.trim();
-      const cor       = document.getElementById('v-cor').value.trim();
+      `,
+      onConfirm: async () => {
+        const placa     = document.getElementById('v-placa').value.trim().toUpperCase();
+        const categoria = document.getElementById('v-cat').value;
+        const modelo    = document.getElementById('v-modelo').value.trim();
+        const fabricante= document.getElementById('v-fabricante').value.trim();
+        const cor       = document.getElementById('v-cor').value.trim();
 
-      if (!placa || !modelo) { showToast('Placa e modelo são obrigatórios.', 'warning'); return false; }
+        if (!placa || !modelo) { showToast('Placa e modelo são obrigatórios.', 'warning'); return false; }
 
-      if (isEdit) {
-        const { error } = await supabase.from('frota_veiculos')
-          .update({ modelo, fabricante, cor, categoria })
-          .eq('id', v.id).eq('tenant_id', TENANT_ID);
-        if (error) { showToast('Erro ao salvar.', 'error'); return false; }
-        showToast('Veículo atualizado!', 'success');
-      } else {
-        const { error } = await supabase.from('frota_veiculos').insert({
-          tenant_id: TENANT_ID, placa, categoria, modelo, fabricante, cor,
-          status: 'DISPONIVEL', limpo: true
-        });
-        if (error) { showToast(error.message.includes('unique') ? 'Placa já cadastrada.' : 'Erro ao cadastrar.', 'error'); return false; }
-        showToast('Veículo adicionado!', 'success');
+        if (isEdit) {
+          const { error } = await supabase.from('frota_veiculos')
+            .update({ modelo, fabricante, cor, categoria })
+            .eq('id', v.id).eq('tenant_id', TENANT_ID);
+          if (error) { showToast('Erro ao salvar.', 'error'); return false; }
+          showToast('Veículo atualizado!', 'success');
+        } else {
+          const { error } = await supabase.from('frota_veiculos').insert({
+            tenant_id: TENANT_ID, placa, categoria, modelo, fabricante, cor,
+            status: 'DISPONIVEL', limpo: true
+          });
+          if (error) { showToast(error.message.includes('unique') ? 'Placa já cadastrada.' : 'Erro ao cadastrar.', 'error'); return false; }
+          showToast('Veículo adicionado!', 'success');
+        }
+        loadTab('veiculos');
+        return true;
       }
-      return true;
-    }, () => loadTab('veiculos'));
+    });
   }
 
-  async function deleteVeiculo(id, placa) {
-    if (!confirm(`Remover ${placa} da frota? Esta ação não pode ser desfeita.`)) return;
-    const { data: removidos, error } = await supabase
-      .from('frota_veiculos').delete().eq('id', id).eq('tenant_id', TENANT_ID).select('id');
-    if (error) { showToast('Erro ao remover. Verifique se o veículo tem movimentações.', 'error'); return; }
-    // RLS sem policy de DELETE correspondente não gera erro, só afeta 0
-    // linhas — sem essa checagem a tela mostrava sucesso mesmo sem apagar.
-    if (!removidos?.length) {
-      showToast('Não foi possível remover: permissão negada ou veículo já removido.', 'error');
-      return;
-    }
-    showToast(`${placa} removido.`, 'success');
-    loadTab('veiculos');
+  function deleteVeiculo(id, placa) {
+    criarConfirmationDialog({
+      message: `Remover ${placa} da frota? Esta ação não pode ser desfeita.`,
+      tone: 'danger',
+      onConfirm: async () => {
+        const { data: removidos, error } = await supabase
+          .from('frota_veiculos').delete().eq('id', id).eq('tenant_id', TENANT_ID).select('id');
+        if (error) { showToast('Erro ao remover. Verifique se o veículo tem movimentações.', 'error'); return; }
+        // RLS sem policy de DELETE correspondente não gera erro, só afeta 0
+        // linhas — sem essa checagem a tela mostrava sucesso mesmo sem apagar.
+        if (!removidos?.length) {
+          showToast('Não foi possível remover: permissão negada ou veículo já removido.', 'error');
+          return;
+        }
+        showToast(`${placa} removido.`, 'success');
+        loadTab('veiculos');
+      }
+    });
   }
 
   /* ================================================================
@@ -660,7 +673,10 @@ export async function init(container, params) {
   }
 
   function showUsuarioModal() {
-    createModal('Novo Usuário', `
+    criarModal({
+      title: 'Novo Usuário',
+      confirmLabel: 'Salvar',
+      bodyHtml: `
       <div class="form-grid">
         <div class="form-group" style="grid-column:span 2">
           <label class="form-label">Nome <span class="required">*</span></label>
@@ -681,35 +697,43 @@ export async function init(container, params) {
           </select>
         </div>
       </div>
-    `, async () => {
-      const nome  = document.getElementById('u-nome').value.trim();
-      const email = document.getElementById('u-email').value.trim();
-      const pw    = document.getElementById('u-pw').value;
-      const role  = document.getElementById('u-role').value;
+      `,
+      onConfirm: async () => {
+        const nome  = document.getElementById('u-nome').value.trim();
+        const email = document.getElementById('u-email').value.trim();
+        const pw    = document.getElementById('u-pw').value;
+        const role  = document.getElementById('u-role').value;
 
-      if (!nome || !email || !pw) { showToast('Preencha todos os campos.', 'warning'); return false; }
-      if (pw.length < 8) { showToast('Senha mínima: 8 caracteres.', 'warning'); return false; }
+        if (!nome || !email || !pw) { showToast('Preencha todos os campos.', 'warning'); return false; }
+        if (pw.length < 8) { showToast('Senha mínima: 8 caracteres.', 'warning'); return false; }
 
-      const res = await callAdminFn({ action: 'create', email, password: pw, nome, role });
-      if (!res.success) { showToast(res.error ?? 'Erro ao criar usuário.', 'error'); return false; }
-      showToast(`Usuário ${nome} criado!`, 'success');
-      return true;
-    }, () => loadTab('usuarios'));
+        const res = await callAdminFn({ action: 'create', email, password: pw, nome, role });
+        if (!res.success) { showToast(res.error ?? 'Erro ao criar usuário.', 'error'); return false; }
+        showToast(`Usuário ${nome} criado!`, 'success');
+        loadTab('usuarios');
+        return true;
+      }
+    });
   }
 
   function showResetSenhaModal(userId, nome) {
-    createModal(`Redefinir Senha — ${nome}`, `
+    criarModal({
+      title: `Redefinir Senha — ${nome}`,
+      confirmLabel: 'Salvar',
+      bodyHtml: `
       <div class="form-group">
         <label class="form-label">Nova Senha <span class="required">*</span></label>
         <input class="form-input" type="password" id="pw-nova" placeholder="Mínimo 8 caracteres" />
       </div>
-    `, async () => {
-      const pw = document.getElementById('pw-nova').value;
-      if (pw.length < 8) { showToast('Senha mínima: 8 caracteres.', 'warning'); return false; }
-      const res = await callAdminFn({ action: 'reset_password', userId, password: pw });
-      if (!res.success) { showToast(res.error ?? 'Erro.', 'error'); return false; }
-      showToast('Senha redefinida!', 'success');
-      return true;
+      `,
+      onConfirm: async () => {
+        const pw = document.getElementById('pw-nova').value;
+        if (pw.length < 8) { showToast('Senha mínima: 8 caracteres.', 'warning'); return false; }
+        const res = await callAdminFn({ action: 'reset_password', userId, password: pw });
+        if (!res.success) { showToast(res.error ?? 'Erro.', 'error'); return false; }
+        showToast('Senha redefinida!', 'success');
+        return true;
+      }
     });
   }
 
@@ -780,7 +804,10 @@ export async function init(container, params) {
 
   function showPatioModal(p = null) {
     const isEdit = !!p;
-    createModal(isEdit ? `Editar ${p.nome}` : 'Novo Local', `
+    criarModal({
+      title: isEdit ? `Editar ${p.nome}` : 'Novo Local',
+      confirmLabel: 'Salvar',
+      bodyHtml: `
       <div class="form-grid">
         <div class="form-group" style="grid-column:span 2">
           <label class="form-label">Nome <span class="required">*</span></label>
@@ -799,7 +826,8 @@ export async function init(container, params) {
           <input class="form-input" type="number" id="p-ordem" value="${p?.ordem ?? 0}" min="0" />
         </div>
       </div>
-    `, async () => {
+      `,
+      onConfirm: async () => {
       const nome  = document.getElementById('p-nome').value.trim();
       const tipo  = document.getElementById('p-tipo').value;
       const ordem = parseInt(document.getElementById('p-ordem').value) || 0;
@@ -818,8 +846,10 @@ export async function init(container, params) {
         if (error) { showToast(error.message.includes('unique') ? 'Nome já existe.' : 'Erro ao criar.', 'error'); return false; }
         showToast('Local criado!', 'success');
       }
+      loadTab('patios');
       return true;
-    }, () => loadTab('patios'));
+      }
+    });
   }
 
   /* ================================================================
@@ -847,49 +877,4 @@ export async function init(container, params) {
     }
   }
 
-  function createModal(title, bodyHtml, onConfirm, onDone = null) {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal-content" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="modal-header">
-          <h2 class="modal-title">${escapeHtml(title)}</h2>
-          <button class="modal-close" aria-label="Fechar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">${bodyHtml}</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary modal-cancel">Cancelar</button>
-          <button class="btn btn-primary modal-confirm">Salvar</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    const close = () => overlay.remove();
-    overlay.querySelector('.modal-close').addEventListener('click', close);
-    overlay.querySelector('.modal-cancel').addEventListener('click', close);
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    const confirmBtn = overlay.querySelector('.modal-confirm');
-    confirmBtn.addEventListener('click', async () => {
-      confirmBtn.disabled = true;
-      confirmBtn.classList.add('btn-loading');
-      try {
-        const ok = await onConfirm();
-        if (ok !== false) {
-          close();
-          if (onDone) onDone();
-        }
-      } catch (err) {
-        logger.error('Modal confirm:', err);
-        showToast('Erro inesperado.', 'error');
-      } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.classList.remove('btn-loading');
-      }
-    });
-    return overlay;
-  }
 }

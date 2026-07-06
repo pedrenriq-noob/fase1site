@@ -91,7 +91,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 | veiculos.js | — | — | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | — | — | — | próprio (a migrar) | — |
 | veiculo-detalhe.js | **migrado** (2026-07-05, piloto) | **migrado** (2026-07-05, piloto) | — | — | — | — | — | próprio (a migrar) | — |
 | reservas.js | **migrado** (2026-07-05, Ação #5 da Technical Audit) | **migrado** (2026-07-05) | — | **migrado** (2026-07-05, Camada 4) | — | — | — | próprio (a migrar) | — |
-| admin.js | próprio (a migrar) | `confirm()`/`prompt()` nativo (a migrar) | — | — | — | — | — | — | — |
+| admin.js | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | — | — | — | — | — | — | — |
 | dashboard.js, patio.js, disponibilidade.js, ociosidade.js | — | — | — | — | — | — | — | (candidatos quando ganharem ação de status) | inline (a migrar) |
 
 Esta tabela é o rastreamento explícito mencionado na ADR-006 — atualizar a cada componente adotado por uma tela, para a duplicação temporária durante a transição não virar dívida esquecida.
@@ -104,8 +104,8 @@ Quando um componente for usado por **pelo menos 3 telas sem necessidade de alter
 
 | Componente | Telas adotantes | Status |
 |---|---|---|
-| Modal | veiculo-detalhe.js, reservas.js (2/3) | Em validação |
-| ConfirmationDialog | veiculo-detalhe.js, reservas.js (2/3) | Em validação |
+| Modal | veiculo-detalhe.js, reservas.js, admin.js (3/3) | **Stable** |
+| ConfirmationDialog | veiculo-detalhe.js, reservas.js, admin.js (3/3) | **Stable** |
 | SearchBox | veiculos.js (1/3) | Em validação |
 | FilterBar | veiculos.js, reservas.js (2/3) | Em validação |
 | EmptyState, LoadingState, ErrorState, StatusBadge, SortableHeader, SelectionController, BulkActionBar, ListView | nenhuma ainda | Não iniciado |

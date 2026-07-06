@@ -4,6 +4,48 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
+## admin.js — 2026-07-05 (Camada 4 da Fase 1B — quarta e última tela migrada)
+
+### Componentes adotados nesta etapa
+
+- `Modal` (`criarModal`) — substitui o `createModal(title, bodyHtml, onConfirm, onDone)` local (API posicional própria) nos 4 usos: `showVeiculoModal`, `showUsuarioModal`, `showResetSenhaModal`, `showPatioModal`.
+- `ConfirmationDialog` (`criarConfirmationDialog`, tone `'danger'`) — substitui o `confirm()` nativo em `deleteVeiculo`.
+
+### Decisão de migração
+
+O `createModal` local tinha `onDone` (callback pós-fechamento, chamado só quando `onConfirm` fecha com sucesso) sem equivalente direto no contrato de `Modal` (`onClose` do Design System dispara em **qualquer** fechamento — X, Cancelar, clique fora, ou confirmação). Usar `onClose` no lugar de `onDone` recarregaria a lista mesmo ao cancelar (fetch desnecessário, mas nenhuma mudança de dado incorreta). Para preservar exatamente o comportamento atual, a chamada de `loadTab(...)` foi movida para dentro do próprio `onConfirm`, no branch de sucesso, antes do `return true` — não depende de nenhum evento do Modal.
+
+Todos os 4 modais recebiam `confirmLabel` fixo "Salvar" no `createModal` local (nunca "Confirmar"); mantido explicitamente via `confirmLabel: 'Salvar'` para não alterar o texto visível ao operador.
+
+`deleteVeiculo`: `confirm()` nativo bloqueante era substituído por um `ConfirmationDialog` assíncrono — mesma mudança de UX já sinalizada como risco aceito na proposta de arquitetura do Modal/ConfirmationDialog (ver `ConfirmationDialog.md`), já aplicada anteriormente em `veiculo-detalhe.js`/`reservas.js`.
+
+### Validação em ambiente real
+
+`node --check` (sintaxe ok). `preview_eval` chamando `init()` com container isolado: módulo carrega sem exceções — mas o guard `user?.role !== 'admin'` bloqueia o restante do fluxo sem uma sessão autenticada (login nunca é executado neste projeto, por restrição de segurança). Os componentes `Modal`/`ConfirmationDialog` em si já foram validados ao vivo (clique, foco, `Esc`, erro genérico) nas migrações-piloto de `veiculo-detalhe.js`/`reservas.js`; esta entrega reaproveita a mesma implementação sem alterações, apenas ajusta a chamada. `npm test`: 50/50.
+
+### Problemas encontrados
+
+Nenhuma inconsistência de contrato — `createModal` local mapeia 1:1 para `criarModal` com o ajuste de `onDone`→chamada explícita dentro de `onConfirm` (ver acima).
+
+### Ajustes realizados
+
+Nenhuma mudança nos contratos de `Modal.md`/`ConfirmationDialog.md`.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção
+
+- `Modal`: 3 telas (`veiculo-detalhe.js`, `reservas.js`, `admin.js`) — **Stable**.
+- `ConfirmationDialog`: 3 telas (`veiculo-detalhe.js`, `reservas.js`, `admin.js`) — **Stable**.
+
+### Fechamento da Camada 4
+
+Com esta entrega, as 4 telas da Camada 4 estão endereçadas: `veiculos.js` (SearchBox+FilterBar), `patio.js` (avaliado, nada a migrar), `reservas.js` (FilterBar), `admin.js` (Modal+ConfirmationDialog). Próximo passo: Camada 5 (Funcionalidades Operacionais), mediante autorização.
+
+---
+
 ## reservas.js — 2026-07-05 (Camada 4 da Fase 1B — segunda tela migrada)
 
 ### Componentes adotados nesta etapa
