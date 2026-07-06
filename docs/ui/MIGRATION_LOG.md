@@ -1,5 +1,46 @@
 # Migration Log — Design System Operacional do i-Frotas
 
+## ociosidade.js — 2026-07-06 (fora da Fase 1B — regras de negócio da Central de Reservas)
+
+Reescrita completa da tela a partir de 12 regras de negócio trazidas pelo Product Owner (objetivo: mostrar só oportunidades comercialmente viáveis, não "tempo livre da frota" genérico). Não faz parte da Fase 1B (Design System) — é evolução de regra de negócio da própria feature de Ociosidade.
+
+### Novo serviço: OportunidadeComercialService
+
+`apps/frota-ops/js/services/oportunidade-comercial.js` — função pura `filtrarOportunidadesComerciais`, testada em `tests/oportunidade-comercial.test.js` (9 casos: limiar de 30h estrito, recorte por período, recorte por horário incluindo caso noturno atravessando meia-noite, domingo fechado, cálculo de diárias recomendadas, ordenação, pureza). Ver contrato completo em `docs/domain/OportunidadeComercial.md` e `docs/services/OportunidadeComercial.md`.
+
+### Inconsistência real encontrada e resolvida com o Product Owner (não implementada por suposição)
+
+A Regra 5 pede horário de funcionamento "da configuração operacional da empresa", mas a única tabela com horários (`locais`, usada hoje só pelo site público de cotação) não tinha nenhuma ligação com `frota_patios` (pátios internos, usados em `patio_atual`) — os nomes cadastrados em cada tabela não correspondem (`Oklahoma`/`Garagem`/`Lavador` vs `Av. Brasil, 90 — Centro`/etc., verificado com `execute_sql` direto em produção). Não havia como inferir esse vínculo automaticamente.
+
+Decisão do Product Owner: criar `sql/031_locais_id_frota_patios.sql` (coluna nullable `frota_patios.locais_id`, aplicada em produção, **sem popular nenhum vínculo** — o mapeamento fica para o operador preencher manualmente). Foi adicionado um campo "Local vinculado" no modal de Pátio em `admin.js` para isso.
+
+### Decisão de arquitetura — pool vs. horário por local
+
+`IdleWindowService` opera em modelo de pool (N veículos livres de uma categoria, não rastreados individualmente por pátio). Para aplicar o horário de funcionamento a uma janela agregada, a página resolve o(s) pátio(s) dos veículos hoje `DISPONIVEL` daquela categoria; se todos compartilham o mesmo local vinculado (ou nenhum tem vínculo), usa esse horário; se há mais de um distinto, aplica "sem restrição" (opção conservadora — nunca esconde uma oportunidade real por ambiguidade). Documentado como limitação conhecida — hoje sem efeito prático porque nenhum pátio tem `locais_id` preenchido em produção ainda.
+
+### Regras implementadas
+
+1. Limiar de 30h estrito (`duracao_horas > 30`).
+2. Filtro de período (`data_inicial`/`data_final`, inputs `type="date"` simples — sem componente novo do Design System, escopo fora da Fase 1B).
+3. Default do período: hoje + 15 dias quando os campos ficam vazios.
+4. Filtro de categoria (`select`: Todas / uma específica).
+5. Horário de funcionamento via `locais` (ver acima) — recorta início/fim da janela, incluindo caso de horário noturno (atravessa meia-noite) e dia fechado (domingo).
+6. Buffer operacional inalterado — continua exclusivo do `IdleWindowService`, aplicado antes do novo filtro comercial.
+7. Só oportunidades comercialmente viáveis aparecem (Regras 1+2+5 combinadas antes da exibição).
+8. Ordenação por maior duração, depois menor início (`SortableHeader` ainda não adotado nesta tela).
+9. Exibição: categoria, veículos livres, início, fim, duração total, tempo máximo recomendado (diárias), devolução máxima recomendada.
+10/11. Diárias recomendadas = piso(horas/24), sem mínimo bloqueante adicional (decisão do Product Owner: "só arredondamento de diárias, sem mínimo bloqueante" — Regra 1 já filtra janelas curtas demais).
+
+### Validação em ambiente real
+
+`npm test`: 59/59 (9 novos casos). `preview_eval` chamando `init()` contra o Supabase de produção real (sem sessão de login, mas a tabela é legível): confirma inputs de data com o default correto (hoje=2026-07-06, +15=2026-07-21), select de categoria completo, e **oportunidades reais calculadas e ordenadas corretamente** (ex: categoria B com 98h antes de 40h). Nenhuma escrita foi feita — só leitura.
+
+### Mudanças de infraestrutura
+
+- Migration `031_locais_id_frota_patios.sql` aplicada em produção (coluna nullable, sem dado populado).
+- `admin.js`: campo "Local vinculado (horário de funcionamento)" no modal de Pátio, salvando `locais_id`.
+
+
 Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e (a partir da Camada 3 da Fase 1B) dos serviços de domínio implementados. Ver `docs/ui/README.md` para a tabela-resumo de "status de adoção"; este documento é o relato detalhado de cada entrega, incluindo dificuldades e ajustes de contrato.
 
 ---

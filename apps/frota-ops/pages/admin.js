@@ -741,12 +741,18 @@ export async function init(container, params) {
      TAB PÁTIOS
   ================================================================ */
   async function renderPatios(panel) {
-    const { data: patios, error } = await supabase
-      .from('frota_patios').select('*').eq('tenant_id', TENANT_ID).order('ordem');
+    const [{ data: patios, error }, { data: locaisDisponiveis }] = await Promise.all([
+      supabase.from('frota_patios').select('*').eq('tenant_id', TENANT_ID).order('ordem'),
+      // Locais com horário de funcionamento (site público de cotação) — usados
+      // aqui só para o operador vincular cada pátio interno ao seu horário
+      // real (Regra 5 da Ociosidade, ver sql/031_locais_id_frota_patios.sql).
+      supabase.from('locais').select('id, nome').eq('tenant_id', TENANT_ID).eq('ativo', true).order('ordem')
+    ]);
 
     if (error) { panel.innerHTML = `<div class="alert alert-error">Erro ao carregar pátios.</div>`; return; }
 
     const tipoLabel = { patio: 'Pátio', retorno: 'Ponto Retorno', retirada: 'Ponto Retirada' };
+    const locaisPorId = new Map((locaisDisponiveis ?? []).map((l) => [l.id, l.nome]));
 
     panel.innerHTML = `
       <div class="section">
@@ -757,13 +763,14 @@ export async function init(container, params) {
         <div class="card" style="padding:0;overflow:hidden;">
           <table class="admin-table">
             <thead>
-              <tr><th>Nome</th><th>Tipo</th><th>Ordem</th><th>Status</th><th></th></tr>
+              <tr><th>Nome</th><th>Tipo</th><th>Local vinculado (horário)</th><th>Ordem</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               ${patios.map(p => `
                 <tr class="${!p.ativo ? 'row-inactive' : ''}">
                   <td><strong>${escapeHtml(p.nome)}</strong></td>
                   <td>${escapeHtml(tipoLabel[p.tipo] ?? p.tipo)}</td>
+                  <td>${p.locais_id ? escapeHtml(locaisPorId.get(p.locais_id) ?? '—') : '<span class="text-muted">Sem vínculo (sem restrição de horário)</span>'}</td>
                   <td>${p.ordem}</td>
                   <td><span class="badge ${p.ativo ? 'badge-disponivel' : 'badge-cancelado'}">${p.ativo ? 'Ativo' : 'Inativo'}</span></td>
                   <td class="table-actions">
@@ -781,12 +788,12 @@ export async function init(container, params) {
       </div>
     `;
 
-    panel.querySelector('#btn-add-patio').addEventListener('click', () => showPatioModal());
+    panel.querySelector('#btn-add-patio').addEventListener('click', () => showPatioModal(null, locaisDisponiveis ?? []));
 
     panel.querySelectorAll('.btn-edit-patio').forEach(btn => {
       btn.addEventListener('click', () => {
         const p = patios.find(x => x.id === btn.dataset.id);
-        if (p) showPatioModal(p);
+        if (p) showPatioModal(p, locaisDisponiveis ?? []);
       });
     });
 
@@ -802,7 +809,7 @@ export async function init(container, params) {
     });
   }
 
-  function showPatioModal(p = null) {
+  function showPatioModal(p = null, locaisDisponiveis = []) {
     const isEdit = !!p;
     criarModal({
       title: isEdit ? `Editar ${p.nome}` : 'Novo Local',
@@ -825,23 +832,36 @@ export async function init(container, params) {
           <label class="form-label">Ordem</label>
           <input class="form-input" type="number" id="p-ordem" value="${p?.ordem ?? 0}" min="0" />
         </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label class="form-label">Local vinculado (horário de funcionamento)</label>
+          <select class="form-select" id="p-locais-id">
+            <option value="">Sem vínculo (sem restrição de horário)</option>
+            ${locaisDisponiveis.map((l) =>
+              `<option value="${escapeHtml(l.id)}" ${p?.locais_id === l.id ? 'selected' : ''}>${escapeHtml(l.nome)}</option>`
+            ).join('')}
+          </select>
+          <span class="form-hint" style="color:var(--text-secondary);font-size:0.8rem;">
+            Usado pela Ociosidade (Regra 5) para não recomendar retirada/devolução fora do horário deste local.
+          </span>
+        </div>
       </div>
       `,
       onConfirm: async () => {
       const nome  = document.getElementById('p-nome').value.trim();
       const tipo  = document.getElementById('p-tipo').value;
       const ordem = parseInt(document.getElementById('p-ordem').value) || 0;
+      const locaisId = document.getElementById('p-locais-id').value || null;
 
       if (!nome) { showToast('Nome é obrigatório.', 'warning'); return false; }
 
       if (isEdit) {
         const { error } = await supabase.from('frota_patios')
-          .update({ nome, tipo, ordem }).eq('id', p.id);
+          .update({ nome, tipo, ordem, locais_id: locaisId }).eq('id', p.id);
         if (error) { showToast('Erro ao salvar.', 'error'); return false; }
         showToast('Local atualizado!', 'success');
       } else {
         const { error } = await supabase.from('frota_patios').insert({
-          tenant_id: TENANT_ID, nome, tipo, ordem, ativo: true
+          tenant_id: TENANT_ID, nome, tipo, ordem, ativo: true, locais_id: locaisId
         });
         if (error) { showToast(error.message.includes('unique') ? 'Nome já existe.' : 'Erro ao criar.', 'error'); return false; }
         showToast('Local criado!', 'success');
