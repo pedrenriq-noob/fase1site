@@ -46,6 +46,12 @@ Nenhuma.
 - `SelectionController`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
 - `BulkActionBar`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
 
+### Adendo — 2026-07-06: "Selecionar todos"
+
+Adicionado um checkbox `#select-all-checkbox` ao lado da contagem de resultados, operando sobre a lista **atualmente filtrada/ordenada** (`getSorted(getFiltered())`), não sobre todos os veículos da frota. Ao marcar, chama `selection.selectAll(filtered.map(v => v.placa))`; ao desmarcar, como o contrato do `SelectionController` não expõe um `deselectMany`, desmarca individualmente (via `toggle()`) só os veículos hoje visíveis — preservando qualquer seleção feita sob um filtro anterior, consistente com a regra de comportamento #1 do contrato ("seleção nunca é limpa automaticamente, só por ação explícita do operador"). O checkbox reflete `true` somente quando todos os itens filtrados atuais estão selecionados, recalculado a cada `renderGrid()`.
+
+Validado em `preview_eval`: `selectAll` seleciona os 3 ids simulados; destoggle individual quebra corretamente o estado "todos selecionados"; desmarcar "selecionar todos" limpa apenas os visíveis. `npm test` 50/50 sem regressão.
+
 ---
 
 ## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — ordenação por coluna)

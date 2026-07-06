@@ -64,8 +64,14 @@ export async function init(container) {
       <div id="sort-container" class="mb-md" style="display:flex;gap:var(--space-sm);"></div>
       <div id="bulk-container" class="mb-md"></div>
 
-      <!-- Results Count -->
-      <p class="text-sm text-muted mb-md" id="result-count"></p>
+      <!-- Results Count + Selecionar Todos -->
+      <div class="row-between mb-md" style="align-items:center;">
+        <p class="text-sm text-muted" id="result-count" style="margin:0;"></p>
+        <label class="text-sm" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="select-all-checkbox" />
+          Selecionar todos
+        </label>
+      </div>
 
       <!-- Vehicle Grid -->
       <div id="vehicle-grid"></div>
@@ -115,6 +121,20 @@ export async function init(container) {
     onCancelSelection: () => selection.clear()
   });
   document.getElementById('bulk-container').appendChild(bulkBar.el);
+
+  document.getElementById('select-all-checkbox').addEventListener('change', (e) => {
+    const filtered = getSorted(getFiltered());
+    if (e.target.checked) {
+      selection.selectAll(filtered.map((v) => v.placa));
+    } else {
+      // Desmarca só os veículos atualmente visíveis (sob o filtro/busca
+      // ativos) — SelectionController não tem "deselectMany"; a seleção de
+      // itens fora do filtro atual é preservada (regra de comportamento #1
+      // do contrato: seleção só é limpa por ação explícita do operador).
+      filtered.forEach((v) => { if (selection.isSelected(v.placa)) selection.toggle(v.placa); });
+    }
+    renderGrid();
+  });
 
   async function runBulkAction(actionId) {
     const acao = BULK_ACTIONS.find((a) => a.id === actionId);
@@ -192,6 +212,11 @@ export async function init(container) {
 
     const filtered = getSorted(getFiltered());
     if (countEl) countEl.textContent = `${filtered.length} veículo${filtered.length !== 1 ? 's' : ''}`;
+
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = filtered.length > 0 && filtered.every((v) => selection.isSelected(v.placa));
+    }
 
     if (filtered.length === 0) {
       grid.innerHTML = `
