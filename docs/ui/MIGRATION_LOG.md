@@ -4,6 +4,53 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ve
 
 ---
 
+## BulkActionBar (Camada 2) — 2026-07-05 (Fase 1B, implementação — não é migração de tela) — **Camada 2 concluída**
+
+### Componente implementado
+
+`apps/frota-ops/js/ui/bulk-action-bar.js`, conforme `docs/ui/BulkActionBar.md`. Ainda não adotado por nenhuma tela (Camada 4).
+
+### Revisão de contrato antes da implementação — a mais significativa até agora
+
+O contrato anterior pedia que cada ação tivesse `onAction(idsSelecionados: Set<string>)`, mas a config só recebia `selectedCount: number` — o componente nunca teria de onde tirar os ids reais para repassar. Encontrada e apresentada ao Product Owner, que propôs uma simplificação mais profunda do que a correção mínima (adicionar os ids à config): o componente deixa de manipular ids em qualquer forma. `actions` passou a ser `Array<{id, label}>` (sem função própria por ação); um único `onAction(actionId)` no nível do componente é chamado ao clicar em qualquer botão; a página é responsável por obter os ids do seu próprio `SelectionController` (por closure) e decidir o que fazer. Resultado: `BulkActionBar` não conhece veículos, não conhece ids, não conhece nenhuma estrutura de dados de seleção — apenas sinaliza escolha de ação, o desacoplamento mais completo de todos os componentes implementados até aqui.
+
+### Validação em ambiente real
+
+Testado via `preview_eval`:
+- Visibilidade correta (`display:none` com `selectedCount:0`, visível com `selectedCount>0`), contagem exibida corretamente ("N selecionado(s)").
+- Clique em botão de ação dispara `onAction(actionId)` com o id correto.
+- **Bloqueio de concorrência**: durante a execução de uma ação (Promise pendente), o botão fica `disabled`; um segundo clique enquanto a primeira ainda está pendente **não** dispara uma segunda execução — confirmado contando as chamadas recebidas.
+- Após a Promise resolver, botões reabilitados.
+- **Tratamento de erro**: quando `onAction` rejeita, o componente exibe um toast genérico (mesmo padrão do `Modal`), reabilita os botões, e **não fecha sozinho** — confirmado que o elemento continua no DOM após o erro.
+- `onCancelSelection()` chamado corretamente ao clicar em "Cancelar seleção".
+- `destroy()` remove o elemento do DOM.
+
+### Problemas encontrados
+
+O problema de fundo (contrato pedindo dado que o componente não tinha) foi encontrado na revisão crítica antes de qualquer código, não durante a implementação.
+
+### Ajustes realizados
+
+CSS novo criado (`.bulk-action-bar`, `.bulk-action-bar__count`, `.bulk-action-bar__actions`, `.bulk-action-bar__cancel`) — necessidade comprovada: não existe nenhuma barra de ação contextual no projeto hoje. Reaproveita classes de botão já existentes (`.btn`, `.btn-sm`, `.btn-secondary`) e variáveis de cor já existentes (`--orange`, `--orange-lt`).
+
+### Lições aprendidas
+
+A correção mínima (só adicionar os ids que faltavam) teria resolvido o bug, mas não teria produzido o desacoplamento mais completo que o Product Owner identificou como possível. Vale, ao encontrar uma inconsistência de contrato, perguntar não só "qual é o menor ajuste que resolve isso?" mas também "existe uma simplificação mais profunda que elimina a necessidade do ajuste inteiro?".
+
+### Mudanças na API
+
+Sim — reformulação completa de `actions`/`onAction` antes de qualquer implementação existir (não quebra nenhum consumidor).
+
+### Dependências
+
+Nenhuma — `BulkActionBar` não importa nenhum outro módulo de `js/ui/` (importa `showToast` de `../utils.js`, mesmo padrão já usado pelo `Modal`).
+
+### Camada 2 — encerramento
+
+Com este componente, a **Camada 2 (Componentes Compostos)** do plano de implementação da Fase 1B está concluída. Próxima etapa: Camada 3 (`VehicleStatusService`).
+
+---
+
 ## SelectionController (Camada 1) — 2026-07-05 (Fase 1B, implementação — não é migração de tela) — **Camada 1 concluída**
 
 ### Componente implementado
