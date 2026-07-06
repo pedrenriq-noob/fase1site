@@ -3,13 +3,13 @@ import { subscribeReservas } from '../js/realtime.js';
 import { getUser } from '../js/auth.js';
 import { criarModal } from '../js/ui/modal.js';
 import { criarConfirmationDialog } from '../js/ui/confirmation-dialog.js';
+import { criarFilterBar } from '../js/ui/filter-bar.js';
 import {
   reservaStatusLabel, reservaStatusColor, formatDate, escapeHtml,
   showToast, logger, CATEGORIAS, PONTOS
 } from '../js/utils.js';
 
-const TAB_FILTERS = [
-  { value: 'ALL',        label: 'Todas' },
+const STATUS_OPTIONS = [
   { value: 'PREVISTO',   label: 'Previsto' },
   { value: 'CONFIRMADO', label: 'Confirmado' },
   { value: 'CONCLUIDO',  label: 'Concluído' }
@@ -17,7 +17,6 @@ const TAB_FILTERS = [
 
 export async function init(container) {
   let _reservas = [];
-  let _tab = 'ALL';
   let _channel = null;
 
   container.innerHTML = `
@@ -32,7 +31,7 @@ export async function init(container) {
         </button>
       </div>
 
-      <div class="tabs" id="reserva-tabs" role="tablist"></div>
+      <div id="filter-container" class="mb-md"></div>
 
       <div id="reservas-list">
         <div class="loading-screen" style="min-height:40vh;"><div class="spinner"></div></div>
@@ -40,33 +39,28 @@ export async function init(container) {
     </div>
   `;
 
-  function renderTabs() {
-    const tabs = document.getElementById('reserva-tabs');
-    if (!tabs) return;
-    tabs.innerHTML = TAB_FILTERS.map((t) => {
-      const count = t.value === 'ALL'
-        ? _reservas.length
-        : _reservas.filter((r) => r.status === t.value).length;
-      return `
-        <button class="tab-btn ${_tab === t.value ? 'active' : ''}" data-tab="${t.value}"
-                role="tab" aria-selected="${_tab === t.value}">
-          ${escapeHtml(t.label)} (${count})
-        </button>
-      `;
-    }).join('');
+  const filterBar = criarFilterBar({
+    groups: buildFilterGroups(_reservas),
+    onFilterChange: () => renderList()
+  });
+  document.getElementById('filter-container').appendChild(filterBar.el);
 
-    tabs.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        _tab = btn.dataset.tab;
-        renderTabs();
-        renderList();
-      });
-    });
+  function buildFilterGroups(reservas) {
+    return [{
+      key: 'status',
+      label: 'Status',
+      options: STATUS_OPTIONS.map((o) => ({
+        value: o.value,
+        label: o.label,
+        count: reservas.filter((r) => r.status === o.value).length
+      }))
+    }];
   }
 
   function getFiltered() {
-    if (_tab === 'ALL') return _reservas;
-    return _reservas.filter((r) => r.status === _tab);
+    const estado = filterBar.getState();
+    if (!estado.status?.length) return _reservas;
+    return _reservas.filter((r) => estado.status.includes(r.status));
   }
 
   function renderList() {
@@ -158,7 +152,9 @@ export async function init(container) {
     }
 
     _reservas = data ?? [];
-    renderTabs();
+    // update() do FilterBar preserva a seleção ativa do operador mesmo
+    // quando os dados (e portanto as contagens) mudam.
+    filterBar.update({ groups: buildFilterGroups(_reservas) });
     renderList();
   }
 

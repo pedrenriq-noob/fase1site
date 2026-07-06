@@ -4,6 +4,50 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
+## reservas.js — 2026-07-05 (Camada 4 da Fase 1B — segunda tela migrada)
+
+### Componentes adotados nesta etapa
+
+- `FilterBar` — substitui as "tabs" de status (`PREVISTO`/`CONFIRMADO`/`CONCLUIDO`) por um grupo de `FilterBar`. (`Modal`/`ConfirmationDialog` já haviam sido migrados na Ação #5 da Technical Audit — não fazem parte desta entrega.)
+
+### Decisão de migração
+
+Mesma decisão já aplicada em `veiculos.js`: removida a opção `'ALL'`/`'Todas'` explícita — ausência de seleção no grupo já significa "sem restrição".
+
+### Validação em ambiente real
+
+`preview_eval` chamando `init()` com container isolado: módulo carrega sem exceções, `FilterBar` renderiza com as 3 opções de status, clique não gera erro.
+
+### Problemas encontrados
+
+Nenhum.
+
+### Ajustes realizados
+
+Nenhuma mudança de contrato.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção
+
+- `FilterBar`: 2 telas (`veiculos.js`, `reservas.js`). Falta 1 para Stable.
+
+---
+
+## patio.js — 2026-07-05 (Camada 4 da Fase 1B — nada a migrar)
+
+### Avaliação
+
+`patio.js` não usa nenhuma capacidade correspondente a um componente já implementado — sem busca, sem filtro, sem modal/confirmação. É uma grade de tiles agrupada por localização física, com atualização manual via botão. Adicionar busca/filtro agora seria funcionalidade **nova** (Camada 5), não migração de algo existente — decisão do Product Owner: não antecipar escopo da Camada 5, pular esta tela nesta etapa e seguir para `reservas.js`.
+
+### Ação
+
+Nenhuma mudança de código. Este registro existe para deixar explícito que a tela foi avaliada e propositalmente não teve nada migrado, evitando que pareça um passo esquecido.
+
+---
+
 ## veiculos.js — 2026-07-05 (Camada 4 da Fase 1B — primeira tela migrada)
 
 ### Componentes adotados
