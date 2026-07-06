@@ -3,9 +3,24 @@ import { subscribeVeiculos } from '../js/realtime.js';
 import { criarSearchBox } from '../js/ui/search-box.js';
 import { criarFilterBar } from '../js/ui/filter-bar.js';
 import { criarSortableHeader } from '../js/ui/sortable-header.js';
+import { criarSelectionController } from '../js/ui/selection-controller.js';
+import { criarBulkActionBar } from '../js/ui/bulk-action-bar.js';
+import { descreverTransicao } from '../js/services/vehicle-status.js';
 import {
-  statusLabel, statusColor, categoriaLabel, escapeHtml, logger, CATEGORIAS
+  statusLabel, statusColor, categoriaLabel, escapeHtml, logger, showToast, CATEGORIAS
 } from '../js/utils.js';
+
+// Ações em lote restritas às 2 transições do VehicleStatusService que não
+// exigem contexto por veículo (ponto/horário/pátio) — as demais transições
+// (locar, devolver, lavar) precisariam de um formulário por item, o que
+// descaracterizaria a ideia de ação em lote. Decisão do Product Owner
+// (2026-07-06): faz sentido hoje porque a tela ainda supre um sistema
+// oficial que não gera esses eventos automaticamente; deixará de fazer
+// sentido quando o SaaS definitivo registrar cada evento individualmente.
+const BULK_ACTIONS = [
+  { id: 'manutencao',          label: 'Enviar p/ Manutenção', statusDestino: 'MANUTENCAO' },
+  { id: 'liberar-manutencao',  label: 'Liberar de Manutenção', statusDestino: 'DISPONIVEL' }
+];
 
 const STATUS_OPTIONS = [
   { value: 'DISPONIVEL', label: 'Disponível' },
@@ -41,6 +56,7 @@ export async function init(container) {
       <div id="search-container" class="mb-md"></div>
       <div id="filter-container" class="mb-md"></div>
       <div id="sort-container" class="mb-md" style="display:flex;gap:var(--space-sm);"></div>
+      <div id="bulk-container" class="mb-md"></div>
 
       <!-- Results Count -->
       <p class="text-sm text-muted mb-md" id="result-count"></p>
@@ -81,6 +97,45 @@ export async function init(container) {
     sortContainer.appendChild(header.el);
     return header;
   });
+
+  const selection = criarSelectionController({
+    onSelectionChange: (ids) => bulkBar.update({ selectedCount: ids.size })
+  });
+
+  const bulkBar = criarBulkActionBar({
+    selectedCount: 0,
+    actions: BULK_ACTIONS.map((a) => ({ id: a.id, label: a.label })),
+    onAction: runBulkAction,
+    onCancelSelection: () => selection.clear()
+  });
+  document.getElementById('bulk-container').appendChild(bulkBar.el);
+
+  async function runBulkAction(actionId) {
+    const acao = BULK_ACTIONS.find((a) => a.id === actionId);
+    const ids = selection.getSelected();
+    const selecionados = _veiculos.filter((v) => ids.has(v.placa));
+
+    let sucesso = 0;
+    const falhas = [];
+    for (const v of selecionados) {
+      const resultado = descreverTransicao(v.status, acao.statusDestino);
+      if (!resultado.valido) { falhas.push(`${v.placa}: ${resultado.motivo}`); continue; }
+      const { error } = await supabase.from('frota_veiculos')
+        .update(resultado.payload).eq('id', v.id).eq('tenant_id', TENANT_ID);
+      if (error) { falhas.push(`${v.placa}: erro ao salvar`); continue; }
+      sucesso++;
+    }
+
+    if (sucesso > 0) {
+      showToast(`${sucesso} veículo${sucesso !== 1 ? 's' : ''} atualizado${sucesso !== 1 ? 's' : ''}.`, 'success');
+    }
+    if (falhas.length > 0) {
+      showToast(`${falhas.length} não puderam ser atualizados: ${falhas.join('; ')}`, 'error', 7000);
+    }
+
+    selection.clear();
+    await loadData();
+  }
 
   function getSorted(lista) {
     const { key, dir } = _sort;
@@ -154,6 +209,9 @@ export async function init(container) {
         ${filtered.map((v) => `
           <div class="vehicle-card" role="button" tabindex="0" data-placa="${escapeHtml(v.placa)}"
                aria-label="Veículo ${escapeHtml(v.placa)}">
+            <input type="checkbox" class="vehicle-select" data-placa="${escapeHtml(v.placa)}"
+                   aria-label="Selecionar veículo ${escapeHtml(v.placa)}"
+                   ${selection.isSelected(v.placa) ? 'checked' : ''} />
             <div class="vehicle-placa">${escapeHtml(v.placa)}</div>
             <div class="vehicle-modelo">${escapeHtml(v.modelo ?? '—')}</div>
             <div class="vehicle-badges">
@@ -170,8 +228,16 @@ export async function init(container) {
 
     grid.querySelectorAll('.vehicle-card').forEach((card) => {
       const handler = () => { window.location.hash = `#/veiculo/${card.dataset.placa}`; };
-      card.addEventListener('click', handler);
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.vehicle-select')) return;
+        handler();
+      });
       card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') handler(); });
+    });
+
+    grid.querySelectorAll('.vehicle-select').forEach((checkbox) => {
+      checkbox.addEventListener('click', (e) => e.stopPropagation());
+      checkbox.addEventListener('change', () => selection.toggle(checkbox.dataset.placa));
     });
   }
 

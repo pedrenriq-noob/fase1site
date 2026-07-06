@@ -4,6 +4,13 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 
 ---
 
+**Data:** 2026-07-06
+**Decisão:** "Mudança de status em lote" (Camada 5) só cobre as 2 transições do `VehicleStatusService` que não exigem contexto por veículo (`*→MANUTENCAO`, `MANUTENCAO→DISPONIVEL`). As demais (locar, devolver, lavar, liberar do lavador) ficam de fora do lote — exigiriam formulário por item.
+**Justificativa:** Decisão explícita do Product Owner — a tela hoje supre um sistema oficial que ainda não gera esses eventos automaticamente; faz sentido operar em lote enquanto isso. Quando o SaaS definitivo registrar cada evento individualmente (devolução, retirada, lavagem, uma por uma), essa ação deixa de fazer sentido. Não deve ser generalizada como precedente para outras ações em lote sem repetir essa checagem de contexto por transição.
+**Impacto:** `veiculos.js` ganhou só 2 ações de `BulkActionBar` (`manutencao`, `liberar-manutencao`); seleção heterogênea reporta falhas por veículo via `descreverTransicao`, sem bloquear os demais.
+
+---
+
 **Data:** 2026-07-05
 **Decisão:** `Modal` inicializa na ordem `document.body.appendChild(overlay)` antes de `render()`, não depois.
 **Justificativa:** `render()` tenta focar o primeiro elemento focável; `.focus()` em elemento ainda não anexado ao DOM é *no-op* silencioso. Só foi descoberto testando de fato no navegador durante a Migração Piloto.

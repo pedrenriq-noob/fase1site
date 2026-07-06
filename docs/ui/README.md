@@ -88,7 +88,7 @@ Chamar `destroy()` mais de uma vez nunca lança exceção (idempotente).
 
 | Tela | Modal | ConfirmationDialog | SearchBox | FilterBar | SortableHeader | SelectionController | BulkActionBar | StatusBadge | ErrorState |
 |---|---|---|---|---|---|---|---|---|---|
-| veiculos.js | — | — | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-06, Camada 5) | — | — | próprio (a migrar) | — |
+| veiculos.js | — | — | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-06, Camada 5) | **migrado** (2026-07-06, Camada 5) | **migrado** (2026-07-06, Camada 5) | próprio (a migrar) | — |
 | veiculo-detalhe.js | **migrado** (2026-07-05, piloto) | **migrado** (2026-07-05, piloto) | — | — | — | — | — | próprio (a migrar) | — |
 | reservas.js | **migrado** (2026-07-05, Ação #5 da Technical Audit) | **migrado** (2026-07-05) | — | **migrado** (2026-07-05, Camada 4) | — | — | — | próprio (a migrar) | — |
 | admin.js | **migrado** (2026-07-05, Camada 4) | **migrado** (2026-07-05, Camada 4) | — | — | — | — | — | — | — |
@@ -109,7 +109,9 @@ Quando um componente for usado por **pelo menos 3 telas sem necessidade de alter
 | SearchBox | veiculos.js (1/3) | Em validação |
 | FilterBar | veiculos.js, reservas.js (2/3) | Em validação |
 | SortableHeader | veiculos.js (1/3) | Em validação |
-| EmptyState, LoadingState, ErrorState, StatusBadge, SelectionController, BulkActionBar, ListView | nenhuma ainda | Não iniciado |
+| SelectionController | veiculos.js (1/3) | Em validação |
+| BulkActionBar | veiculos.js (1/3) | Em validação |
+| EmptyState, LoadingState, ErrorState, StatusBadge, ListView | nenhuma ainda | Não iniciado |
 
 ## Acessibilidade (RF-06, obrigatória em todo componente interativo)
 

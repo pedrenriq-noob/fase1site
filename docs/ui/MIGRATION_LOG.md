@@ -4,6 +4,49 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
+## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — seleção múltipla + ações em lote + status em lote)
+
+### Componentes adotados nesta etapa
+
+- `SelectionController` — checkbox por card (`.vehicle-select`), usando `v.placa` como id (mesmo padrão do exemplo do contrato).
+- `BulkActionBar` — 2 ações: `manutencao` ("Enviar p/ Manutenção") e `liberar-manutencao` ("Liberar de Manutenção").
+- `VehicleStatusService.descreverTransicao` — decide, por veículo selecionado, se a transição é válida antes de gravar.
+
+### Decisão de domínio (Product Owner, 2026-07-06)
+
+Das 7 transições do `VehicleStatusService`, só 2 não exigem contexto por veículo (`ponto_retirada`/`ponto_retorno`/`hora_entrada_lavador`/`patio_atual`): qualquer status operacional → `MANUTENCAO`, e `MANUTENCAO` → `DISPONIVEL`. As demais (locar, devolver, lavar, liberar do lavador) exigiriam um formulário por veículo, o que descaracterizaria "ação em lote" — não foram incluídas.
+
+Justificativa registrada explicitamente pelo Product Owner: a tela hoje supre um sistema oficial que não gera esses eventos automaticamente meio-a-meio; "status em lote" faz sentido *agora* para marcar disponibilidade rapidamente. Quando o SaaS definitivo registrar cada evento individualmente (devolução, retirada, lavagem), essa ação deixa de fazer sentido — decisão que não deve ser generalizada para novas ações em lote sem essa mesma checagem de contexto.
+
+### Comportamento em seleções heterogêneas
+
+`runBulkAction` aplica `descreverTransicao(v.status, statusDestino)` **por veículo selecionado**, não em bloco único — um veículo cujo status atual já não permite a transição (ex: já está em `MANUTENCAO` e o operador clica "Enviar p/ Manutenção") é reportado como falha individual (`motivo` do próprio serviço), sem impedir os demais veículos válidos de serem atualizados. Confirmado em `preview_eval`: `descreverTransicao('MANUTENCAO','MANUTENCAO')` retorna `valido:false`.
+
+Checkbox de seleção usa `e.stopPropagation()` no `click` para não disparar a navegação do card (`vehicle-card` já tem handler de clique para abrir o detalhe do veículo).
+
+### Validação em ambiente real
+
+`preview_eval`: `BulkActionBar` renderiza os 2 botões corretos e começa oculta (`selectedCount:0`); reimplementação isolada do wiring checkbox→`SelectionController`→`BulkActionBar.update()` confirma que marcar/desmarcar exibe/oculta a barra e atualiza a contagem; `descreverTransicao` testado para os 5 pares relevantes (válidos e inválidos, incluindo mesmo-status). `node --check` e `npm test` (50/50) sem regressão. Fluxo completo (clique real no botão de ação → grava no Supabase) não pôde ser testado autenticado — login segue proibido; a lógica de `runBulkAction` foi validada por inspeção + testes unitários do `VehicleStatusService` (já cobrindo os payloads exatos usados aqui).
+
+### Problemas encontrados
+
+Nenhum — contratos de `SelectionController`/`BulkActionBar` já prontos para este uso sem ajuste.
+
+### Ajustes realizados
+
+Nenhuma mudança de contrato.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção
+
+- `SelectionController`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
+- `BulkActionBar`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
+
+---
+
 ## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — ordenação por coluna)
 
 ### Componentes adotados nesta etapa
