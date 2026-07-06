@@ -1,6 +1,51 @@
 # Migration Log — Design System Operacional do i-Frotas
 
-Histórico permanente de cada tela migrada para os componentes de `docs/ui/`. Ver `docs/ui/README.md` para a tabela-resumo de "status de adoção"; este documento é o relato detalhado de cada migração, incluindo dificuldades e ajustes de API.
+Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e (a partir da Camada 3 da Fase 1B) dos serviços de domínio implementados. Ver `docs/ui/README.md` para a tabela-resumo de "status de adoção"; este documento é o relato detalhado de cada entrega, incluindo dificuldades e ajustes de contrato.
+
+---
+
+## VehicleStatusService (Camada 3) — 2026-07-05 (Fase 1B, implementação — não é migração de tela)
+
+### Serviço implementado
+
+`apps/frota-ops/js/services/vehicle-status.js`, conforme `docs/services/VehicleStatusService.md`. Ainda não adotado por nenhuma tela (Camada 4 migra `veiculo-detalhe.js`/`reservas.js` para usá-lo).
+
+### Revisão de contrato antes da implementação — a mais substancial até agora, com decisões de domínio reais
+
+Diferente dos componentes de UI (Camadas 1-2), aqui a revisão expôs lacunas de **regra de negócio**, não só de arquitetura. Todas levadas ao Product Owner antes de codar, nenhuma decidida por suposição:
+
+1. `contexto.limpo` e `contexto.patioDestino` — removidos do contrato: nenhuma transição documentada os lia (o serviço decide `limpo` sozinho a partir da transição; movimentação de pátio é declarada fora de escopo, candidata a um serviço futuro dedicado).
+2. `contexto.patioAtual`, `contexto.pontoRetirada`, `contexto.prevRetorno` — adicionados: sem eles, 2 das 7 transições documentadas não eram implementáveis como especificado.
+3. **Transições fora da tabela oficial**: minha proposta original era permitir qualquer par (origem, destino) por padrão, citando o princípio #11 dos 18 Princípios de UX ("sem sequência obrigatória"). O Product Owner decidiu o oposto: `VehicleStatusService` representa o fluxo operacional oficial da locadora — só as 7 transições documentadas são válidas, qualquer outra retorna `valido:false`. Isso exigiu revisar o texto de `docs/domain/VehicleStatus.md`, que antes citava o princípio #11 para justificar a leitura contrária — reconciliado: o princípio continua valendo para a *interface* (nenhuma ação escondida atrás de cliques por causa de suposta ordem), mas o *serviço de domínio* é a fonte de verdade de quais transições existem de fato.
+4. `horaEntradaLavador` passou de opcional para obrigatório em `DEVOLVIDO→NO_LAVADOR` — o serviço nunca gera timestamp internamente (`new Date()`), mantendo-o puro e determinístico.
+
+### Documentação adicional criada
+
+`docs/domain/CicloVidaVeiculo.md` — referência funcional do ciclo de vida oficial (fluxo principal + ramificação de manutenção), a ser consultada antes de qualquer nova transição ser discutida. Não substitui o contrato técnico, complementa.
+
+### Validação
+
+`tests/vehicle-status.test.js` — 17 testes, tabela-verdade completa: as 7 transições válidas com payload exato, cada uma com contexto obrigatório faltando, pares fora do fluxo oficial (recusados mesmo sem ambiguidade técnica), `statusAtual === statusDestino`, e confirmação de pureza (mesma entrada → mesma saída). Todos passando na primeira tentativa após a revisão de contrato — nenhuma surpresa na implementação em si, só nas decisões de domínio anteriores a ela.
+
+### Problemas encontrados
+
+Nenhum na implementação. Todos os achados foram de contrato/domínio, resolvidos antes de qualquer código.
+
+### Ajustes realizados
+
+Nenhum CSS (serviço de domínio, sem UI).
+
+### Lições aprendidas
+
+Extrair regra de negócio de código real e ad-hoc (`veiculo-detalhe.js`) expõe decisões que nunca tinham sido formalizadas — cada handler decidia sozinho o que era "óbvio" fazer. Centralizar forçou perguntas que o código espalhado nunca tinha precisado responder explicitamente (o que fazer fora do fluxo principal? de onde vem o timestamp?). Vale esperar o mesmo ao extrair `ReservationService` (Camada 3 seguinte, se aplicável) — reservar tempo para revisão de domínio, não só técnica.
+
+### Mudanças na API
+
+Sim — várias, todas antes de qualquer implementação existir (não quebra nenhum consumidor).
+
+### Dependências
+
+Nenhuma — função pura, sem imports.
 
 ---
 

@@ -16,7 +16,7 @@ Hoje esta regra está implícita e espalhada dentro de `apps/frota-ops/pages/vei
 
 - `statusAtual: string`
 - `statusDestino: string`
-- `contexto?: { limpo?, patioDestino?, pontoRetorno?, horaEntradaLavador? }` — dados adicionais que a transição específica precisa
+- `contexto?: { patioAtual?, pontoRetirada?, pontoRetorno?, prevRetorno?, horaEntradaLavador? }` — dados adicionais que a transição específica precisa. Ver `docs/services/VehicleStatusService.md` para quais campos são obrigatórios em qual transição.
 
 ## Saídas
 
@@ -25,8 +25,16 @@ Hoje esta regra está implícita e espalhada dentro de `apps/frota-ops/pages/vei
 ## O que nunca faz
 
 - Não executa a query `UPDATE` — quem persiste é sempre a página (RB-01, serviços stateless).
-- Não impõe uma sequência obrigatória entre status — princípio #11 dos 18 Princípios de UX é explícito: "o sistema não deve impor uma sequência obrigatória de transições", a responsabilidade da decisão é do operador. Este serviço apenas garante que os **campos derivados** de uma transição (ex: `limpo`) fiquem consistentes, não que uma transição seja "proibida" por ordem.
+- Não gera timestamps internamente (`horaEntradaLavador` sempre vem de `contexto`, fornecido por quem chama) — mantém o serviço puro e determinístico, testável sem mockar relógio.
 - Não conhece Supabase, RLS ou tenant — recebe e devolve dados puros.
+
+## Decisão de domínio (revisada em 2026-07-05 — substitui a redação anterior deste documento)
+
+**Somente as transições documentadas em `docs/services/VehicleStatusService.md` são consideradas válidas.** Qualquer par (`statusAtual`, `statusDestino`) fora dessa lista retorna `valido: false`. Esta é uma decisão deliberada do Product Owner: `VehicleStatusService` representa o **fluxo operacional oficial** da locadora, não um mecanismo permissivo genérico.
+
+Isso ajusta a leitura do princípio #11 dos 18 Princípios de UX ("o sistema não deve impor uma sequência obrigatória de transições") especificamente para este serviço: o princípio continua valendo para a **interface** (nenhuma tela deve esconder uma ação de status atrás de múltiplos cliques ou telas por causa de uma suposta ordem) — mas o **serviço de domínio** é a fonte de verdade de quais transições existem de fato na operação. Se uma necessidade operacional real exigir contornar o fluxo oficial (ex: correção administrativa de um estado inconsistente), isso deve ocorrer por um mecanismo explícito e separado (ex: uma ação administrativa dedicada), nunca como comportamento padrão deste serviço.
+
+Ver `docs/domain/CicloVidaVeiculo.md` para a referência funcional do fluxo oficial.
 
 ## Casos de uso
 
