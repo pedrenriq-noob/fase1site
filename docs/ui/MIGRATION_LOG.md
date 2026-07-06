@@ -4,6 +4,42 @@ Histórico permanente de cada tela migrada para os componentes de `docs/ui/`, e 
 
 ---
 
+## veiculos.js — 2026-07-06 (Camada 5 da Fase 1B — ordenação por coluna)
+
+### Componentes adotados nesta etapa
+
+- `SortableHeader` — 3 instâncias independentes (Placa, Categoria, Status) renderizadas em uma nova `#sort-container`, acima da grade de cards.
+
+### Decisão de arquitetura
+
+`veiculos.js` usa uma grade de cards (`.vehicle-card`), não uma tabela — `SortableHeader` não exige `<table>`/`<th>` no seu contrato (é só um `<button>`), então foi possível reaproveitá-lo sem adaptação, na mesma composição já usada para `SearchBox`/`FilterBar` (uma "barra" acima da lista). Nenhuma mudança de contrato foi necessária.
+
+`_sort` (estado da página, não do componente) guarda `{key, dir}`; a página garante que só um `SortableHeader` fique `active` por vez, atualizando os 3 via `update()` a cada clique — exatamente a responsabilidade que a regra de comportamento #3 do contrato atribui à página, não ao componente. Ordenação padrão inicial (`placa`/`asc`) replica a ordem da query atual (`order('placa')`), sem mudança de comportamento perceptível até o operador trocar de critério.
+
+Comparador usa `localeCompare` sobre os 3 campos (todos string/categoria), aplicado sobre a lista já filtrada (`getSorted(getFiltered())`) — ordenação e filtro compõem sem se conhecerem.
+
+### Validação em ambiente real
+
+`preview_eval`: os 3 headers renderizam corretamente; clique em "Categoria" ativa Categoria (`aria-sort="ascending"`) e desativa Placa (`aria-sort="none"`) simultaneamente; segundo clique alterna para `descending`; comparador testado isoladamente com dataset de 3 itens (asc/desc por placa, asc por categoria) — resultados corretos. `node --check` e `npm test` (50/50) sem regressão.
+
+### Problemas encontrados
+
+Nenhum.
+
+### Ajustes realizados
+
+Nenhuma mudança de contrato.
+
+### Mudanças na API
+
+Nenhuma.
+
+### Contagem de adoção
+
+- `SortableHeader`: 1 tela (`veiculos.js`). Faltam 2 para Stable.
+
+---
+
 ## admin.js — 2026-07-05 (Camada 4 da Fase 1B — quarta e última tela migrada)
 
 ### Componentes adotados nesta etapa

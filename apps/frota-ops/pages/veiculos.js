@@ -2,6 +2,7 @@ import { supabase, TENANT_ID } from '../js/supabase.js';
 import { subscribeVeiculos } from '../js/realtime.js';
 import { criarSearchBox } from '../js/ui/search-box.js';
 import { criarFilterBar } from '../js/ui/filter-bar.js';
+import { criarSortableHeader } from '../js/ui/sortable-header.js';
 import {
   statusLabel, statusColor, categoriaLabel, escapeHtml, logger, CATEGORIAS
 } from '../js/utils.js';
@@ -14,10 +15,22 @@ const STATUS_OPTIONS = [
   { value: 'MANUTENCAO', label: 'Manutenção' }
 ];
 
+// Critérios de ordenação disponíveis para a grade de veículos — cada um vira
+// uma instância independente de SortableHeader (regra de comportamento #1 do
+// contrato: um componente por critério, a página decide quais existem).
+const SORT_CRITERIOS = [
+  { key: 'placa',     label: 'Placa' },
+  { key: 'categoria', label: 'Categoria' },
+  { key: 'status',    label: 'Status' }
+];
+
 export async function init(container) {
   let _veiculos = [];
   let _search = '';
   let _channel = null;
+  // Ordenação padrão replica a query atual (`order('placa')`) — nenhuma
+  // mudança de comportamento percebida até o operador escolher outro critério.
+  let _sort = { key: 'placa', dir: 'asc' };
 
   container.innerHTML = `
     <div class="page">
@@ -27,6 +40,7 @@ export async function init(container) {
 
       <div id="search-container" class="mb-md"></div>
       <div id="filter-container" class="mb-md"></div>
+      <div id="sort-container" class="mb-md" style="display:flex;gap:var(--space-sm);"></div>
 
       <!-- Results Count -->
       <p class="text-sm text-muted mb-md" id="result-count"></p>
@@ -47,6 +61,36 @@ export async function init(container) {
     onFilterChange: () => renderGrid()
   });
   document.getElementById('filter-container').appendChild(filterBar.el);
+
+  const sortContainer = document.getElementById('sort-container');
+  const sortHeaders = SORT_CRITERIOS.map((criterio) => {
+    const header = criarSortableHeader({
+      label: criterio.label,
+      sortKey: criterio.key,
+      active: _sort.key === criterio.key,
+      direction: _sort.key === criterio.key ? _sort.dir : null,
+      onSort: (key, dir) => {
+        _sort = { key, dir };
+        // Só um critério fica ativo por vez (regra de comportamento #3) —
+        // a página é quem garante isso, atualizando todos os outros headers.
+        sortHeaders.forEach((h) => h.update({ active: h.sortKey === key, direction: h.sortKey === key ? dir : null }));
+        renderGrid();
+      }
+    });
+    header.sortKey = criterio.key;
+    sortContainer.appendChild(header.el);
+    return header;
+  });
+
+  function getSorted(lista) {
+    const { key, dir } = _sort;
+    const mult = dir === 'desc' ? -1 : 1;
+    return [...lista].sort((a, b) => {
+      const va = (a[key] ?? '').toString();
+      const vb = (b[key] ?? '').toString();
+      return va.localeCompare(vb) * mult;
+    });
+  }
 
   function buildFilterGroups(veiculos) {
     const categorias = [...new Set(veiculos.map((v) => v.categoria).filter(Boolean))].sort();
@@ -87,7 +131,7 @@ export async function init(container) {
     const countEl = document.getElementById('result-count');
     if (!grid) return;
 
-    const filtered = getFiltered();
+    const filtered = getSorted(getFiltered());
     if (countEl) countEl.textContent = `${filtered.length} veículo${filtered.length !== 1 ? 's' : ''}`;
 
     if (filtered.length === 0) {
