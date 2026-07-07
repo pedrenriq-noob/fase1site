@@ -1,3 +1,5 @@
+import { filtrarReservasNoPeriodo, calcularNucleoDisponibilidade, mapReservaConflito } from './disponibilidade-core.js';
+
 /* ===== Logging ===== */
 const LOG_LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 const CURRENT_LEVEL = LOG_LEVELS.warn;
@@ -204,33 +206,13 @@ export function calcularDisponibilidade(categoria, inicio, fim, veiculos, reserv
            ['PREVISTO', 'CONFIRMADO'].includes(r.status)
   );
 
-  // Reservas (futuras + contratos abertos) que se sobrepõem ao período solicitado
-  const reservasNoPeriodo = reservasCat.filter((r) => {
-    const rSaida = new Date(r.data_saida);
-    const rRetorno = new Date(r.data_retorno_prev);
-    return rSaida < fimD && rRetorno > inicioD;
-  });
-
-  const total = veiculosCat.length;
-  const ocupados = reservasNoPeriodo.length;
-  const disponivel = Math.max(0, total - ocupados);
-  const overbookingQtd = Math.max(0, ocupados - total);
-  const overbooking = overbookingQtd > 0;
-  // Sem frota cadastrada na categoria (total=0) não é o mesmo alerta que
-  // "frota esgotada" — replica o comportamento da fonte canônica
-  // (supabase/functions/_shared/disponibilidade.ts), que força alerta=null
-  // quando fonte='sem_dados'.
-  const alerta = total === 0 ? null : disponivel === 0 ? 'sem_veiculos' : disponivel === 1 ? 'ultimo_veiculo' : null;
-  const reservas_conflito = overbooking
-    ? reservasNoPeriodo.map((r) => ({
-        locacao_numero: r.locacao_numero ?? null,
-        cliente: r.cliente ?? null,
-        status: r.status,
-        data_saida: r.data_saida,
-        data_retorno_prev: r.data_retorno_prev,
-        placa_atribuida: r.placa_atribuida ?? null,
-      }))
-    : [];
+  // Núcleo do cálculo (total/ocupados/disponivel/overbooking/alerta) é
+  // compartilhado com a Edge Function check-disponibilidade — ver
+  // disponibilidade-core.js (fonte canônica em supabase/functions/_shared/).
+  const reservasNoPeriodo = filtrarReservasNoPeriodo(reservasCat, inicioD, fimD);
+  const nucleo = calcularNucleoDisponibilidade(veiculosCat.length, reservasNoPeriodo);
+  const { total, ocupados, disponivel, overbooking, overbookingQtd, alerta } = nucleo;
+  const reservas_conflito = overbooking ? reservasNoPeriodo.map(mapReservaConflito) : [];
 
   // Detalhamento por veículo: cada reserva no período "consome" uma vaga,
   // priorizando as com placa atribuída (contrato aberto) sobre a placa

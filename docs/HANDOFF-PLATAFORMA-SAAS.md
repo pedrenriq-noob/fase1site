@@ -123,13 +123,12 @@ Fonte canônica: `supabase/functions/_shared/pricing.js` (ES module, sem I/O). C
 
 Todos os 4 consumidores (`site/script.js`, `intake-admin/pages/reservas.js`, `cotacao-rapida/sidebar.js`, `frota-ops` via pricing embutido) **já importam** a lógica em vez de reimplementá-la — este ponto já está resolvido, não é uma dívida pendente. Um comentário desatualizado dentro do próprio `_shared/pricing.js` ainda fala de "cópias históricas" a migrar; na prática a migração já ocorreu.
 
-### 4.2 Algoritmo de disponibilidade — duas implementações, sem teste de paridade
+### 4.2 Algoritmo de disponibilidade — ~~três~~ duas implementações, agora com fonte única (corrigido 2026-07-07)
 
-- `supabase/functions/_shared/disponibilidade.ts` (Deno/TypeScript) — consumido pela Edge Function `check-disponibilidade`, usada por `apps/site` e `extensions/cotacao-rapida`. Contém também o `SLUG_MAP` (categoria comercial → categoria de frota) hardcoded em TypeScript.
-- `apps/frota-ops/js/utils.js` (`calcularDisponibilidade`/`calcularDisponivel`, JavaScript) — usado internamente pelo i-Frotas (inclusive como buffer do `IdleWindowService`).
-- `apps/frota-ops/pages/disponibilidade.js` — consulta manual própria a `frota_veiculos`+`frota_reservas`, replicando o cruzamento em vez de chamar uma função central — uma **terceira** variante do mesmo cruzamento.
+- `supabase/functions/_shared/disponibilidade.ts` (Deno/TypeScript) — consumido pela Edge Function `check-disponibilidade`, usada por `apps/site` e `extensions/cotacao-rapida`.
+- `apps/frota-ops/js/utils.js` (`calcularDisponibilidade`/`calcularDisponivel`, JavaScript) — usado internamente pelo i-Frotas (inclusive como buffer do `IdleWindowService`). `apps/frota-ops/pages/disponibilidade.js` **não é uma terceira implementação** (correção desta seção) — já delegava para `calcularDisponibilidade` de `utils.js`, só fazia sua própria consulta ao banco antes de chamá-la.
 
-Ao contrário de `pricing.js`, **não existe teste de paridade entre essas implementações** — é uma dívida técnica real (ver `tests/disponibilidade.test.js`, que testa só a implementação do frota-ops isoladamente). ADR-003 documenta a "fonte de verdade" conceitual, mas não força paridade automatizada entre os arquivos. Some a isso que a tradução categoria→frota existe em **dois lugares que precisam ser mantidos manualmente em sincronia**: o `SLUG_MAP` hardcoded em `_shared/disponibilidade.ts` e a tabela `categoria_frota_map` (criada na migration 027, ver 4.4) — o mesmo tipo de risco de divergência que já causou o bug histórico do GRUPO J documentado no handoff técnico anterior.
+**Resolvido em 2026-07-07:** o núcleo compartilhado (`total`/`ocupados`/`disponivel`/`overbooking`/`alerta`) foi extraído para `supabase/functions/_shared/disponibilidade-core.js` (fonte canônica), com cópia física em `apps/frota-ops/js/disponibilidade-core.js` garantida por `tests/disponibilidade-core-parity.test.js` — mesmo padrão já usado por `pricing.js`. Também foi consolidado o mapeamento categoria→frota: o `SLUG_MAP` hardcoded em `disponibilidade.ts` foi removido, agora consulta `categoria_frota_map` (a mesma tabela que o trigger de sincronização usa). Ambas as correções foram testadas em produção (smoke test + `get_logs`) e documentadas em `docs/DECISION_LOG.md`.
 
 ### 4.3 `locais` vs. `frota_patios` — gap real, corrigido parcialmente nesta sessão
 

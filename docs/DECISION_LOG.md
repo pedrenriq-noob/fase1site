@@ -5,6 +5,13 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 ---
 
 **Data:** 2026-07-07
+**Decisão:** Consolidado o núcleo de cálculo de disponibilidade (total/ocupados/disponivel/overbooking/alerta) numa fonte canônica única — `supabase/functions/_shared/disponibilidade-core.js`, com cópia física em `apps/frota-ops/js/disponibilidade-core.js` garantida por `tests/disponibilidade-core-parity.test.js` (mesmo padrão de `pricing.js`). `_shared/disponibilidade.ts` (Edge Function) e `apps/frota-ops/js/utils.js` (`calcularDisponibilidade`) passam a chamar o núcleo compartilhado em vez de reimplementar a fórmula cada um. A investigação encontrou só 2 implementações reais do algoritmo (não 3 como o handoff inicial supôs) — `apps/frota-ops/pages/disponibilidade.js` já delegava para `calcularDisponibilidade` de `utils.js`, não é uma terceira variante.
+**Justificativa:** A mesma fórmula estava duplicada manualmente entre a Edge Function e o frota-ops — mesmo risco de divergência silenciosa já corrigido para o mapeamento categoria→frota. `apps/frota-ops/js/utils.js` mantém por cima o detalhamento por veículo (`detalhes`), que não existe na Edge Function (o site público só precisa do agregado).
+**Impacto:** `npm test` 60/60 (novo teste de paridade), comportamento idêntico confirmado via `preview_eval` (frota-ops) e smoke test em produção (Edge Function, mesmo `total:3` antes/depois). Deploy de `check-disponibilidade`/`criar-solicitacao` feito e validado.
+
+---
+
+**Data:** 2026-07-07
 **Decisão:** Consolidado o mapeamento categoria→frota: `_shared/disponibilidade.ts` (edge functions `check-disponibilidade`/`criar-solicitacao`) não usa mais o `SLUG_MAP` hardcoded — passa a consultar `categoria_frota_map` (tabela já criada em `sql/027`, mesma fonte usada pelo trigger de sincronização). Deploy feito e validado (smoke test + `get_logs` sem erros novos).
 **Justificativa:** Havia dois mapeamentos independentes mantidos manualmente em paralelo (`SLUG_MAP` em TypeScript e `categoria_frota_map` no banco) — o mesmo tipo de risco de divergência que já causou o bug histórico do GRUPO J. `SLUG_MAP` ainda tinha `'U - UTILITARIO'` com espaços (grafia divergente da normalizada em `admin.js`), mas era código morto (`categorias` não tem entrada `grupo_u` — U-UTILITARIO nunca é ofertado ao público).
 **Impacto:** Uma única fonte de verdade para o mapeamento. `resolverCategoriaFrota()` faz join `categorias`↔`categoria_frota_map` via `slug`, com filtro de `tenant_id`. Testado em produção: `check-disponibilidade` retornou `total:3` para `grupo_b` (antes e depois do deploy, mesmo resultado).

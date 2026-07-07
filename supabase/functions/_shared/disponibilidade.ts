@@ -1,4 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+// @ts-ignore — módulo JS canônico compartilhado (ver disponibilidade-core.js)
+import { filtrarReservasNoPeriodo, calcularNucleoDisponibilidade, mapReservaConflito } from './disponibilidade-core.js'
 
 // Mapeia slug do site (categorias.slug) → categoria de frota
 // (frota_veiculos.categoria/frota_reservas.categoria). Fonte de verdade
@@ -133,62 +135,33 @@ export async function checkDisponibilidade(
   if (eV) throw eV
   if (eR) throw eR
 
-  const reservasNoPeriodo = (reservas ?? []).filter(r => {
-    const rS = new Date(r.data_saida)
-    const rR = new Date(r.data_retorno_prev)
-    return rS < dataRetorno && rR > dataSaida
-  })
+  const reservasNoPeriodo = filtrarReservasNoPeriodo(reservas ?? [], dataSaida, dataRetorno)
+  const totalVeiculos = veiculos?.length ?? 0
+  const nucleo = calcularNucleoDisponibilidade(totalVeiculos, reservasNoPeriodo)
 
-  if (!veiculos || veiculos.length === 0) {
+  if (totalVeiculos === 0) {
     // Sem Frota importada para a categoria ainda é possível prever
     // overbooking: se já existem contratos/reservas ativos, todos eles
     // excedem uma frota de tamanho zero.
-    const ocupadosSemFrota = reservasNoPeriodo.length
-    const overbookingSemFrota = ocupadosSemFrota > 0
     return {
-      disponivel: null, total: 0, reservas_periodo: ocupadosSemFrota, fonte: 'sem_dados',
-      overbooking: overbookingSemFrota,
-      overbooking_categoria: overbookingSemFrota ? categoria : null,
-      overbooking_qtd: ocupadosSemFrota,
+      disponivel: null, total: 0, reservas_periodo: nucleo.ocupados, fonte: 'sem_dados',
+      overbooking: nucleo.overbooking,
+      overbooking_categoria: nucleo.overbooking ? categoria : null,
+      overbooking_qtd: nucleo.overbookingQtd,
       alerta: null,
-      reservas_conflito: overbookingSemFrota ? reservasNoPeriodo.map(mapReservaConflito) : [],
+      reservas_conflito: nucleo.overbooking ? reservasNoPeriodo.map(mapReservaConflito) : [],
     }
   }
 
-  const total = veiculos.length
-  const ocupados = reservasNoPeriodo.length
-  const disponivel = Math.max(0, total - ocupados)
-  const overbookingQtd = Math.max(0, ocupados - total)
-  const overbooking = overbookingQtd > 0
-  const alerta = disponivel === 0 ? 'sem_veiculos' : disponivel === 1 ? 'ultimo_veiculo' : null
-
   return {
-    disponivel,
-    total,
-    reservas_periodo: ocupados,
+    disponivel: nucleo.disponivel,
+    total: nucleo.total,
+    reservas_periodo: nucleo.ocupados,
     fonte: 'frota',
-    overbooking,
-    overbooking_categoria: overbooking ? categoria : null,
-    overbooking_qtd: overbookingQtd,
-    alerta,
-    reservas_conflito: overbooking ? reservasNoPeriodo.map(mapReservaConflito) : [],
-  }
-}
-
-function mapReservaConflito(r: {
-  locacao_numero: string | null
-  cliente: string | null
-  status: string
-  data_saida: string
-  data_retorno_prev: string
-  placa_atribuida: string | null
-}): ReservaConflito {
-  return {
-    locacao_numero: r.locacao_numero,
-    cliente: r.cliente,
-    status: r.status,
-    data_saida: r.data_saida,
-    data_retorno_prev: r.data_retorno_prev,
-    placa_atribuida: r.placa_atribuida,
+    overbooking: nucleo.overbooking,
+    overbooking_categoria: nucleo.overbooking ? categoria : null,
+    overbooking_qtd: nucleo.overbookingQtd,
+    alerta: nucleo.alerta,
+    reservas_conflito: nucleo.overbooking ? reservasNoPeriodo.map(mapReservaConflito) : [],
   }
 }
