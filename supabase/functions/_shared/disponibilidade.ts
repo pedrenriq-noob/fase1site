@@ -1,17 +1,30 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-// Mapeia slug do site → categoria em frota_veiculos
-export const SLUG_MAP: Record<string, string> = {
-  grupo_b:         'B',
-  grupo_c:         'C',
-  grupo_d:         'D+',
-  grupo_e:         'E',
-  grupo_f:         'F',
-  grupo_g:         'G',
-  grupo_h:         'H',
-  grupo_i:         'I',
-  grupo_j:         'J',
-  grupo_u:         'U - UTILITARIO',
+// Mapeia slug do site (categorias.slug) → categoria de frota
+// (frota_veiculos.categoria/frota_reservas.categoria). Fonte de verdade
+// única: tabela `categoria_frota_map` (criada em sql/027, já usada pelo
+// trigger de sincronização solicitacoes→frota_reservas) — antes deste
+// commit havia um segundo mapeamento hardcoded aqui (`SLUG_MAP`), mantido
+// manualmente em paralelo, o mesmo tipo de risco de divergência que já
+// causou o bug histórico do GRUPO J (categoria "some" da disponibilidade
+// por erro de grafia). U-UTILITARIO propositalmente não tem entrada em
+// `categoria_frota_map` — é categoria exclusiva de um cliente específico,
+// nunca ofertada ao público (ver apps/frota-ops/pages/admin.js).
+async function resolverCategoriaFrota(
+  sb: ReturnType<typeof createClient>,
+  tenantId: string,
+  categoriaSlug: string,
+): Promise<string | null> {
+  const { data, error } = await sb
+    .from('categorias')
+    .select('categoria_frota_map(frota_categoria)')
+    .eq('slug', categoriaSlug)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (error) throw error
+  const mapa = data?.categoria_frota_map as { frota_categoria: string } | { frota_categoria: string }[] | null
+  if (!mapa) return null
+  return Array.isArray(mapa) ? (mapa[0]?.frota_categoria ?? null) : mapa.frota_categoria
 }
 
 export interface ReservaConflito {
@@ -102,7 +115,7 @@ export async function checkDisponibilidade(
   dataSaida: Date,
   dataRetorno: Date,
 ): Promise<DisponibilidadeResult> {
-  const categoria = SLUG_MAP[categoriaSlug]
+  const categoria = await resolverCategoriaFrota(sb, tenantId, categoriaSlug)
   if (!categoria) throw new Error('Categoria inválida')
 
   const [{ data: veiculos, error: eV }, { data: reservas, error: eR }] = await Promise.all([

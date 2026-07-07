@@ -1,13 +1,20 @@
 # Decision Log — i-Frotas
 
+Pequenas decisões arquiteturais e de implementação que não justificam uma ADR, mas que não devem depender do histórico de conversas para serem lembradas. Cada entrada contém apenas: Data, Decisão, Justificativa, Impacto. Ordem cronológica, mais recente no topo.
+
+---
+
+**Data:** 2026-07-07
+**Decisão:** Consolidado o mapeamento categoria→frota: `_shared/disponibilidade.ts` (edge functions `check-disponibilidade`/`criar-solicitacao`) não usa mais o `SLUG_MAP` hardcoded — passa a consultar `categoria_frota_map` (tabela já criada em `sql/027`, mesma fonte usada pelo trigger de sincronização). Deploy feito e validado (smoke test + `get_logs` sem erros novos).
+**Justificativa:** Havia dois mapeamentos independentes mantidos manualmente em paralelo (`SLUG_MAP` em TypeScript e `categoria_frota_map` no banco) — o mesmo tipo de risco de divergência que já causou o bug histórico do GRUPO J. `SLUG_MAP` ainda tinha `'U - UTILITARIO'` com espaços (grafia divergente da normalizada em `admin.js`), mas era código morto (`categorias` não tem entrada `grupo_u` — U-UTILITARIO nunca é ofertado ao público).
+**Impacto:** Uma única fonte de verdade para o mapeamento. `resolverCategoriaFrota()` faz join `categorias`↔`categoria_frota_map` via `slug`, com filtro de `tenant_id`. Testado em produção: `check-disponibilidade` retornou `total:3` para `grupo_b` (antes e depois do deploy, mesmo resultado).
+
+---
+
 **Data:** 2026-07-07
 **Decisão:** Corrigido bug real no trigger de sincronização `solicitacoes`→`frota_reservas` (`sql/027`): a FK `frota_reservas.solicitacao_id` não tinha `ON DELETE SET NULL`, então excluir uma `solicitacao` já sincronizada falhava com violação de FK — o trigger `AFTER DELETE` documentado para cancelar a reserva nunca chegava a rodar. Corrigido em `sql/032` (FK vira `SET NULL`, trigger vira `BEFORE DELETE`).
 **Justificativa:** Encontrado testando o trigger de ponta a ponta em produção (solicitação de teste, criada/apagada em seguida) como parte da preparação do handoff para o SaaS — validação pedida explicitamente pelo usuário antes de assumir que a automação "já resolve" a integração site→frota. Não havia UI em `intake-admin` usando esse caminho de exclusão, por isso nunca foi notado.
 **Impacto:** `confirmada`→cria `frota_reservas`, `concluida`→conclui, `cancelada`→cancela, `DELETE`→cancela e desvincula (`solicitacao_id` vira `NULL`, histórico preservado) — todos os 4 caminhos testados e confirmados em produção após a correção.
-
----
-
-Pequenas decisões arquiteturais e de implementação que não justificam uma ADR, mas que não devem depender do histórico de conversas para serem lembradas. Cada entrada contém apenas: Data, Decisão, Justificativa, Impacto. Ordem cronológica, mais recente no topo.
 
 ---
 
