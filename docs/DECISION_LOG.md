@@ -5,6 +5,13 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 ---
 
 **Data:** 2026-07-08
+**Decisão:** Duas limpezas em `apps/site`, a partir dos "pontos de atenção" registrados em `docs/HANDOFF-SITE-RESERVAS.md`: (1) unificada a criação do cliente Supabase — `index.html` tinha um bloco `<script type="module">` inline duplicando `supabase.js` (mesma URL/chave, CDN diferente); extraído para `apps/site/landing.js`, que agora importa `supabase`/`TENANT_ID` do módulo compartilhado. (2) removido `renderLanding()`/`iniciarReserva()` de `script.js` — código morto confirmado (nenhum caminho no código atual seta `S.step = 0`; `prevStep()` já impede voltar abaixo de 1; a landing real é `index.html`, separada, desde que o site foi dividido).
+**Justificativa:** Ambos os itens foram identificados no handoff e confirmados como seguros/baratos antes de tocar em qualquer proposta de layout futura — não alteram comportamento visível, só removem duplicação e código morto.
+**Impacto:** `index.html` carrega um único `<script type="module" src="landing.js">`; `landing.js` reaproveita `supabase.js`. `renderStep()` simplificado (removida toda a ramificação `isLanding`/`mode-landing`/`mode-flow`/`header-dark`, hoje sempre falsa). Validado no browser: landing carrega locais/frota reais sem erro, `window._reservarCat` funcional; `reserva.html` renderiza Step 1 direto, sem regressão. `npm test` 60/60.
+
+---
+
+**Data:** 2026-07-08
 **Decisão:** Removida toda a integração de disponibilidade em tempo real de `apps/site` (checagem/UI dos cards de categoria, debounce, badge "verificando…", bloqueio de categoria esgotada) e a trava de overbooking (erro 409 `sem_disponibilidade`) dentro de `criar-solicitacao`. A Edge Function `check-disponibilidade` continua existindo (ainda usada por `extensions/cotacao-rapida`).
 **Justificativa:** Decisão explícita do Product Owner — "o site de disponibilidade não funcionou como eu queria. Vou descontinuar." A funcionalidade fica reservada para reintegração futura no SaaS unificado, com desenho próprio.
 **Impacto:** `apps/site/script.js` não faz mais fetch para `check-disponibilidade`; categorias no site sempre aparecem selecionáveis, sem checagem de estoque. `criar-solicitacao` aceita qualquer solicitação dentro das demais validações (local/horário/cadeirinhas), sem checar disponibilidade de frota. Removido código morto associado (`_dispDebounce`, `_dispAbortCtrl`, `AbortController`, CSS `.esgotado`/`.cat-disp-badge`). Deploy de `criar-solicitacao` validado (smoke test + `get_logs`).

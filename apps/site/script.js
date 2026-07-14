@@ -183,143 +183,34 @@ function avisoDevolucao(data, hora) {
 function renderStep() {
   const content  = document.getElementById('content')
   const app      = document.getElementById('app')
-  const header   = document.getElementById('main-header')
   const stepsBar = document.getElementById('steps-bar')
   const summary  = document.getElementById('summary')
 
-  const isLanding = S.step === 0
-  app?.classList.toggle('mode-landing', isLanding)
-  app?.classList.toggle('mode-flow',    !isLanding)
-  app?.classList.toggle('step-final',   S.step === 4)
-  header?.classList.toggle('header-dark', isLanding)
+  app?.classList.toggle('step-final', S.step === 4)
 
-  if (stepsBar) stepsBar.style.display = isLanding ? 'none' : ''
-  if (summary)  summary.style.display  = (isLanding || S.step === 4) ? 'none' : ''
+  if (stepsBar) stepsBar.style.display = ''
+  if (summary)  summary.style.display  = S.step === 4 ? 'none' : ''
 
-  if (!isLanding) {
-    const prog = document.getElementById('progress')
-    if (prog) prog.style.width = `${(S.step / 4) * 100}%`
-    document.querySelectorAll('.step').forEach((el, i) => {
-      el.classList.toggle('active', i + 1 === S.step)
-    })
-  }
+  const prog = document.getElementById('progress')
+  if (prog) prog.style.width = `${(S.step / 4) * 100}%`
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === S.step)
+  })
 
-  if      (S.step === 0) renderLanding(content)
-  else if (S.step === 1) renderStep1(content)
+  if      (S.step === 1) renderStep1(content)
   else if (S.step === 2) renderStep2(content)
   else if (S.step === 3) renderStep3(content)
   else if (S.step === 4) renderStep4(content)
 
-  // Mobile bar: inject once, hide when landing or step 4
-  if (!isLanding) ensureMobileBar()
+  // Mobile bar: inject once, hide no step 4
+  ensureMobileBar()
   const mBar = document.getElementById('mobile-bar')
-  if (mBar) mBar.style.display = (isLanding || S.step === 4) ? 'none' : ''
+  if (mBar) mBar.style.display = S.step === 4 ? 'none' : ''
 
-  if (!isLanding) { updateSummary(); updateMobileBar() }
+  updateSummary()
+  updateMobileBar()
   saveSession()
   window.scrollTo(0, 0)
-}
-
-// ── LANDING PAGE ───────────────────────────────────────────
-function renderLanding(c) {
-  const locRet  = S.locais.filter(l => l.permite_retirada)
-  const optsLoc = locRet.map(l =>
-    `<option value="${esc(l.nome)}"${l.nome === S.retLocal ? ' selected' : ''}>${esc(l.nome)}</option>`
-  ).join('')
-
-  const cats = S.categorias.slice(0, 5)
-  const strip = cats.map(cat => {
-    const desc  = (cat.descricao ?? '').split(/\s*[-–(]/)[0].trim()
-    const label = desc.length > 18 ? desc.slice(0, 18) + '…' : (desc || cat.nome)
-    const preco = Math.round(cat.preco_diaria)
-    return `
-    <div class="cat-strip-item" onclick="iniciarReserva()">
-      <div class="cat-strip-label">${esc(cat.nome)}</div>
-      <div class="cat-strip-name">${esc(label)}</div>
-      <div class="cat-strip-price">R$ ${preco.toLocaleString('pt-BR')} <span>/dia</span></div>
-    </div>`
-  }).join('')
-
-  c.innerHTML = `
-  <section class="hero">
-    <div class="hero-left">
-      <div class="hero-eyebrow">FOZ DO IGUAÇU · FRONTEIRA</div>
-      <h1 class="hero-title">Alugue seu carro<br>na Tríplice Fronteira</h1>
-      <p class="hero-sub">Retirada na Av. Brasil ou Av. das Cataratas.<br>Frota moderna, processo simples.</p>
-      <div class="hero-tags">
-        <span class="hero-tag">Aeroporto IGU</span>
-        <span class="hero-tag">Fronteira PY/AR</span>
-        <span class="hero-tag">Carta Verde</span>
-      </div>
-    </div>
-    <div class="hero-card">
-      <h3 class="hero-card-title">Reserve seu veículo</h3>
-      <div class="form-group">
-        <label>E-MAIL</label>
-        <input type="email" id="land-email" value="${esc(S.email)}" placeholder="seu@email.com">
-      </div>
-      <div class="land-dates">
-        <div class="form-group">
-          <label>RETIRADA</label>
-          <input type="date" id="land-ret" min="${minDate()}" value="${S.retData}">
-        </div>
-        <div class="form-group">
-          <label>DEVOLUÇÃO</label>
-          <input type="date" id="land-dev" min="${S.retData || minDate()}" value="${S.devData}">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>LOCAL DE RETIRADA</label>
-        <select id="land-local">
-          <option value="">Selecione o local...</option>
-          ${optsLoc}
-        </select>
-      </div>
-      <div id="land-err"></div>
-      <button class="btn-land-cta" onclick="iniciarReserva()">Ver veículos disponíveis →</button>
-    </div>
-  </section>
-  ${cats.length ? `
-  <section class="cat-strip">${strip}</section>
-  <div class="feature-strip">
-    <span>✓ Frota sempre revisada</span>
-    <span>✓ Carta Verde disponível</span>
-    <span>✓ Translado do aeroporto</span>
-    <span>✓ Atendimento em PT/ES</span>
-  </div>` : ''}
-  `
-
-  // Sincroniza min do campo devolução com retirada
-  const retEl = document.getElementById('land-ret')
-  const devEl = document.getElementById('land-dev')
-  if (retEl && devEl) {
-    if (retEl.value) devEl.min = retEl.value
-    retEl.addEventListener('change', () => {
-      devEl.min = retEl.value
-      if (!devEl.value || devEl.value < retEl.value) devEl.value = retEl.value
-    })
-  }
-}
-
-window.iniciarReserva = function() {
-  const email = document.getElementById('land-email')?.value.trim() || ''
-  const ret   = document.getElementById('land-ret')?.value  || ''
-  const dev   = document.getElementById('land-dev')?.value  || ''
-  const local = document.getElementById('land-local')?.value || ''
-  const errEl = document.getElementById('land-err')
-  const err = (msg) => { if (errEl) errEl.innerHTML = `<div class="step-error">${msg}</div>`; return false }
-
-  if (!ret)      return err('Informe a data de retirada.')
-  if (!dev)      return err('Informe a data de devolução.')
-  if (dev < ret) return err('A data de devolução deve ser após a retirada.')
-
-  if (email) S.email = email
-  S.retData  = ret
-  S.devData  = dev
-  S.retLocal = local
-  calcDias()
-  S.step = 1
-  renderStep()
 }
 
 // ── STEP 1 — PERÍODO + CATEGORIA ──────────────────────────
