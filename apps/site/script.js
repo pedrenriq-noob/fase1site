@@ -680,6 +680,8 @@ function generateResumoHTML() {
 
   return `
     <div class="resumo-row"><span>Período</span><span>${fmtDate(S.retData)} – ${fmtDate(S.devData)}</span></div>
+    <div class="resumo-row"><span>Retirada</span><span>${esc(S.retHora)} — ${nomeCurto(S.retLocal)}</span></div>
+    <div class="resumo-row"><span>Devolução</span><span>${esc(S.devHora)} — ${nomeCurto(S.devLocal)}</span></div>
     <div class="resumo-row"><span>Categoria</span><span>${esc(cat.nome)}</span></div>
     <div class="resumo-row"><span>Diárias</span><span>${diasFmt} × R$ ${fmtN(preco)}</span></div>
     ${prot ? `<div class="resumo-row"><span>Proteção — ${esc(prot.nome)}</span><span>R$ ${fmtN(baseProt)}</span></div>` : ''}

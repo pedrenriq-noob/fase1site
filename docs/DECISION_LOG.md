@@ -5,6 +5,13 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 ---
 
 **Data:** 2026-07-14
+**Decisão:** Adicionadas as linhas "Retirada" e "Devolução" (horário + local, ex. "09:00 — Av. Brasil, 90") ao resumo da solicitação no Step 4 (`generateResumoHTML()`), entre "Período" e "Categoria". O cliente confirmava a reserva sem ver onde/quando pegar e devolver o veículo — só aparecia via `fmtDate` do período (datas), sem hora nem local.
+**Justificativa:** Pedido do usuário: tela final de confirmação deve mostrar local e horário de retirada/devolução, não só o resumo de valores.
+**Impacto:** `script.js`: `generateResumoHTML()` — duas novas `.resumo-row`, reaproveitando `nomeCurto()` (já usado na revalidação de local) para exibir só o nome do ponto, sem o endereço completo. Validado no browser: Step 4 exibe "Retirada — 09:00 — Av. Brasil, 90" e "Devolução — 12:00 — Av. Brasil, 90" corretamente, sem erros de console. `npm test` 60/60, inalterado.
+
+---
+
+**Data:** 2026-07-14
 **Decisão:** Tornados clicáveis os indicadores de etapa na barra de progresso (`#steps-bar`, topo de `reserva.html`). Antes, os círculos "Período/Proteção/Adicionais/Confirmação" eram só decorativos — para voltar do Step 3 ao Step 1, o cliente precisava clicar em "← Voltar" duas vezes. Agora cada etapa já alcançada nesta sessão (`S.maxStep`, novo campo persistido em `sessionStorage`) é clicável e navega direto (`goToStep(n)`), sem re-render intermediário nem re-validação (os dados dessas etapas já foram validados quando o cliente passou por elas da primeira vez). Etapas ainda não alcançadas continuam sem interação (clique é ignorado, `aria-disabled="true"`, `tabindex="-1"`) — avançar ainda exige `nextStep()`/validação normal, isso não é um atalho para pular etapas.
 **Justificativa:** Pedido do usuário: "quanto menos clicks melhor" — voltar várias etapas só com o botão "Voltar" era um retrabalho desnecessário para algo que a UI já sinalizava visualmente (a barra de progresso).
 **Impacto:** `reserva.html` (`onclick`/`onkeydown` nos 4 `.step`), `script.js` (`S.maxStep`, `window.goToStep()`, `renderStep()` agora marca `.reachable`/`aria-current`/`aria-disabled` em cada `.step`), `style.css` (`.step.reachable` — cursor pointer, hover e foco visível). Validado no browser: do Step 3, clique no chip "Período" volta direto ao Step 1 em um clique só; chips não alcançados (ex. "Confirmação" antes de passar por Proteção/Adicionais) não reagem a clique; estado (`S.maxStep`) sobrevive a reload via `sessionStorage`. Sem erros de console. `npm test` 60/60, inalterado.
