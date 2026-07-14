@@ -8,6 +8,7 @@ import {
 // ── STATE ──────────────────────────────────────────────────
 const S = {
   step: 1,
+  maxStep: 1, // maior step já alcançado nesta sessão — habilita navegação clicável na steps-bar
   // datas / horários / locais
   retData: '', retHora: '',
   devData: '', devHora: '',
@@ -30,7 +31,7 @@ const SESSION_KEY = 'igufoz_rascunho'
 
 function saveSession() {
   const data = {
-    step: S.step, retData: S.retData, retHora: S.retHora,
+    step: S.step, maxStep: S.maxStep, retData: S.retData, retHora: S.retHora,
     devData: S.devData, devHora: S.devHora, retLocal: S.retLocal,
     devLocal: S.devLocal, dias: S.dias, catId: S.catId,
     protId: S.protId, adicionais_sel: S.adicionais_sel,
@@ -187,6 +188,7 @@ function renderStep() {
   const summary  = document.getElementById('summary')
 
   app?.classList.toggle('step-final', S.step === 4)
+  S.maxStep = Math.max(S.maxStep || 1, S.step)
 
   if (stepsBar) stepsBar.style.display = ''
   if (summary)  summary.style.display  = S.step === 4 ? 'none' : ''
@@ -194,7 +196,14 @@ function renderStep() {
   const prog = document.getElementById('progress')
   if (prog) prog.style.width = `${(S.step / 4) * 100}%`
   document.querySelectorAll('.step').forEach((el, i) => {
-    el.classList.toggle('active', i + 1 === S.step)
+    const n = i + 1
+    const reachable = n <= S.maxStep && n !== S.step
+    el.classList.toggle('active', n === S.step)
+    el.classList.toggle('reachable', reachable)
+    el.setAttribute('role', 'button')
+    el.setAttribute('tabindex', reachable ? '0' : '-1')
+    el.setAttribute('aria-current', n === S.step ? 'step' : 'false')
+    el.setAttribute('aria-disabled', reachable ? 'false' : 'true')
   })
 
   if      (S.step === 1) renderStep1(content)
@@ -1021,6 +1030,15 @@ window.nextStep = function() {
 window.prevStep = function() {
   if (S.step > 1) { S.step--; renderStep() }
   // step 1 é a primeira tela, não volta mais
+}
+
+// Clique direto num passo da steps-bar. Só navega para passos já alcançados
+// nesta sessão (S.maxStep) — pular à frente ainda exige passar por nextStep()
+// (validação de cada etapa), então isso é puramente navegação de "voltar rápido".
+window.goToStep = function(n) {
+  if (n < 1 || n > 4 || n === S.step || n > (S.maxStep || 1)) return
+  S.step = n
+  renderStep()
 }
 
 function clearFieldErrors() {

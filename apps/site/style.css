@@ -170,6 +170,15 @@ body {
 
 .step.active .step-lbl { color: var(--orange); font-weight: 700; }
 
+.step.reachable { cursor: pointer; }
+.step.reachable:hover .step-circle,
+.step.reachable:focus-visible .step-circle {
+  border-color: var(--orange);
+  transform: translateY(-1px);
+}
+.step.reachable:focus-visible { outline: 2px solid var(--orange); outline-offset: 4px; border-radius: 12px; }
+.step.reachable:not(.active) .step-lbl:hover { color: var(--orange); }
+
 .step-connector {
   flex: 1 1 48px;
   max-width: 100px;

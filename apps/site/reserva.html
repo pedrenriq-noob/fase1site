@@ -36,22 +36,22 @@
 
     <!-- Step indicator -->
     <div class="steps" id="steps-bar">
-      <div class="step" data-step="1">
+      <div class="step" data-step="1" onclick="goToStep(1)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToStep(1)}">
         <div class="step-circle">🚗</div>
         <span class="step-lbl">Período</span>
       </div>
       <div class="step-connector"></div>
-      <div class="step" data-step="2">
+      <div class="step" data-step="2" onclick="goToStep(2)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToStep(2)}">
         <div class="step-circle">🛡</div>
         <span class="step-lbl">Proteção</span>
       </div>
       <div class="step-connector"></div>
-      <div class="step" data-step="3">
+      <div class="step" data-step="3" onclick="goToStep(3)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToStep(3)}">
         <div class="step-circle">➕</div>
         <span class="step-lbl">Adicionais</span>
       </div>
       <div class="step-connector"></div>
-      <div class="step" data-step="4">
+      <div class="step" data-step="4" onclick="goToStep(4)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToStep(4)}">
         <div class="step-circle">✅</div>
         <span class="step-lbl">Confirmação</span>
       </div>
