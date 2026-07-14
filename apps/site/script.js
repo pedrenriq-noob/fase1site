@@ -344,6 +344,7 @@ window.selectCat = function(id) {
 
   const novoLim  = cat?.max_cadeirinhas ?? 2
   const totalCad = getTotalCad()
+  let limMsg = null
 
   if (totalCad > novoLim) {
     // Reduz cadeirinhas ao novo limite, removendo o excesso do fim da lista
@@ -361,18 +362,9 @@ window.selectCat = function(id) {
       return item
     }).filter(Boolean)
 
-    const limMsg = novoLim === 0
+    limMsg = novoLim === 0
       ? 'Este veículo não suporta cadeirinhas.'
       : `Para veículos de até ${cat?.max_pessoas ?? 5} ocupantes, o limite é de ${novoLim} cadeirinha${novoLim !== 1 ? 's' : ''} por veículo. As cadeirinhas excedentes foram removidas.`
-
-    // Mostra aviso — se estiver no step 3, re-renderiza a tela
-    if (S.step === 3) {
-      const errEl = document.getElementById('step3-err')
-      if (errEl) errEl.innerHTML = `<div class="step-error" style="margin-top:8px">⚠️ ${limMsg}</div>`
-      renderStep3(document.getElementById('content'))
-    } else {
-      showToast(`⚠️ ${limMsg}`, 'warning')
-    }
   }
 
   S.catId = id
@@ -387,6 +379,27 @@ window.selectCat = function(id) {
       badge.remove()
     }
   })
+
+  // Troca vinda da sidebar (Step 2-3, ver renderUpgradeBlocks): re-renderiza
+  // o conteúdo do step atual para refletir a nova categoria (limite de
+  // cadeirinhas no Step 3) — Step 1 já se atualiza sozinho via toggle de
+  // classe nos cards, acima. Step 4 nunca chega aqui: a sidebar (e o
+  // dropdown/upgrade dentro dela) fica oculta nessa etapa — ver
+  // updateSummary(), que retorna cedo em S.step===4 — e um re-render do
+  // Step 4 apagaria dados do formulário já digitados (nome/e-mail/etc. só
+  // são lidos do DOM no envio, não sincronizados em S a cada tecla).
+  if (S.step === 2) {
+    renderStep2(document.getElementById('content'))
+  } else if (S.step === 3) {
+    renderStep3(document.getElementById('content'))
+    if (limMsg) {
+      const errEl = document.getElementById('step3-err')
+      if (errEl) errEl.innerHTML = `<div class="step-error" style="margin-top:8px">⚠️ ${limMsg}</div>`
+    }
+  }
+
+  if (limMsg && S.step !== 3) showToast(`⚠️ ${limMsg}`, 'warning')
+
   updateSummary()
   updateMobileBar()
   saveSession()
@@ -707,6 +720,7 @@ function updateSummary() {
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Escolha uma categoria de veículo.</p>
       ${btns}`
     bindSbPeriod()
+    renderUpgradeBlocks(null, 0, 0, 0)
     return
   }
 
@@ -752,6 +766,43 @@ function updateSummary() {
 
   updateMobileBar()
   bindSbPeriod()
+  renderUpgradeBlocks(cat, baseProt, totalAdd, dias)
+}
+
+// ── UPGRADE DE CATEGORIA (sidebar, a partir do step 2) ─────
+// Mostra até 3 categorias mais caras que a selecionada, cada uma já
+// com o valor TOTAL da reserva (mesma proteção/adicionais atuais) caso
+// o cliente troque. Clique troca a categoria imediatamente — mesma
+// função usada pelos cards do Step 1 (selectCat).
+function renderUpgradeBlocks(cat, baseProt, totalAdd, dias) {
+  const box = document.getElementById('summaryUpgrade')
+  if (!box) return
+
+  if (!cat || S.step < 2) { box.innerHTML = ''; return }
+
+  const precoAtual = getPreco(cat)
+  const candidatas = S.categorias
+    .filter(c => c.id !== cat.id && getPreco(c) > precoAtual)
+    .sort((a, b) => getPreco(a) - getPreco(b))
+    .slice(0, 3)
+
+  if (!candidatas.length) { box.innerHTML = ''; return }
+
+  box.innerHTML = `
+    <div class="summary-upgrade">
+      <div class="summary-upgrade-title">Que tal um upgrade?</div>
+      ${candidatas.map(c => {
+        const cPreco = getPreco(c)
+        const cTotal = cPreco * dias + baseProt + totalAdd
+        return `<div class="summary-upgrade-card" role="button" tabindex="0"
+             onclick="selectCat('${c.id}')"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCat('${c.id}')}"
+             aria-label="Trocar para ${esc(c.nome)}, total R$ ${fmtN(cTotal)}">
+          <span class="summary-upgrade-cat">${esc(c.nome)}</span>
+          <span class="summary-upgrade-price">Total: R$ ${fmtN(cTotal)}</span>
+        </div>`
+      }).join('')}
+    </div>`
 }
 
 function bindSbPeriod() {
