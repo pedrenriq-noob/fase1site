@@ -5,9 +5,6 @@ import {
   calcSubtotal as calcSubtotalCanonico,
 } from './shared/pricing.js'
 
-const CHECK_DISP_URL = 'https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/check-disponibilidade'
-const SUPABASE_ANON  = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
-
 // ── STATE ──────────────────────────────────────────────────
 const S = {
   step: 1,
@@ -18,8 +15,6 @@ const S = {
   dias: 0,
   // dados carregados do Supabase
   categorias: [], protecoes: [], adicionais: [], sazonalidade: [], locais: [],
-  // disponibilidade real por categoria: { [catId]: number | null | 'loading' }
-  disponibilidade: {},
   // seleções
   catId: null,
   protId: null,
@@ -114,66 +109,6 @@ async function loadData() {
   ]
   return true
 }
-
-// ── DISPONIBILIDADE REAL (I-Frotas) ───────────────────────
-let _dispDebounce = null
-let _dispAbortCtrl = null
-
-async function atualizarDisponibilidade() {
-  if (!S.retData || !S.retHora || !S.devData || !S.devHora) return
-  if (!S.categorias.length) return
-
-  const dataSaida    = `${S.retData}T${S.retHora}:00`
-  const dataRetorno  = `${S.devData}T${S.devHora}:00`
-  if (new Date(dataRetorno) <= new Date(dataSaida)) return
-
-  // Cancela fetch anterior em voo para evitar race condition
-  if (_dispAbortCtrl) _dispAbortCtrl.abort()
-  _dispAbortCtrl = new AbortController()
-  const { signal } = _dispAbortCtrl
-
-  // Marcar todas como "carregando"
-  S.categorias.forEach(c => { S.disponibilidade[c.id] = 'loading' })
-  _refreshCatGrid()
-
-  // Buscar em paralelo para todas as categorias
-  await Promise.all(S.categorias.map(async cat => {
-    try {
-      const res = await fetch(CHECK_DISP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({
-          tenant_id:         TENANT_ID,
-          categoria_slug:    cat.slug,
-          data_saida:        dataSaida,
-          data_retorno_prev: dataRetorno,
-        }),
-        signal,
-      })
-      const data = await res.json()
-      S.disponibilidade[cat.id] = typeof data.disponivel === 'number' ? data.disponivel : null
-    } catch (e) {
-      if (e.name !== 'AbortError') S.disponibilidade[cat.id] = null
-    }
-  }))
-
-  _refreshCatGrid()
-}
-
-function _refreshCatGrid() {
-  const grid = document.getElementById('catGrid')
-  if (grid) grid.innerHTML = renderCatCards()
-}
-
-function scheduleAtualizarDisponibilidade() {
-  clearTimeout(_dispDebounce)
-  _dispDebounce = setTimeout(atualizarDisponibilidade, 600)
-}
-
-window.addEventListener('beforeunload', () => {
-  clearTimeout(_dispDebounce)
-  if (_dispAbortCtrl) _dispAbortCtrl.abort()
-})
 
 // ── HELPERS DE LOCAIS ─────────────────────────────────────
 function locaisParaRetirada(data, hora) {
@@ -474,44 +409,31 @@ function renderStep1(c) {
       S.devData = S.retData
       devEl.value = S.retData
     }
-    calcDias(); renderStep1(c); updateSummary(); scheduleAtualizarDisponibilidade()
+    calcDias(); renderStep1(c); updateSummary()
   })
-  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary(); scheduleAtualizarDisponibilidade() })
+  document.getElementById('devData').addEventListener('change', e => { S.devData = e.target.value; calcDias(); renderStep1(c); updateSummary() })
   document.getElementById('retLocal').addEventListener('change', e => { S.retLocal = e.target.value })
   document.getElementById('devLocal').addEventListener('change', e => { S.devLocal = e.target.value; syncAeroAdd(); updateSummary() })
-
-  // Carregar disponibilidade se datas já estão preenchidas (volta do step 2, etc.)
-  if (S.retData && S.retHora && S.devData && S.devHora) scheduleAtualizarDisponibilidade()
 }
 
 function renderCatCards() {
   if (!S.categorias.length) return '<p style="color:var(--muted);font-size:14px;padding:12px 0">Carregando categorias...</p>'
   return S.categorias.map(cat => {
     const preco = getPreco(cat)
-    const dispReal = S.disponibilidade[cat.id]
-    // dispReal: undefined = ainda não carregou, 'loading' = buscando, number = resultado, null = sem dados frota
-    // null = erro no fetch (não bloqueia compra, frota não confirmada)
-    const esgotado = dispReal !== undefined && dispReal !== 'loading' && dispReal !== null
-      ? dispReal === 0
-      : (dispReal === undefined && cat.quantidade_frota != null && cat.quantidade_frota <= 0)
-    const loading = dispReal === 'loading'
     const sel      = S.catId === cat.id
     const img      = cat.imagem_url
       ? `<img src="${esc(cat.imagem_url)}" alt="${esc(cat.nome)}" class="category-img" onerror="this.style.display='none'">`
       : ''
-    const clickFn  = esgotado ? '' : `selectCat('${cat.id}')`
-    const keyFn    = esgotado ? '' : `if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCat('${cat.id}')}`
     return `<div
-      class="category-card${sel ? ' selected' : ''}${esgotado ? ' esgotado' : ''}"
+      class="category-card${sel ? ' selected' : ''}"
       role="radio"
       aria-checked="${sel}"
-      tabindex="${esgotado ? '-1' : '0'}"
-      onclick="${clickFn}"
-      onkeydown="${keyFn}"
+      tabindex="0"
+      onclick="selectCat('${cat.id}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectCat('${cat.id}')}"
       data-id="${cat.id}"
-      aria-label="${esc(cat.nome)}, R$ ${fmtN(preco)} por dia${esgotado ? ', indisponível' : ''}">
+      aria-label="${esc(cat.nome)}, R$ ${fmtN(preco)} por dia">
       ${sel ? '<div class="cat-selected-badge" aria-hidden="true">✓</div>' : ''}
-      ${loading ? '<div class="cat-disp-badge cat-disp-loading" aria-hidden="true">verificando…</div>' : ''}
       ${img}
       <div class="category-card-body">
         <h3>${esc(cat.nome)}</h3>
@@ -519,7 +441,7 @@ function renderCatCards() {
       </div>
       <div class="cat-price-col">
         <span class="price-label">Valor Diário</span>
-        <span class="price">${esgotado ? '<em>Indisponível</em>' : `R$ ${fmtN(preco)}`}</span>
+        <span class="price">R$ ${fmtN(preco)}</span>
       </div>
     </div>`
   }).join('')
@@ -528,16 +450,6 @@ function renderCatCards() {
 window.selectCat = function(id) {
   const cat = S.categorias.find(x => x.id === id)
   if (!cat) return
-
-  const dispCat = S.disponibilidade[id]
-  const esgotadoCat = dispCat !== undefined && dispCat !== 'loading' && dispCat !== null
-    ? dispCat === 0
-    : (dispCat === undefined && cat.quantidade_frota != null && cat.quantidade_frota <= 0)
-  if (esgotadoCat) {
-    showToast('Esta categoria está indisponível para o período selecionado.', 'warning')
-    updateSummary()
-    return
-  }
 
   const novoLim  = cat?.max_cadeirinhas ?? 2
   const totalCad = getTotalCad()
@@ -921,11 +833,7 @@ function updateSummary() {
     : ''
 
   const catOpts = S.categorias.map(c => {
-    const dispC = S.disponibilidade[c.id]
-    const esgotadoC = dispC !== undefined && dispC !== 'loading' && dispC !== null
-      ? dispC === 0
-      : (dispC === undefined && c.quantidade_frota != null && c.quantidade_frota <= 0)
-    return `<option value="${c.id}"${c.id === S.catId ? ' selected' : ''}${esgotadoC ? ' disabled' : ''}>${esc(c.nome)} — ${esgotadoC ? 'Indisponível' : `R$ ${fmtN(getPreco(c))}`}</option>`
+    return `<option value="${c.id}"${c.id === S.catId ? ' selected' : ''}>${esc(c.nome)} — R$ ${fmtN(getPreco(c))}</option>`
   }).join('')
 
   let items = `
@@ -968,7 +876,6 @@ function bindSbPeriod() {
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
-    scheduleAtualizarDisponibilidade()
   })
   document.getElementById('sb-devData')?.addEventListener('change', e => {
     S.devData = e.target.value
@@ -976,7 +883,6 @@ function bindSbPeriod() {
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
-    scheduleAtualizarDisponibilidade()
   })
 }
 
@@ -1471,7 +1377,6 @@ window.selectHora = function(id, value) {
     renderStep1(document.getElementById('content'))
     updateSummary()
   }
-  scheduleAtualizarDisponibilidade()
 }
 
 function pousoOpts(sel) {

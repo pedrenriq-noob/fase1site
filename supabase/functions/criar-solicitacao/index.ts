@@ -1,6 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { checkDisponibilidade } from '../_shared/disponibilidade.ts'
 import { errJson, okJson } from '../_shared/http.ts'
 import { criarLogger } from '../_shared/logger.ts'
 // @ts-ignore — módulo JS canônico compartilhado (ver _shared/pricing.js)
@@ -184,27 +183,6 @@ Deno.serve(async (req: Request) => {
     }
     if (devDate.getDay() === 0 && !localDev.disponivel_domingo) {
       return errJson('local_fechado_domingo', 'Local de devolução não funciona aos domingos.', 400, CORS)
-    }
-
-    // ── Verificação de disponibilidade em tempo real ──────────────────
-    try {
-      const disp = await checkDisponibilidade(
-        sb,
-        body.tenant_id,
-        cat.slug,
-        retDate,
-        devDate,
-      )
-      if (disp.fonte === 'frota' && disp.disponivel === 0) {
-        return errJson(
-          'sem_disponibilidade',
-          'Não há veículos disponíveis para esta categoria no período solicitado. Escolha outra categoria ou período.',
-          409, CORS,
-        )
-      }
-    } catch (dispErr) {
-      // Falha na verificação não bloqueia (sistema de solicitações com aprovação manual)
-      logger.warn('check-disp falhou:', String(dispErr))
     }
 
     const dataRet = body.data_retirada.slice(0, 10)

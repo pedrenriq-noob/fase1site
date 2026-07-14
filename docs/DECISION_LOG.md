@@ -4,6 +4,13 @@ Pequenas decisões arquiteturais e de implementação que não justificam uma AD
 
 ---
 
+**Data:** 2026-07-08
+**Decisão:** Removida toda a integração de disponibilidade em tempo real de `apps/site` (checagem/UI dos cards de categoria, debounce, badge "verificando…", bloqueio de categoria esgotada) e a trava de overbooking (erro 409 `sem_disponibilidade`) dentro de `criar-solicitacao`. A Edge Function `check-disponibilidade` continua existindo (ainda usada por `extensions/cotacao-rapida`).
+**Justificativa:** Decisão explícita do Product Owner — "o site de disponibilidade não funcionou como eu queria. Vou descontinuar." A funcionalidade fica reservada para reintegração futura no SaaS unificado, com desenho próprio.
+**Impacto:** `apps/site/script.js` não faz mais fetch para `check-disponibilidade`; categorias no site sempre aparecem selecionáveis, sem checagem de estoque. `criar-solicitacao` aceita qualquer solicitação dentro das demais validações (local/horário/cadeirinhas), sem checar disponibilidade de frota. Removido código morto associado (`_dispDebounce`, `_dispAbortCtrl`, `AbortController`, CSS `.esgotado`/`.cat-disp-badge`). Deploy de `criar-solicitacao` validado (smoke test + `get_logs`).
+
+---
+
 **Data:** 2026-07-07
 **Decisão:** Consolidado o núcleo de cálculo de disponibilidade (total/ocupados/disponivel/overbooking/alerta) numa fonte canônica única — `supabase/functions/_shared/disponibilidade-core.js`, com cópia física em `apps/frota-ops/js/disponibilidade-core.js` garantida por `tests/disponibilidade-core-parity.test.js` (mesmo padrão de `pricing.js`). `_shared/disponibilidade.ts` (Edge Function) e `apps/frota-ops/js/utils.js` (`calcularDisponibilidade`) passam a chamar o núcleo compartilhado em vez de reimplementar a fórmula cada um. A investigação encontrou só 2 implementações reais do algoritmo (não 3 como o handoff inicial supôs) — `apps/frota-ops/pages/disponibilidade.js` já delegava para `calcularDisponibilidade` de `utils.js`, não é uma terceira variante.
 **Justificativa:** A mesma fórmula estava duplicada manualmente entre a Edge Function e o frota-ops — mesmo risco de divergência silenciosa já corrigido para o mapeamento categoria→frota. `apps/frota-ops/js/utils.js` mantém por cima o detalhamento por veículo (`detalhes`), que não existe na Edge Function (o site público só precisa do agregado).

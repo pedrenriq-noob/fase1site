@@ -31,7 +31,7 @@ Stack comum a todos: **JavaScript vanilla, sem framework, sem build step** (ADR-
 - **Sem autenticação** — acesso público via chave `anon` do Supabase.
 - Lê diretamente: `categorias`, `locais`, `protecoes`, `adicionais`, `sazonalidade`.
 - Escreve via **Edge Function** `criar-solicitacao` (nunca insere direto na tabela — validação server-side de horário do local e regras de negócio antes de gravar em `solicitacoes`/`solicitacao_itens`).
-- Consulta disponibilidade via Edge Function `check-disponibilidade`.
+- ~~Consulta disponibilidade via Edge Function `check-disponibilidade`~~ — **descontinuado em 2026-07-08** por decisão do Product Owner ("o site de disponibilidade não funcionou como eu queria"). O site não checa mais estoque em tempo real; `criar-solicitacao` também não bloqueia mais por falta de disponibilidade. Fica reservado para reintegração futura no SaaS, com desenho próprio (ver `docs/DECISION_LOG.md`, 2026-07-08).
 - Deploy: Vercel (site estático).
 
 ### 2.2 `apps/intake-admin` — Painel de intake/back-office
