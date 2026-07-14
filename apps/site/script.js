@@ -43,18 +43,26 @@ function loadSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
     if (raw) Object.assign(S, JSON.parse(raw))
-    // Pré-preenchimento vindo do formulário de busca rápida da landing
+
+    // Pré-preenchimento vindo do formulário de busca rápida da landing.
+    // Só se aplica ao INICIAR uma reserva do zero (sem rascunho salvo ainda) —
+    // nunca sobre uma sessão já em andamento. Sem essa guarda, um reload da
+    // página em qualquer step com essas chaves ainda em sessionStorage (ex.:
+    // o cliente abriu a landing numa aba/momento anterior) sobrescrevia
+    // silenciosamente retData/devData de uma reserva já preenchida, mantendo
+    // categoria/proteção/adicionais intactos — reserva e valor exibido
+    // ficavam descolados do período real.
     const qsRet   = sessionStorage.getItem('qs_retData')
     const qsDev   = sessionStorage.getItem('qs_devData')
     const qsLocal = sessionStorage.getItem('qs_local')
-    if (qsRet || qsDev || qsLocal) {
+    if (!raw && (qsRet || qsDev || qsLocal)) {
       if (qsRet)   S.retData  = qsRet
       if (qsDev)   S.devData  = qsDev
       if (qsLocal) S.retLocal = qsLocal
-      sessionStorage.removeItem('qs_retData')
-      sessionStorage.removeItem('qs_devData')
-      sessionStorage.removeItem('qs_local')
     }
+    sessionStorage.removeItem('qs_retData')
+    sessionStorage.removeItem('qs_devData')
+    sessionStorage.removeItem('qs_local')
   } catch (_) {}
 }
 
@@ -73,6 +81,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       sessionStorage.removeItem('qs_cat')
     }
   } catch (_) {}
+  calcDias() // recalcula a partir do que foi restaurado, não confia no S.dias persistido
   renderStep()
   // Fecha hora pickers ao clicar fora
   document.addEventListener('click', e => {
