@@ -815,17 +815,99 @@ function bindSbPeriod() {
       devEl.value = S.retData
     }
     calcDias()
+    const aviso = revalidarLocaisPeriodo()
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
+    if (aviso) showLocationModal(aviso)
   })
   document.getElementById('sb-devData')?.addEventListener('change', e => {
     S.devData = e.target.value
     calcDias()
+    const aviso = revalidarLocaisPeriodo()
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
+    if (aviso) showLocationModal(aviso)
   })
+}
+
+// ── REVALIDAÇÃO DE LOCAL x HORÁRIO (edição via sidebar) ────
+// A edição de período pela sidebar (Step 2+) não tem os selects de local
+// visíveis (só existem no Step 1). Se o cliente muda a hora/data para fora
+// da janela de atendimento do local já escolhido, corrigimos automaticamente
+// para o único local ainda válido (normalmente o aeroporto, 24h) e avisamos
+// por pop-up — em vez de deixar a reserva seguir com uma combinação
+// local+horário que o backend rejeitaria só no envio final.
+function janelaTexto(local, tipo) {
+  const ini = tipo === 'retirada' ? local.hora_retirada_inicio : local.hora_devolucao_inicio
+  const fim = tipo === 'retirada' ? local.hora_retirada_fim   : local.hora_devolucao_fim
+  return (ini && fim) ? `das ${String(ini).slice(0, 5)} às ${String(fim).slice(0, 5)}` : 'em horário integral (24h)'
+}
+
+function nomeCurto(nomeLocal) {
+  return esc((nomeLocal || '').split('—')[0].trim())
+}
+
+function revalidarLocaisPeriodo() {
+  const avisos = []
+
+  if (S.retLocal) {
+    const antigo  = S.locais.find(l => l.nome === S.retLocal)
+    const validos = locaisParaRetirada(S.retData, S.retHora)
+    if (antigo && !validos.find(l => l.nome === S.retLocal)) {
+      if (validos.length === 1) {
+        S.retLocal = validos[0].nome
+        avisos.push(`<p><strong>⚠️ Local de retirada atualizado.</strong></p>
+          <p>${nomeCurto(antigo.nome)} atende retirada ${janelaTexto(antigo, 'retirada')}. Como o novo horário fica fora desse período, ajustamos a retirada para <strong>${nomeCurto(S.retLocal)}</strong>.</p>`)
+      } else {
+        S.retLocal = ''
+        avisos.push(`<p><strong>⚠️ Local de retirada removido.</strong></p>
+          <p>O horário escolhido não é atendido por ${nomeCurto(antigo.nome)}. Volte à Etapa 1 para selecionar um local de retirada disponível nesse horário.</p>`)
+      }
+    }
+  }
+
+  if (S.devLocal) {
+    const antigo  = S.locais.find(l => l.nome === S.devLocal)
+    const validos = locaisParaDevolucao(S.devData, S.devHora)
+    if (antigo && !validos.find(l => l.nome === S.devLocal)) {
+      if (validos.length === 1) {
+        S.devLocal = validos[0].nome
+        syncAeroAdd()
+        const novo = S.locais.find(l => l.nome === S.devLocal)
+        avisos.push(`<p><strong>⚠️ Local de devolução atualizado.</strong></p>
+          <p>A devolução em ${nomeCurto(antigo.nome)} é atendida ${janelaTexto(antigo, 'devolução')}. Para o horário selecionado, a devolução passa a ser em <strong>${nomeCurto(S.devLocal)}</strong>${novo?.is_aeroporto ? ', que funciona 24 horas' : ''}. A taxa correspondente já foi ajustada no resumo.</p>`)
+      } else {
+        S.devLocal = ''
+        syncAeroAdd()
+        avisos.push(`<p><strong>⚠️ Local de devolução removido.</strong></p>
+          <p>O horário escolhido não é atendido por ${nomeCurto(antigo.nome)}. Volte à Etapa 1 para selecionar um local de devolução disponível nesse horário.</p>`)
+      }
+    }
+  }
+
+  return avisos.length ? avisos.join('<hr class="modal-divider">') : null
+}
+
+function showLocationModal(html) {
+  document.querySelectorAll('.modal-overlay').forEach(el => el.remove())
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true" aria-label="Aviso sobre local da reserva">
+      <button type="button" class="modal-close" aria-label="Fechar aviso">✕</button>
+      <div class="modal-body">${html}</div>
+      <button type="button" class="btn btn-primary modal-ok">Entendi</button>
+    </div>`
+  document.body.appendChild(overlay)
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey) }
+  const onKey = e => { if (e.key === 'Escape') close() }
+  overlay.querySelector('.modal-close').addEventListener('click', close)
+  overlay.querySelector('.modal-ok').addEventListener('click', close)
+  overlay.addEventListener('click', e => { if (e.target === overlay) close() })
+  document.addEventListener('keydown', onKey)
+  overlay.querySelector('.modal-ok').focus()
 }
 
 // ── MOBILE STICKY BAR ─────────────────────────────────────
@@ -1312,9 +1394,11 @@ window.selectHora = function(id, value) {
   if (id === 'devHora' || id === 'sb-devHora') S.devHora = value
   calcDias()
   if (id.startsWith('sb-')) {
+    const aviso = revalidarLocaisPeriodo()
     if (S.step === 1) renderStep1(document.getElementById('content'))
     updateSummary()
     saveSession()
+    if (aviso) showLocationModal(aviso)
   } else {
     renderStep1(document.getElementById('content'))
     updateSummary()
