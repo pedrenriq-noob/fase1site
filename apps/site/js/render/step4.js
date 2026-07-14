@@ -178,6 +178,13 @@ window.submitReservation = async function() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...' }
 
   const errEl = document.getElementById('step4-err')
+  if (errEl) errEl.innerHTML = ''
+
+  // Timeout defensivo: sem isso, uma rede instável ou o servidor sem
+  // responder deixava o botão em "Enviando..." indefinidamente, sem
+  // nenhum feedback e sem forma de tentar de novo.
+  const abortCtrl = new AbortController()
+  const timeoutId = setTimeout(() => abortCtrl.abort(), 20000)
 
   try {
     const cat  = S.categorias.find(x => x.id === S.catId)
@@ -187,6 +194,7 @@ window.submitReservation = async function() {
     // Envia para Edge Function — preços são recalculados e validados server-side
     const res = await fetch('https://lxfnqzuzohudqwibgdic.supabase.co/functions/v1/criar-solicitacao', {
       method: 'POST',
+      signal: abortCtrl.signal,
       headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF' },
       body: JSON.stringify({
         tenant_id:        TENANT_ID,
@@ -214,7 +222,14 @@ window.submitReservation = async function() {
       }),
     })
 
-    const resultado = await res.json()
+    clearTimeout(timeoutId)
+
+    let resultado
+    try {
+      resultado = await res.json()
+    } catch (_) {
+      throw new Error('O servidor demorou para responder. Tente novamente em instantes ou fale com a gente pelo WhatsApp.')
+    }
     if (!res.ok) throw new Error(resultado.error?.message ?? `Erro ${res.status}`)
 
     const total = resultado.valor_estimado
@@ -227,7 +242,19 @@ window.submitReservation = async function() {
     showSuccess(waMsg, total)
 
   } catch (e) {
-    if (errEl) errEl.innerHTML = `<div class="step-error">Erro ao enviar: ${esc(e.message)}</div>`
+    clearTimeout(timeoutId)
+    // "Failed to fetch"/TypeError = sem conexão; AbortError = timeout — nenhum
+    // dos dois é uma mensagem que faz sentido para o cliente final, por isso
+    // trocamos por um texto cordial. Erros vindos do servidor (validate() local
+    // ou a Edge Function) já chegam em português e ficam como estão.
+    const semConexao = e.name === 'AbortError' || e instanceof TypeError
+    const msg = semConexao
+      ? 'Não foi possível conectar. Verifique sua internet e tente novamente — se o problema continuar, fale com a gente pelo WhatsApp.'
+      : e.message
+    if (errEl) {
+      errEl.innerHTML = `<div class="step-error">${esc(msg)}</div>`
+      errEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar Solicitação 🚀' }
   }
 }
