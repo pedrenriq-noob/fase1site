@@ -80,6 +80,13 @@ async function abrirForm(id = null) {
                 <option value="fixed"   ${p?.tipo_preco === 'fixed'   ? 'selected' : ''}>Valor fixo</option>
             </select>
         </div>
+        <div class="form-group" id="grupo-regra-hora-extra" style="${p?.tipo_preco === 'per_day' ? '' : 'display:none'}">
+            <label>Cobrança de Hora Extra</label>
+            <select id="f-regra-hora-extra">
+                <option value="proporcional" ${(p?.regra_hora_extra ?? 'proporcional') === 'proporcional' ? 'selected' : ''}>Proporcional (fração da diária, regra padrão)</option>
+                <option value="integral_apos_tolerancia" ${p?.regra_hora_extra === 'integral_apos_tolerancia' ? 'selected' : ''}>Diária integral após 1h de tolerância</option>
+            </select>
+        </div>
         <div class="form-group">
             <label>Franquia / Participação</label>
             <input type="text" id="f-franquia" value="${p?.franquia ?? ''}" placeholder="Ex: até 20% do valor FIPE">
@@ -118,6 +125,7 @@ async function abrirForm(id = null) {
             nome,
             preco,
             tipo_preco:     document.getElementById('f-tipo').value,
+            regra_hora_extra: document.getElementById('f-regra-hora-extra').value,
             franquia:       document.getElementById('f-franquia').value.trim() || null,
             pre_autorizacao: parseFloat(document.getElementById('f-preauth').value) || null,
             ordem:          parseInt(document.getElementById('f-ordem').value) || 0,
@@ -130,6 +138,15 @@ async function abrirForm(id = null) {
             : await supabase.from('protecoes').insert(payload)
 
         if (error) { toast(error.message, 'error'); return false }
+    })
+
+    // "Cobrança de Hora Extra" só faz sentido para tipo_preco='per_day' —
+    // esconde/mostra ao trocar o tipo, igual ao padrão já usado no site
+    // público para o toggle de estrangeiro (ver apps/site/js/render/step4.js).
+    const tipoEl = document.getElementById('f-tipo')
+    const grupoRegra = document.getElementById('grupo-regra-hora-extra')
+    tipoEl.addEventListener('change', () => {
+        grupoRegra.style.display = tipoEl.value === 'per_day' ? '' : 'none'
     })
 }
 

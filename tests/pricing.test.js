@@ -7,7 +7,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { calcDias, precoDiariaComSazonalidade, calcSubtotal } from '../supabase/functions/_shared/pricing.js'
+import { calcDias, calcDiasItem, precoDiariaComSazonalidade, calcSubtotal } from '../supabase/functions/_shared/pricing.js'
 
 // ── calcDias ────────────────────────────────────────────────
 test('calcDias: períodos inválidos retornam 0', () => {
@@ -71,4 +71,40 @@ test('calcSubtotal: per_day multiplica por diárias, flat não', () => {
   assert.equal(calcSubtotal('per_day', 25, 2, 3), 150)  // 25 × 2 × 3
   assert.equal(calcSubtotal('flat', 25, 2, 3), 50)      // 25 × 2
   assert.equal(calcSubtotal('per_day', '10.5', 1, 2), 21)
+})
+
+// ── calcDiasItem ──────────────────────────────────────────────
+// Regra por-item configurável no painel admin (protecoes/adicionais),
+// ver docs/DECISION_LOG.md 2026-07-14.
+test('calcDiasItem: sem regra ou "proporcional" é idêntico a calcDias (regra histórica)', () => {
+  const casos = [
+    ['2026-08-01T10:00:00', '2026-08-02T10:00:00'],   // exato
+    ['2026-08-01T10:00:00', '2026-08-02T11:00:00'],   // +1h (tolerância)
+    ['2026-08-01T10:00:00', '2026-08-02T12:00:00'],   // +2h (fração)
+    ['2026-08-01T10:00:00', '2026-08-02T15:00:00'],   // +5h (diária cheia extra)
+  ]
+  for (const [ret, dev] of casos) {
+    assert.equal(calcDiasItem(ret, dev, 'proporcional'), calcDias(ret, dev))
+    assert.equal(calcDiasItem(ret, dev, undefined), calcDias(ret, dev))
+    assert.equal(calcDiasItem(ret, dev, null), calcDias(ret, dev))
+  }
+})
+
+test('calcDiasItem: "integral_apos_tolerancia" — dentro de 1h não cobra fração', () => {
+  assert.equal(calcDiasItem('2026-08-01T10:00:00', '2026-08-02T10:00:00', 'integral_apos_tolerancia'), 1)
+  assert.equal(calcDiasItem('2026-08-01T10:00:00', '2026-08-02T11:00:00', 'integral_apos_tolerancia'), 1) // +1h, ainda tolerância
+})
+
+test('calcDiasItem: "integral_apos_tolerancia" — acima de 1h cobra diária INTEIRA extra, sem fração', () => {
+  // +2h: regra proporcional cobraria fração (1.5); integral cobra diária cheia (2)
+  assert.equal(calcDiasItem('2026-08-01T10:00:00', '2026-08-02T12:00:00', 'integral_apos_tolerancia'), 2)
+  assert.notEqual(calcDiasItem('2026-08-01T10:00:00', '2026-08-02T12:00:00', 'integral_apos_tolerancia'),
+    calcDias('2026-08-01T10:00:00', '2026-08-02T12:00:00'))
+  // +5h: mesma diária extra que a regra proporcional já cobra por passar de 4h
+  assert.equal(calcDiasItem('2026-08-01T10:00:00', '2026-08-02T15:00:00', 'integral_apos_tolerancia'), 2)
+})
+
+test('calcDiasItem: período inválido retorna 0 nas duas regras', () => {
+  assert.equal(calcDiasItem('2026-08-02T10:00:00', '2026-08-01T10:00:00', 'proporcional'), 0)
+  assert.equal(calcDiasItem('2026-08-02T10:00:00', '2026-08-01T10:00:00', 'integral_apos_tolerancia'), 0)
 })

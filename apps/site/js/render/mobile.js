@@ -1,6 +1,6 @@
 // ── BARRA STICKY MOBILE ─────────────────────────────────────
 import { S } from '../state.js'
-import { getPreco } from '../pricing-adapter.js'
+import { getPreco, calcBaseProtecao } from '../pricing-adapter.js'
 import { fmtN } from '../utils.js'
 
 export function ensureMobileBar() {
@@ -35,7 +35,7 @@ export function updateMobileBar() {
   const preco    = getPreco(cat)
   const dias     = S.dias || 1
   const baseCat  = preco * dias
-  const baseProt = prot ? (prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco) : 0
+  const baseProt = calcBaseProtecao(prot)
   const totalAdd = S.adicionais_sel.reduce((s, a) => s + a.subtotal, 0)
   const total    = baseCat + baseProt + totalAdd
 

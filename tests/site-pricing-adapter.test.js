@@ -9,7 +9,7 @@
 import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { S } from '../apps/site/js/state.js'
-import { calcDias, getPreco, calcSubtotal, getTotalCad } from '../apps/site/js/pricing-adapter.js'
+import { calcDias, getPreco, calcSubtotal, calcBaseProtecao, getTotalCad } from '../apps/site/js/pricing-adapter.js'
 
 beforeEach(() => {
   S.retData = '2026-07-15'
@@ -55,9 +55,38 @@ test('getPreco: delega para o preço base da categoria sem sazonalidade cadastra
   assert.equal(getPreco(cat), 150)
 })
 
-test('calcSubtotal: usa S.dias atual para tipo_preco per_day', () => {
-  S.dias = 3
-  assert.equal(calcSubtotal({ tipo_preco: 'per_day', preco: 20 }, 2), 120)
+// calcSubtotal calcula a diária do próprio item a partir de S.retData/
+// devData/retHora/devHora + item.regra_hora_extra — não confia mais em
+// S.dias diretamente (S.dias continua correto para a categoria, que não
+// passa por calcSubtotal). Ver docs/DECISION_LOG.md 2026-07-14.
+test('calcSubtotal: item "proporcional" (padrão) usa a mesma fração que S.dias', () => {
+  // 09:00→12:00 no mesmo dia = 0.75 diária (fração), igual a calcDias()
+  assert.equal(calcSubtotal({ tipo_preco: 'per_day', preco: 20, regra_hora_extra: 'proporcional' }, 2), 20 * 2 * 0.75)
+  assert.equal(calcSubtotal({ tipo_preco: 'per_day', preco: 20 }, 2), 20 * 2 * 0.75) // sem regra definida = proporcional
+})
+
+test('calcSubtotal: item "integral_apos_tolerancia" cobra diária cheia em vez da fração', () => {
+  // mesmo período (09:00→12:00, 3h de diferença): proporcional cobraria 0.75,
+  // integral cobra 1 diária inteira (passou de 1h de tolerância)
+  const item = { tipo_preco: 'per_day', preco: 20, regra_hora_extra: 'integral_apos_tolerancia' }
+  assert.equal(calcSubtotal(item, 2), 20 * 2 * 1)
+})
+
+test('calcSubtotal: tipo_preco "flat"/"fixed" ignora regra_hora_extra e diárias', () => {
+  assert.equal(calcSubtotal({ tipo_preco: 'fixed', preco: 50, regra_hora_extra: 'integral_apos_tolerancia' }, 1), 50)
+})
+
+test('calcBaseProtecao: aplica a mesma lógica por-item que calcSubtotal', () => {
+  assert.equal(calcBaseProtecao(null), 0)
+  assert.equal(
+    calcBaseProtecao({ tipo_preco: 'per_day', preco: 100, regra_hora_extra: 'proporcional' }),
+    100 * 0.75,
+  )
+  assert.equal(
+    calcBaseProtecao({ tipo_preco: 'per_day', preco: 100, regra_hora_extra: 'integral_apos_tolerancia' }),
+    100 * 1,
+  )
+  assert.equal(calcBaseProtecao({ tipo_preco: 'fixed', preco: 250 }), 250)
 })
 
 test('getTotalCad: soma só os adicionais marcados como cadeirinha', () => {

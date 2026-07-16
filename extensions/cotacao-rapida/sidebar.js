@@ -170,8 +170,8 @@ async function loadData() {
   try {
     const [cats, prots, adds, catLimits, sazon] = await Promise.all([
       sbFetch('categorias',   'id,nome,slug,preco_diaria', '&order=ordem.asc'),
-      sbFetch('protecoes',    'id,nome,preco,tipo_preco',  '&order=ordem.asc'),
-      sbFetch('adicionais',   'id,nome,preco,tipo_preco,permite_quantidade,is_cadeirinha',  '&order=ordem.asc'),
+      sbFetch('protecoes',    'id,nome,preco,tipo_preco,regra_hora_extra',  '&order=ordem.asc'),
+      sbFetch('adicionais',   'id,nome,preco,tipo_preco,permite_quantidade,is_cadeirinha,regra_hora_extra',  '&order=ordem.asc'),
       sbFetch('categorias',   'id,max_cadeirinhas', '').catch(() => []),
       sbFetch('sazonalidade', 'data_inicio,data_fim,precos', '').catch(() => []),
     ])
@@ -705,6 +705,18 @@ function getDias() {
   return calcDias(`${rd}T${rHora}`, `${dd}T${dHora}`)
 }
 
+// Diária de um item específico (proteção/adicional), segundo o
+// regra_hora_extra configurado nele no painel admin — não a diária global
+// da categoria (getDias()). Ver docs/DECISION_LOG.md 2026-07-14.
+function getDiasItem(item) {
+  const rd = getRetData()
+  const dd = document.getElementById('devData')?.value
+  if (!rd || !dd) return 0
+  const rHora = getHoraText('retHora')
+  const dHora = getHoraText('devHora')
+  return calcDiasItem(`${rd}T${rHora}`, `${dd}T${dHora}`, item?.regra_hora_extra)
+}
+
 // Preço com sazonalidade vem do módulo canônico shared/pricing.js (variante
 // classic-script de supabase/functions/_shared/pricing.js, verificada por
 // tests/pricing-parity.test.js — carregado antes de sidebar.js no HTML).
@@ -723,14 +735,14 @@ function calc() {
   const baseCat = calcSubtotal('per_day', precoD, 1, dias || 1)
 
   const prot     = DATA.prots.find(p => p.id === S.protId)
-  const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, dias || 1) : 0
+  const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, getDiasItem(prot) || 1) : 0
 
   let baseAdds = 0
   Object.entries(S.addSel).forEach(([id, qty]) => {
     if (!qty) return
     const a = DATA.adds.find(x => x.id === id)
     if (!a) return
-    baseAdds += calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
+    baseAdds += calcSubtotal(a.tipo_preco, a.preco, qty, getDiasItem(a) || 1)
   })
 
   const baseExtras = S.extras.reduce((s, e) => s + (e.preco || 0), 0)
@@ -774,7 +786,7 @@ function calc() {
       if (!qty) return
       const a = DATA.adds.find(x => x.id === id)
       if (!a) return
-      const sub = calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
+      const sub = calcSubtotal(a.tipo_preco, a.preco, qty, getDiasItem(a) || 1)
       linhas.push(`<div class="resumo-item">
         <div class="resumo-nome">+ ${esc(a.nome)}${qty > 1 ? ` (${qty}×)` : ''}</div>
         <span class="resumo-preco">R$ ${fmtN(sub)}</span>
@@ -831,7 +843,7 @@ function copyCotacao() {
     if (!qty) return
     const a = DATA.adds.find(x => x.id === id)
     if (!a) return
-    const sub = calcSubtotal(a.tipo_preco, a.preco, qty, dias || 1)
+    const sub = calcSubtotal(a.tipo_preco, a.preco, qty, getDiasItem(a) || 1)
     const nomeWpp = NOME_WHATSAPP[a.nome] ?? a.nome
     linhasAdds += `  ➕ ${nomeWpp}${qty > 1 ? ` (${qty}×)` : ''}: R$ ${fmtN(sub)}\n`
   })

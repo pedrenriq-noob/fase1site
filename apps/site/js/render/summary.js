@@ -1,7 +1,7 @@
 // ── SIDEBAR RESUMO ─────────────────────────────────────────
 import { S, saveSession } from '../state.js'
 import { esc, fmtN, minDate } from '../utils.js'
-import { getPreco, calcDias } from '../pricing-adapter.js'
+import { getPreco, calcDias, calcBaseProtecao } from '../pricing-adapter.js'
 import { revalidarLocaisPeriodo } from '../locations.js'
 import { showLocationModal } from '../ui.js'
 import { renderHoraPicker } from './hora-picker.js'
@@ -56,7 +56,7 @@ export function updateSummary() {
   const preco   = getPreco(cat)
   const dias    = S.dias || 1
   const baseCat = preco * dias
-  const baseProt = prot ? (prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco) : 0
+  const baseProt = calcBaseProtecao(prot)
   const totalAdd = S.adicionais_sel.reduce((s, a) => s + a.subtotal, 0)
   const total    = baseCat + baseProt + totalAdd
 

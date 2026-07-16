@@ -2,7 +2,7 @@
 import { supabase, TENANT_ID, toast, abrirModal, esc, initSortable, logger } from '../admin.js'
 import { SUPABASE_URL, SUPABASE_ANON } from '../supabase.js'
 import { registrarAuditoria, confirmarComSenha } from './auditoria.js'
-import { calcDias as calcDiasCanonico, calcSubtotal } from '../shared/pricing.js'
+import { calcDias as calcDiasCanonico, calcDiasItem, calcSubtotal } from '../shared/pricing.js'
 import { transicoesPossiveis } from '../shared/locacao-status.js'
 
 // Simulação operacional (Especificação Motor de Disponibilidade, item 9):
@@ -303,12 +303,12 @@ export async function verReserva(id) {
     const [{ data: r, error: rErr }, { data: itens, error: itErr }] = await Promise.all([
         supabase
             .from('solicitacoes')
-            .select(`*, numero, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco)`)
+            .select(`*, numero, categorias(nome, preco_diaria), protecoes(nome, preco, tipo_preco, regra_hora_extra)`)
             .eq('id', id)
             .single(),
         supabase
             .from('solicitacao_itens')
-            .select(`quantidade, preco_unitario, tipo_preco, adicionais(nome)`)
+            .select(`quantidade, preco_unitario, tipo_preco, adicionais(nome, regra_hora_extra)`)
             .eq('solicitacao_id', id),
     ])
 
@@ -338,10 +338,12 @@ export async function verReserva(id) {
           <td style="${tdR}">${fmt(totalCat)}</td>
         </tr>`)
       }
-      // Proteção
+      // Proteção — usa a diária própria dela (regra_hora_extra), não a
+      // diária global da categoria. Ver docs/DECISION_LOG.md 2026-07-14.
       if (r.protecoes) {
         const precoProt  = parseFloat(r.protecoes.preco || 0)
-        const totalProt  = calcSubtotal(r.protecoes.tipo_preco, precoProt, 1, dias)
+        const diasProt   = calcDiasItem(r.data_retirada, r.data_devolucao, r.protecoes.regra_hora_extra)
+        const totalProt  = calcSubtotal(r.protecoes.tipo_preco, precoProt, 1, diasProt)
         const sufixoProt = r.protecoes.tipo_preco === 'per_day' ? '/dia' : ''
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${r.protecoes.nome}</td>
@@ -349,11 +351,12 @@ export async function verReserva(id) {
           <td style="${tdR}">${fmt(totalProt)}</td>
         </tr>`)
       }
-      // Adicionais
+      // Adicionais — mesma lógica por-item da proteção acima.
       ;(itens ?? []).forEach(i => {
         const unitario = parseFloat(i.preco_unitario || 0)
         const qty      = i.quantidade || 1
-        const total    = calcSubtotal(i.tipo_preco, unitario, qty, dias)
+        const diasItem = calcDiasItem(r.data_retirada, r.data_devolucao, i.adicionais?.regra_hora_extra)
+        const total    = calcSubtotal(i.tipo_preco, unitario, qty, diasItem)
         rows.push(`<tr style="${trStyle}">
           <td style="${tdL}">${i.adicionais?.nome ?? '—'}${qty > 1 ? ` (${qty}×)` : ''}</td>
           <td style="${tdR}">${fmt(unitario)}${i.tipo_preco === 'per_day' ? '/dia' : ''}</td>
@@ -427,13 +430,15 @@ function imprimirReserva(r, itens, numFmt, dias, fmt, fmtDt) {
         }
         if (r.protecoes) {
             const preco = parseFloat(r.protecoes.preco || 0)
-            const total = r.protecoes.tipo_preco === 'per_day' ? preco * dias : preco
+            const diasProt = calcDiasItem(r.data_retirada, r.data_devolucao, r.protecoes.regra_hora_extra)
+            const total = r.protecoes.tipo_preco === 'per_day' ? preco * diasProt : preco
             rows.push(`<tr style="${trStyle}"><td style="${tdL}">${r.protecoes.nome}</td><td style="${tdR}">${fmt(preco)}${r.protecoes.tipo_preco === 'per_day' ? '/dia' : ''}</td><td style="${tdR}">${fmt(total)}</td></tr>`)
         }
         ;(itens ?? []).forEach(i => {
             const u = parseFloat(i.preco_unitario || 0)
             const q = i.quantidade || 1
-            const t = i.tipo_preco === 'per_day' ? u * q * dias : u * q
+            const diasItem = calcDiasItem(r.data_retirada, r.data_devolucao, i.adicionais?.regra_hora_extra)
+            const t = i.tipo_preco === 'per_day' ? u * q * diasItem : u * q
             rows.push(`<tr style="${trStyle}"><td style="${tdL}">${i.adicionais?.nome ?? '—'}${q > 1 ? ` (${q}×)` : ''}</td><td style="${tdR}">${fmt(u)}${i.tipo_preco === 'per_day' ? '/dia' : ''}</td><td style="${tdR}">${fmt(t)}</td></tr>`)
         })
         return rows.join('')

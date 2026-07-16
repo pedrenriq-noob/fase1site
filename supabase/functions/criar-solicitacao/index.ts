@@ -3,7 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { errJson, okJson } from '../_shared/http.ts'
 import { criarLogger } from '../_shared/logger.ts'
 // @ts-ignore — módulo JS canônico compartilhado (ver _shared/pricing.js)
-import { calcDias, precoDiariaComSazonalidade, calcSubtotal } from '../_shared/pricing.js'
+import { calcDias, calcDiasItem, precoDiariaComSazonalidade, calcSubtotal } from '../_shared/pricing.js'
 
 const logger = criarLogger('criar-solicitacao')
 
@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
         .single(),
       body.protecao_id
         ? sb.from('protecoes')
-            .select('id, preco, tipo_preco, ativo')
+            .select('id, preco, tipo_preco, ativo, regra_hora_extra')
             .eq('id', body.protecao_id)
             .eq('tenant_id', body.tenant_id)
             .single()
@@ -197,7 +197,10 @@ Deno.serve(async (req: Request) => {
     const precoCat = precoDiariaComSazonalidade(cat, dataRet, sazon ?? [])
 
     const baseCat  = precoCat * dias
-    const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, dias) : 0
+    // Proteção usa a diária própria dela (regra_hora_extra do item), não a
+    // diária global da categoria — ver docs/DECISION_LOG.md 2026-07-14.
+    const diasProt = prot ? calcDiasItem(body.data_retirada, body.data_devolucao, prot.regra_hora_extra) : 0
+    const baseProt = prot ? calcSubtotal(prot.tipo_preco, prot.preco, 1, diasProt) : 0
 
     let totalAdd = 0
     let qtdCadeirinhas = 0
@@ -205,15 +208,18 @@ Deno.serve(async (req: Request) => {
     if (body.itens?.length) {
       const ids = body.itens.map((i: any) => i.adicional_id)
       const { data: adicionais } = await sb.from('adicionais')
-        .select('id, preco, tipo_preco, ativo, is_cadeirinha')
+        .select('id, preco, tipo_preco, ativo, is_cadeirinha, regra_hora_extra')
         .eq('tenant_id', body.tenant_id)
         .in('id', ids)
 
       for (const item of body.itens) {
         const a = adicionais?.find((x: any) => x.id === item.adicional_id)
         if (!a?.ativo) continue
-        const qty      = Math.max(1, parseInt(item.quantidade) || 1)
-        const subtotal = calcSubtotal(a.tipo_preco, a.preco, qty, dias)
+        const qty        = Math.max(1, parseInt(item.quantidade) || 1)
+        // Cada adicional também usa a diária própria dele — mesma lógica da
+        // proteção acima.
+        const diasItem = calcDiasItem(body.data_retirada, body.data_devolucao, a.regra_hora_extra)
+        const subtotal = calcSubtotal(a.tipo_preco, a.preco, qty, diasItem)
         totalAdd += subtotal
         if (a.is_cadeirinha) qtdCadeirinhas += qty
         itensInsert.push({

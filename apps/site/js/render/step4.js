@@ -2,7 +2,7 @@
 import { TENANT_ID, WHATSAPP } from '../../supabase.js'
 import { S, clearSession } from '../state.js'
 import { esc, fmtN, fmtDate, pad, maskCPF, maskWpp } from '../utils.js'
-import { getPreco } from '../pricing-adapter.js'
+import { getPreco, calcBaseProtecao } from '../pricing-adapter.js'
 import { nomeCurto } from '../locations.js'
 import { validate } from '../validation.js'
 
@@ -146,7 +146,7 @@ function generateResumoHTML() {
   const dias    = S.dias || 1
   const diasFmt = Number.isInteger(dias) ? dias : dias.toFixed(1).replace('.', ',')
   const baseCat = preco * dias
-  const baseProt = prot ? (prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco) : 0
+  const baseProt = calcBaseProtecao(prot)
   const totalAdd = S.adicionais_sel.reduce((s, a) => s + a.subtotal, 0)
   const total    = baseCat + baseProt + totalAdd
 
@@ -265,7 +265,7 @@ function buildWhatsMsg(cat, prot, total, dias) {
   const preco = getPreco(cat)
 
   let itens = `• ${cat.nome} – ${dias}×: *${R(preco * dias)}*`
-  if (prot) itens += `\n• ${prot.nome}: *${R(prot.tipo_preco === 'per_day' ? prot.preco * dias : prot.preco)}*`
+  if (prot) itens += `\n• ${prot.nome}: *${R(calcBaseProtecao(prot))}*`
   S.adicionais_sel.forEach(a => {
     itens += `\n• ${a.nome}${a.quantidade > 1 ? ` (${a.quantidade}×)` : ''}: *${R(a.subtotal)}*`
   })

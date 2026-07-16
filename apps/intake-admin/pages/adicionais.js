@@ -82,6 +82,13 @@ async function abrirForm(id = null) {
                 <option value="fixed"   ${a?.tipo_preco === 'fixed'   ? 'selected' : ''}>Valor fixo</option>
             </select>
         </div>
+        <div class="form-group" id="grupo-regra-hora-extra" style="${a?.tipo_preco === 'per_day' ? '' : 'display:none'}">
+            <label>Cobrança de Hora Extra</label>
+            <select id="f-regra-hora-extra">
+                <option value="proporcional" ${(a?.regra_hora_extra ?? 'proporcional') === 'proporcional' ? 'selected' : ''}>Proporcional (fração da diária, regra padrão)</option>
+                <option value="integral_apos_tolerancia" ${a?.regra_hora_extra === 'integral_apos_tolerancia' ? 'selected' : ''}>Diária integral após 1h de tolerância</option>
+            </select>
+        </div>
         <div class="form-group">
             <label>Estoque (vazio = ilimitado)</label>
             <input type="number" id="f-estoque" value="${a?.estoque ?? ''}" min="0" placeholder="ilimitado">
@@ -129,6 +136,7 @@ async function abrirForm(id = null) {
             nome,
             preco,
             tipo_preco:        document.getElementById('f-tipo').value,
+            regra_hora_extra:  document.getElementById('f-regra-hora-extra').value,
             estoque:           estoqueVal !== '' ? parseInt(estoqueVal) : null,
             ordem:             parseInt(document.getElementById('f-ordem').value) || 0,
             descricao:         document.getElementById('f-desc').value.trim() || null,
@@ -142,6 +150,13 @@ async function abrirForm(id = null) {
             : await supabase.from('adicionais').insert(payload)
 
         if (error) { toast(error.message, 'error'); return false }
+    })
+
+    // "Cobrança de Hora Extra" só faz sentido para tipo_preco='per_day'.
+    const tipoEl = document.getElementById('f-tipo')
+    const grupoRegra = document.getElementById('grupo-regra-hora-extra')
+    tipoEl.addEventListener('change', () => {
+        grupoRegra.style.display = tipoEl.value === 'per_day' ? '' : 'none'
     })
 }
 
