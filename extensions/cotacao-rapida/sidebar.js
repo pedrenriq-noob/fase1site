@@ -5,7 +5,6 @@
 const SUPABASE_URL   = 'https://lxfnqzuzohudqwibgdic.supabase.co'
 const SUPABASE_ANON  = 'sb_publishable_lZYtlQFkZCgUE-ppawmXHA_CPo0tPUF'
 const TENANT_ID      = 'a1b2c3d4-0000-0000-0000-000000000001'
-const CHECK_DISP_URL = `${SUPABASE_URL}/functions/v1/check-disponibilidade`
 // ─────────────────────────────────────────────────────────────
 
 const NOME_WHATSAPP = {
@@ -45,15 +44,10 @@ const _amanha = () => { const d = new Date(); d.setDate(d.getDate() + 1); return
 
 let DATA   = { cats: [], prots: [], adds: [], sazon: [] }
 let S      = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-               retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false }
+               retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false,
+               priceOverride: null }
 let openPanel = null
 let openHora  = null
-
-// ── Disponibilidade inline ────────────────────────────────
-// dispStatus: 'idle' | 'loading' | 'ok' | 'error'
-let disp = { status: 'idle', data: null, errorMsg: null }
-let dispTimer = null
-let dispSeq   = 0 // descarta respostas de consultas obsoletas (corrida entre fetches)
 
 // Mensagem padrão editável pelo atendente
 const MSG_DEFAULT = `Reserve agora e *pague só na retirada* do carro. Se precisar cancelar, *não tem taxa*.
@@ -74,91 +68,6 @@ async function sbFetch(table, select, extra = '') {
   })
   if (!r.ok) throw new Error(`${table} HTTP ${r.status}: ${await r.text().catch(() => '')}`)
   return r.json()
-}
-
-async function checkCategoriaDisp(slug, retData, retHora, devData, devHora) {
-  const res = await fetch(CHECK_DISP_URL, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: SUPABASE_ANON,
-      Authorization: `Bearer ${SUPABASE_ANON}`
-    },
-    body: JSON.stringify({
-      tenant_id:         TENANT_ID,
-      categoria_slug:    slug,
-      data_saida:        `${retData}T${retHora}:00`,
-      data_retorno_prev: `${devData}T${devHora}:00`
-    })
-  })
-  return res.json()
-}
-
-// Os 5 campos obrigatórios para a checagem de disponibilidade estão preenchidos?
-function camposDispCompletos() {
-  return !!(S.retData && S.retHora && S.devData && S.devHora && S.catId)
-}
-
-function dispBadgeHTML() {
-  if (disp.status === 'idle')    return ''
-  if (disp.status === 'loading') return `<div class="disp-badge disp-loading">⏳ Consultando disponibilidade…</div>`
-  if (disp.status === 'error')   return `<div class="disp-badge disp-error">⚠️ Erro ao consultar disponibilidade${disp.errorMsg ? `: ${esc(disp.errorMsg)}` : ''}</div>`
-
-  const { disponivel = null, total = 0, reservas_periodo = 0, fonte = 'sem_dados' } = disp.data || {}
-  if (fonte === 'sem_dados' || total === 0) {
-    return `<div class="disp-badge disp-warn">⚠️ Frota não cadastrada nesta categoria.</div>`
-  }
-  const livres = Math.max(0, disponivel ?? 0)
-  if (livres === 0) {
-    return `<div class="disp-badge disp-red">❌ Indisponível no período (${reservas_periodo} reserva${reservas_periodo !== 1 ? 's' : ''} no período, ${total} no total).</div>`
-  }
-  const cls = livres <= 1 ? 'disp-yellow' : 'disp-green'
-  return `<div class="disp-badge ${cls}">✅ ${livres} de ${total} disponível${livres !== 1 ? 'is' : ''} no período.</div>`
-}
-
-function renderDispBadge() {
-  const el = document.getElementById('dispBadge')
-  if (el) el.innerHTML = dispBadgeHTML()
-}
-
-// Reavalia disponibilidade conforme estado atual do formulário.
-// Chamada após qualquer mudança em categoria/data/hora (via calc()).
-function updateDisponibilidade() {
-  if (dispTimer) clearTimeout(dispTimer)
-
-  if (!camposDispCompletos()) {
-    // Campo obrigatório ausente/inválido: limpa qualquer resultado anterior
-    if (disp.status !== 'idle') {
-      disp = { status: 'idle', data: null, errorMsg: null }
-      renderDispBadge()
-    }
-    return
-  }
-
-  const cat = DATA.cats.find(c => c.id === S.catId)
-  if (!cat?.slug) return
-
-  const { retData, retHora, devData, devHora } = S
-  const seq = ++dispSeq
-  disp = { status: 'loading', data: null, errorMsg: null }
-  renderDispBadge()
-
-  dispTimer = setTimeout(async () => {
-    try {
-      const json = await checkCategoriaDisp(cat.slug, retData, retHora, devData, devHora)
-      if (seq !== dispSeq) return // resposta obsoleta, ignora
-      if (json?.error) {
-        disp = { status: 'error', data: null, errorMsg: json.error.message || json.error.code }
-      } else {
-        disp = { status: 'ok', data: json, errorMsg: null }
-      }
-    } catch (e) {
-      if (seq !== dispSeq) return
-      disp = { status: 'error', data: null, errorMsg: e.message }
-    }
-    renderDispBadge()
-  }, 400)
 }
 
 async function loadData() {
@@ -265,7 +174,9 @@ function addOptionsHTML() {
 // ── Current selection labels ──────────────────────────────
 function catLabel() {
   const c = DATA.cats.find(x => x.id === S.catId)
-  return c ? `${c.nome} — R$ ${fmtN(getPreco(c))}/dia` : ''
+  if (!c) return ''
+  const preco = S.priceOverride ?? getPreco(c)
+  return `${c.nome} — R$ ${fmtN(preco)}/dia`
 }
 
 function protLabel() {
@@ -329,7 +240,18 @@ function renderForm() {
     <section>
       <div class="sec-label">🚘 Categoria</div>
       ${colSelHTML('cat', catLabel(), catOptionsHTML())}
-      <div id="dispBadge"></div>
+      ${S.catId ? (() => {
+        const _c = DATA.cats.find(x => x.id === S.catId)
+        const _db = _c ? getPreco(_c) : 0
+        const _val = S.priceOverride ?? _db
+        const _edited = S.priceOverride !== null && S.priceOverride !== _db
+        return `<div style="margin-top:6px;display:flex;align-items:center;gap:7px">
+          <label for="priceOverride" style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0">Valor/dia (R$)</label>
+          <input type="number" id="priceOverride" value="${_val}" min="0" step="0.01"
+            style="flex:1;padding:5px 8px;border:1.5px solid ${_edited ? 'var(--orange)' : 'var(--border)'};border-radius:var(--radius);font-family:inherit;font-size:12px;color:var(--text);background:#fff;outline:none">
+          ${_edited ? `<button id="resetPriceBtn" title="Restaurar valor original" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap">↺ R$ ${fmtN(_db)}</button>` : ''}
+        </div>`
+      })() : ''}
     </section>
 
     <hr class="divider">
@@ -427,6 +349,38 @@ function wireEvents() {
   // Hora picker buttons — delegated on body
   // (handled in global delegation below)
 
+  // Price override
+  document.getElementById('priceOverride')?.addEventListener('input', e => {
+    const v = parseFloat(e.target.value)
+    S.priceOverride = isNaN(v) || v < 0 ? null : v
+    e.target.style.borderColor = S.priceOverride !== null ? 'var(--orange)' : 'var(--border)'
+    // Atualiza botão de reset sem re-render completo
+    const cat = DATA.cats.find(c => c.id === S.catId)
+    const db  = cat ? getPreco(cat) : 0
+    let resetBtn = document.getElementById('resetPriceBtn')
+    if (S.priceOverride !== null && S.priceOverride !== db) {
+      if (!resetBtn) {
+        resetBtn = document.createElement('button')
+        resetBtn.id = 'resetPriceBtn'
+        resetBtn.title = 'Restaurar valor original'
+        resetBtn.style.cssText = 'background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap'
+        e.target.parentNode.appendChild(resetBtn)
+        resetBtn.addEventListener('click', () => {
+          S.priceOverride = null
+          renderForm()
+        })
+      }
+      resetBtn.textContent = `↺ R$ ${fmtN(db)}`
+    } else if (resetBtn) {
+      resetBtn.remove()
+    }
+    calc()
+  })
+  document.getElementById('resetPriceBtn')?.addEventListener('click', () => {
+    S.priceOverride = null
+    renderForm()
+  })
+
   // Add extra button
   document.getElementById('addExtraBtn')?.addEventListener('click', () => {
     S.extras.push({ desc: '', preco: 0 })
@@ -508,8 +462,9 @@ document.addEventListener('click', e => {
   // ── Category option
   const catOpt = e.target.closest('[data-cat-id]')
   if (catOpt && catOpt.closest('#panel-cat')) {
-    S.catId   = catOpt.dataset.catId || null
-    openPanel = null
+    S.catId         = catOpt.dataset.catId || null
+    S.priceOverride = null
+    openPanel       = null
     renderForm()
     return
   }
@@ -725,13 +680,11 @@ function getPreco(cat) {
 }
 
 function calc() {
-  updateDisponibilidade()
-
   const dias    = getDias()
   const diasFmt = Number.isInteger(dias) ? dias : dias.toFixed(1).replace('.', ',')
 
   const cat     = DATA.cats.find(c => c.id === S.catId)
-  const precoD  = cat ? getPreco(cat) : 0
+  const precoD  = cat ? (S.priceOverride ?? getPreco(cat)) : 0
   const baseCat = calcSubtotal('per_day', precoD, 1, dias || 1)
 
   const prot     = DATA.prots.find(p => p.id === S.protId)
@@ -774,8 +727,13 @@ function calc() {
       </div>`)
     }
     if (prot && baseProt > 0) {
-      const protSub = prot.tipo_preco === 'per_day' && dias > 0
-        ? `${diasFmt} diária${dias !== 1 ? 's' : ''} × R$ ${fmtN(prot.preco)}`
+      // Usa a diária própria da proteção (getDiasItem), não a da categoria
+      // (dias/diasFmt) — bug corrigido em 2026-07-16: o texto mostrava a
+      // fração do veículo mesmo quando a proteção usa regra integral.
+      const diasProt    = getDiasItem(prot)
+      const diasProtFmt = Number.isInteger(diasProt) ? diasProt : diasProt.toFixed(1).replace('.', ',')
+      const protSub = prot.tipo_preco === 'per_day' && diasProt > 0
+        ? `${diasProtFmt} diária${diasProt !== 1 ? 's' : ''} × R$ ${fmtN(prot.preco)}`
         : ''
       linhas.push(`<div class="resumo-item">
         <div><div class="resumo-nome">○ ${esc(prot.nome)}</div>${protSub ? `<div class="resumo-sub">${protSub}</div>` : ''}</div>
@@ -786,9 +744,14 @@ function calc() {
       if (!qty) return
       const a = DATA.adds.find(x => x.id === id)
       if (!a) return
-      const sub = calcSubtotal(a.tipo_preco, a.preco, qty, getDiasItem(a) || 1)
+      const diasAdd    = getDiasItem(a)
+      const diasAddFmt = Number.isInteger(diasAdd) ? diasAdd : diasAdd.toFixed(1).replace('.', ',')
+      const sub = calcSubtotal(a.tipo_preco, a.preco, qty, diasAdd || 1)
+      const addSub = a.tipo_preco === 'per_day' && diasAdd > 0
+        ? `${diasAddFmt} diária${diasAdd !== 1 ? 's' : ''}${qty > 1 ? ` × ${qty}` : ''} × R$ ${fmtN(a.preco)}`
+        : ''
       linhas.push(`<div class="resumo-item">
-        <div class="resumo-nome">+ ${esc(a.nome)}${qty > 1 ? ` (${qty}×)` : ''}</div>
+        <div><div class="resumo-nome">+ ${esc(a.nome)}${qty > 1 ? ` (${qty}×)` : ''}</div>${addSub ? `<div class="resumo-sub">${addSub}</div>` : ''}</div>
         <span class="resumo-preco">R$ ${fmtN(sub)}</span>
       </div>`)
     })
@@ -890,12 +853,10 @@ function copyCotacao() {
 // ── Reset ─────────────────────────────────────────────────
 function resetForm() {
   S         = { catId: null, protId: null, protChosen: false, addSel: {}, extras: [],
-                retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false }
+                retData: _amanha(), retHora: '', devData: '', devHora: '', prime: false,
+                priceOverride: null }
   openPanel = null
   openHora  = null
-  if (dispTimer) clearTimeout(dispTimer)
-  dispSeq++
-  disp      = { status: 'idle', data: null, errorMsg: null }
   renderForm()
 }
 
