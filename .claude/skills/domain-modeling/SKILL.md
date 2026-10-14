@@ -3,6 +3,9 @@ name: domain-modeling
 description: Build and sharpen a project's domain model. Use when discussing codebase terminology, writing or editing a GLOSSARY.md, or recording or editing an ADR.
 ---
 
+**Idioma:** converse em português do Brasil. Escreva as definições do `GLOSSARY.md` e o texto dos ADRs em português. Os nomes de arquivo (`GLOSSARY.md`, `docs/adr/NNNN-slug.md`) e a estrutura dos templates não mudam. Se um termo do domínio já é usado em inglês no código, mantenha o termo original e explique em português.
+
+
 # Domain Modeling
 
 Actively build and sharpen the project's domain model as you design. This is the *active* discipline: challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `GLOSSARY.md` for vocabulary is not this skill: that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
